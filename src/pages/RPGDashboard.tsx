@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
-import { 
-  Brain, Users, Wallet, Trophy, Flame, 
-  Shield, Swords, Dumbbell
+import {
+  Brain,
+  Users,
+  Wallet,
+  Trophy,
+  Flame,
+  Shield,
+  Swords,
+  Dumbbell
 } from "lucide-react";
 
 import { AttributeBar } from "@/components/rpg/AttributeBar";
@@ -16,7 +22,7 @@ const STORAGE_KEY = "life_rpg_player";
 const RPGDashboard = () => {
 
   /* =========================
-     PLAYER STATE (PERSISTENT)
+     PLAYER (PERSISTENTE)
   ========================= */
 
   const [playerData, setPlayerData] = useState(() => {
@@ -34,10 +40,8 @@ const RPGDashboard = () => {
         };
   });
 
-  const [levelUpFlash, setLevelUpFlash] = useState(false);
-
   /* =========================
-     XP CALCULATION
+     XP & LEVEL SYSTEM
      nextLevelXP = 100 + (XPAtual * 90)
   ========================= */
 
@@ -53,10 +57,77 @@ const RPGDashboard = () => {
   ========================= */
 
   const attributes = [
-    { name: "Físico", value: 68, icon: Dumbbell, color: "from-neon-red to-neon-orange", bgColor: "bg-neon-red/20" },
-    { name: "Mente", value: 85, icon: Brain, color: "from-neon-blue to-neon-cyan", bgColor: "bg-neon-blue/20" },
-    { name: "Social", value: 52, icon: Users, color: "from-neon-purple to-neon-pink", bgColor: "bg-neon-purple/20" },
-    { name: "Finanças", value: 74, icon: Wallet, color: "from-neon-green to-neon-cyan", bgColor: "bg-neon-green/20" }
+    {
+      name: "Físico",
+      value: 68,
+      icon: Dumbbell,
+      color: "from-neon-red to-neon-orange",
+      bgColor: "bg-neon-red/20",
+      description: "Saúde, exercícios, sono"
+    },
+    {
+      name: "Mente",
+      value: 85,
+      icon: Brain,
+      color: "from-neon-blue to-neon-cyan",
+      bgColor: "bg-neon-blue/20",
+      description: "Foco, estudos, leitura"
+    },
+    {
+      name: "Social",
+      value: 52,
+      icon: Users,
+      color: "from-neon-purple to-neon-pink",
+      bgColor: "bg-neon-purple/20",
+      description: "Relacionamentos, networking"
+    },
+    {
+      name: "Finanças",
+      value: 74,
+      icon: Wallet,
+      color: "from-neon-green to-neon-cyan",
+      bgColor: "bg-neon-green/20",
+      description: "Economia, investimentos"
+    }
+  ];
+
+  /* =========================
+     ACHIEVEMENTS (COMPLETOS)
+  ========================= */
+
+  const achievements = [
+    {
+      name: "Early Bird",
+      description: "Acorde 5h por 7 dias",
+      icon: "🌅",
+      unlocked: true,
+      rarity: "common"
+    },
+    {
+      name: "Bookworm",
+      description: "Leia 10 livros",
+      icon: "📚",
+      unlocked: true,
+      rarity: "rare"
+    },
+    {
+      name: "Iron Will",
+      description: "30 dias de streak",
+      icon: "💪",
+      unlocked: false,
+      progress: 18,
+      maxProgress: 30,
+      rarity: "epic"
+    },
+    {
+      name: "Millionaire",
+      description: "Economize R$100k",
+      icon: "💎",
+      unlocked: false,
+      progress: 45000,
+      maxProgress: 100000,
+      rarity: "legendary"
+    }
   ];
 
   /* =========================
@@ -64,11 +135,11 @@ const RPGDashboard = () => {
   ========================= */
 
   const activeQuests = [
-    { title: "Treino Matinal", xp: 50, attribute: "Físico", completed: true },
-    { title: "Ler 30 minutos", xp: 30, attribute: "Mente", completed: true },
-    { title: "Meditar 10 min", xp: 25, attribute: "Mente", completed: false },
-    { title: "Estudar 1h", xp: 75, attribute: "Mente", completed: false },
-    { title: "Networking", xp: 40, attribute: "Social", completed: false }
+    { title: "Treino Matinal", xp: 50, attribute: "Físico", completed: true, streak: 5 },
+    { title: "Ler 30 minutos", xp: 30, attribute: "Mente", completed: true, streak: 12 },
+    { title: "Meditar 10 min", xp: 25, attribute: "Mente", completed: false, streak: 0 },
+    { title: "Estudar 1h", xp: 75, attribute: "Mente", completed: false, streak: 8 },
+    { title: "Networking", xp: 40, attribute: "Social", completed: false, streak: 2 }
   ];
 
   /* =========================
@@ -86,33 +157,29 @@ const RPGDashboard = () => {
   };
 
   /* =========================
-     APPLY QUEST XP + LEVEL UP
+     APPLY XP + LEVEL UP (ONCE)
   ========================= */
 
   useEffect(() => {
-    const gainedXP = stats.xpToday;
-
-    if (gainedXP === 0) return;
+    if (stats.xpToday === 0) return;
 
     setPlayerData(prev => {
-      let newXP = prev.currentXP + gainedXP;
+      let newXP = prev.currentXP + stats.xpToday;
       let newLevel = prev.level;
 
       if (newXP >= nextLevelXP) {
-        newXP = newXP - nextLevelXP;
+        newXP -= nextLevelXP;
         newLevel += 1;
-
-        setLevelUpFlash(true);
-        setTimeout(() => setLevelUpFlash(false), 1200);
       }
 
       return {
         ...prev,
         level: newLevel,
         currentXP: newXP,
-        totalXP: prev.totalXP + gainedXP
+        totalXP: prev.totalXP + stats.xpToday
       };
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* =========================
@@ -133,16 +200,16 @@ const RPGDashboard = () => {
         {/* HEADER */}
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">
-              <span className="text-neon-cyan">LIFE</span>
-              <span className="text-neon-purple">.RPG</span>
+            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+              <span className="text-neon-cyan text-glow-cyan">LIFE</span>
+              <span className="text-neon-purple text-glow-purple">.RPG</span>
             </h1>
-            <p className="text-gray-400 text-sm">
+            <p className="text-gray-400 text-sm mt-1">
               Sistema de Gamificação Pessoal
             </p>
           </div>
 
-          <div className="flex items-center gap-2 bg-cyber-card px-4 py-2 rounded-lg border border-neon-cyan/30">
+          <div className="flex items-center gap-2 bg-cyber-card border border-neon-cyan/30 px-4 py-2 rounded-lg">
             <Flame className="w-5 h-5 text-neon-orange animate-pulse" />
             <span className="text-white font-bold">{stats.streak}</span>
             <span className="text-gray-400 text-sm">dias</span>
@@ -157,10 +224,9 @@ const RPGDashboard = () => {
             <AvatarCard
               player={{ ...playerData, nextLevelXP }}
               xpProgress={xpProgress}
-              levelUp={levelUpFlash}
             />
 
-            <div className="bg-cyber-card rounded-xl p-5 border border-white/10">
+            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-neon-cyan" />
                 Atributos
@@ -178,7 +244,7 @@ const RPGDashboard = () => {
           <div className="space-y-6">
             <StatsCard stats={stats} />
 
-            <div className="bg-cyber-card rounded-xl p-5 border border-white/10">
+            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Swords className="w-5 h-5 text-neon-purple" />
                 Missões de Hoje
@@ -194,21 +260,23 @@ const RPGDashboard = () => {
 
           {/* RIGHT */}
           <div className="space-y-6">
-            <StreakCard weeklyXP={stats.weeklyXP} currentStreak={stats.streak} />
+            <StreakCard
+              weeklyXP={stats.weeklyXP}
+              currentStreak={stats.streak}
+            />
 
-            <div className="bg-cyber-card rounded-xl p-5 border border-white/10">
+            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-neon-orange" />
                 Conquistas
               </h3>
 
               <div className="space-y-3">
-                {[
-                  { name: "Early Bird", unlocked: true },
-                  { name: "Bookworm", unlocked: true },
-                  { name: "Iron Will", unlocked: false }
-                ].map((a, i) => (
-                  <AchievementCard key={i} achievement={a} />
+                {achievements.map((achievement, index) => (
+                  <AchievementCard
+                    key={index}
+                    achievement={achievement}
+                  />
                 ))}
               </div>
             </div>
