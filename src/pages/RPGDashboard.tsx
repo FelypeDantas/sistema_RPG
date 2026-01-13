@@ -1,256 +1,224 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Brain,
-  Users,
-  Wallet,
-  Trophy,
   Flame,
   Shield,
   Swords,
-  Dumbbell
+  Trophy,
+  Dumbbell,
+  Brain,
+  Users,
+  Wallet
 } from "lucide-react";
 
-import { AttributeBar } from "@/components/rpg/AttributeBar";
-import { AchievementCard } from "@/components/rpg/AchievementCard";
-import { QuestCard } from "@/components/rpg/QuestCard";
-import { StatsCard } from "@/components/rpg/StatsCard";
 import { AvatarCard } from "@/components/rpg/AvatarCard";
+import { AttributeBar } from "@/components/rpg/AttributeBar";
+import { QuestCard } from "@/components/rpg/QuestCard";
+import { AchievementCard } from "@/components/rpg/AchievementCard";
+import { StatsCard } from "@/components/rpg/StatsCard";
 import { StreakCard } from "@/components/rpg/StreakCard";
 
-const STORAGE_KEY = "life_rpg_player";
-const QUESTS_KEY = "life_rpg_quests";
-
-type Quest = {
-  title: string;
-  xp: number;
-  attribute: string;
-  completed: boolean;
-  streak: number;
-};
+const STORAGE_KEY = "life_rpg_save";
 
 const RPGDashboard = () => {
+  /* ==========================
+     PLAYER STATE
+  ========================== */
+  const [level, setLevel] = useState(1);
+  const [xp, setXP] = useState(0);
 
-  /* =========================
-     PLAYER (PERSISTENTE)
-  ========================= */
+  const nextLevelXP = 100 + xp * 0.9;
+  const xpProgress = (xp / nextLevelXP) * 100;
 
-  const [playerData, setPlayerData] = useState(() => {
+  /* ==========================
+     ATTRIBUTES
+  ========================== */
+  const [attributes, setAttributes] = useState({
+    Físico: 10,
+    Mente: 10,
+    Social: 10,
+    Finanças: 10
+  });
+
+  /* ==========================
+     MISSIONS
+  ========================== */
+  const [missions, setMissions] = useState([
+    { id: 1, title: "Treinar", xp: 50, attribute: "Físico", done: false },
+    { id: 2, title: "Estudar 30 min", xp: 40, attribute: "Mente", done: false }
+  ]);
+
+  const [history, setHistory] = useState<any[]>([]);
+
+  /* ==========================
+     LOAD / SAVE
+  ========================== */
+  useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved
-      ? JSON.parse(saved)
-      : {
-          name: "Player One",
-          title: "Cyber Warrior",
-          level: 1,
-          currentXP: 0,
-          totalXP: 15450,
-          rank: "Silver II",
-          avatar: "🧑‍💻"
-        };
-  });
+    if (!saved) return;
 
-  /* =========================
-     QUESTS (PERSISTENTES)
-  ========================= */
+    const data = JSON.parse(saved);
+    setLevel(data.level);
+    setXP(data.xp);
+    setAttributes(data.attributes);
+    setHistory(data.history || []);
+  }, []);
 
-  const [quests, setQuests] = useState<Quest[]>(() => {
-    const saved = localStorage.getItem(QUESTS_KEY);
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { title: "Treino Matinal", xp: 50, attribute: "Físico", completed: false, streak: 5 },
-          { title: "Ler 30 minutos", xp: 30, attribute: "Mente", completed: false, streak: 12 },
-          { title: "Meditar 10 min", xp: 25, attribute: "Mente", completed: false, streak: 0 },
-          { title: "Estudar 1h", xp: 75, attribute: "Mente", completed: false, streak: 8 },
-          { title: "Networking", xp: 40, attribute: "Social", completed: false, streak: 2 }
-        ];
-  });
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        level,
+        xp,
+        attributes,
+        history
+      })
+    );
+  }, [level, xp, attributes, history]);
 
-  /* =========================
-     XP & LEVEL SYSTEM
-  ========================= */
+  /* ==========================
+     COMPLETE MISSION
+  ========================== */
+  const completeMission = (missionId: number) => {
+    setMissions(prev =>
+      prev.map(m =>
+        m.id === missionId ? { ...m, done: true } : m
+      )
+    );
 
-  const nextLevelXP = useMemo(
-    () => 100 + playerData.currentXP * 90,
-    [playerData.currentXP]
-  );
+    const mission = missions.find(m => m.id === missionId);
+    if (!mission || mission.done) return;
 
-  const xpProgress = Math.min(
-    (playerData.currentXP / nextLevelXP) * 100,
-    100
-  );
-
-  /* =========================
-     STATS (DERIVADOS)
-  ========================= */
-
-  const stats = useMemo(() => {
-    const completed = quests.filter(q => q.completed);
-    return {
-      questsToday: completed.length,
-      totalQuests: quests.length,
-      xpToday: completed.reduce((acc, q) => acc + q.xp, 0),
-      streak: 18,
-      weeklyXP: [120, 95, 150, 80, 110, 0, 0]
-    };
-  }, [quests]);
-
-  /* =========================
-     APPLY XP WHEN QUEST COMPLETES
-  ========================= */
-
-  const completeQuest = (index: number) => {
-    setQuests(prev => {
-      if (prev[index].completed) return prev;
-
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        completed: true,
-        streak: updated[index].streak + 1
-      };
-
-      // Apply XP safely ONCE
-      setPlayerData(p => {
-        let newXP = p.currentXP + updated[index].xp;
-        let newLevel = p.level;
-
-        if (newXP >= nextLevelXP) {
-          newXP -= nextLevelXP;
-          newLevel += 1;
-        }
-
-        return {
-          ...p,
-          level: newLevel,
-          currentXP: newXP,
-          totalXP: p.totalXP + updated[index].xp
-        };
-      });
-
-      return updated;
+    setXP(prev => {
+      const newXP = prev + mission.xp;
+      if (newXP >= nextLevelXP) {
+        setLevel(l => l + 1);
+        return newXP - nextLevelXP;
+      }
+      return newXP;
     });
+
+    setAttributes(prev => ({
+      ...prev,
+      [mission.attribute]: prev[mission.attribute] + 1
+    }));
+
+    setHistory(prev => [
+      {
+        title: mission.title,
+        xp: mission.xp,
+        attribute: mission.attribute,
+        date: new Date().toISOString()
+      },
+      ...prev
+    ]);
   };
 
-  /* =========================
-     PERSISTENCE
-  ========================= */
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(playerData));
-  }, [playerData]);
-
-  useEffect(() => {
-    localStorage.setItem(QUESTS_KEY, JSON.stringify(quests));
-  }, [quests]);
-
-  /* =========================
-     ATTRIBUTES
-  ========================= */
-
-  const attributes = [
-    { name: "Físico", value: 68, icon: Dumbbell, color: "from-neon-red to-neon-orange", bgColor: "bg-neon-red/20" },
-    { name: "Mente", value: 85, icon: Brain, color: "from-neon-blue to-neon-cyan", bgColor: "bg-neon-blue/20" },
-    { name: "Social", value: 52, icon: Users, color: "from-neon-purple to-neon-pink", bgColor: "bg-neon-purple/20" },
-    { name: "Finanças", value: 74, icon: Wallet, color: "from-neon-green to-neon-cyan", bgColor: "bg-neon-green/20" }
-  ];
-
-  /* =========================
-     ACHIEVEMENTS (INTOCADOS)
-  ========================= */
-
-  const achievements = [
-    { name: "Early Bird", description: "Acorde 5h por 7 dias", icon: "🌅", unlocked: true, rarity: "common" },
-    { name: "Bookworm", description: "Leia 10 livros", icon: "📚", unlocked: true, rarity: "rare" },
-    { name: "Iron Will", description: "30 dias de streak", icon: "💪", unlocked: false, progress: 18, maxProgress: 30, rarity: "epic" },
-    { name: "Millionaire", description: "Economize R$100k", icon: "💎", unlocked: false, progress: 45000, maxProgress: 100000, rarity: "legendary" }
+  /* ==========================
+     UI DATA
+  ========================== */
+  const attributeBars = [
+    {
+      name: "Físico",
+      value: attributes.Físico,
+      icon: Dumbbell,
+      color: "from-neon-red to-neon-orange"
+    },
+    {
+      name: "Mente",
+      value: attributes.Mente,
+      icon: Brain,
+      color: "from-neon-blue to-neon-cyan"
+    },
+    {
+      name: "Social",
+      value: attributes.Social,
+      icon: Users,
+      color: "from-neon-purple to-neon-pink"
+    },
+    {
+      name: "Finanças",
+      value: attributes.Finanças,
+      icon: Wallet,
+      color: "from-neon-green to-neon-cyan"
+    }
   ];
 
   return (
-    <div className="min-h-screen bg-cyber-dark p-4 md:p-6 lg:p-8">
-      <div className="fixed inset-0 pointer-events-none bg-scanlines opacity-5 z-50" />
-      <div className="fixed inset-0 bg-cyber-grid opacity-10" />
+    <div className="min-h-screen bg-cyber-dark p-6">
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT */}
+        <div className="space-y-6">
+          <AvatarCard
+            player={{
+              name: "Player One",
+              title: "Cyber Warrior",
+              level,
+              currentXP: xp,
+              nextLevelXP,
+              rank: "Bronze",
+              avatar: "🧑‍💻"
+            }}
+            xpProgress={xpProgress}
+          />
 
-      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+          <div className="bg-cyber-card p-5 rounded-xl">
+            <h3 className="text-white flex items-center gap-2 mb-4">
+              <Shield className="w-5 h-5 text-neon-cyan" />
+              Atributos
+            </h3>
 
-        {/* HEADER */}
-        <header className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
-              <span className="text-neon-cyan text-glow-cyan">LIFE</span>
-              <span className="text-neon-purple text-glow-purple">.RPG</span>
-            </h1>
-            <p className="text-gray-400 text-sm mt-1">Sistema de Gamificação Pessoal</p>
+            {attributeBars.map(attr => (
+              <AttributeBar key={attr.name} attribute={attr} />
+            ))}
           </div>
+        </div>
 
-          <div className="flex items-center gap-2 bg-cyber-card border border-neon-cyan/30 px-4 py-2 rounded-lg">
-            <Flame className="w-5 h-5 text-neon-orange animate-pulse" />
-            <span className="text-white font-bold">{stats.streak}</span>
-            <span className="text-gray-400 text-sm">dias</span>
+        {/* CENTER */}
+        <div className="space-y-6">
+          <StatsCard
+            stats={{
+              questsToday: missions.filter(m => m.done).length,
+              totalQuests: missions.length,
+              xpToday: history.reduce((a, h) => a + h.xp, 0),
+              streak: history.length,
+              weeklyXP: []
+            }}
+          />
+
+          <div className="bg-cyber-card p-5 rounded-xl">
+            <h3 className="text-white flex items-center gap-2 mb-4">
+              <Swords className="w-5 h-5 text-neon-purple" />
+              Missões
+            </h3>
+
+            {missions.map(mission => (
+              <QuestCard
+                key={mission.id}
+                quest={mission}
+                onComplete={() => completeMission(mission.id)}
+              />
+            ))}
           </div>
-        </header>
+        </div>
 
-        {/* GRID */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* RIGHT */}
+        <div className="space-y-6">
+          <StreakCard weeklyXP={[]} currentStreak={history.length} />
 
-          {/* LEFT */}
-          <div className="space-y-6">
-            <AvatarCard
-              player={{ ...playerData, nextLevelXP }}
-              xpProgress={xpProgress}
-            />
+          <div className="bg-cyber-card p-5 rounded-xl">
+            <h3 className="text-white flex items-center gap-2 mb-4">
+              <Trophy className="w-5 h-5 text-neon-orange" />
+              Histórico
+            </h3>
 
-            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-neon-cyan" />
-                Atributos
-              </h3>
-              <div className="space-y-4">
-                {attributes.map(attr => (
-                  <AttributeBar key={attr.name} attribute={attr} />
-                ))}
-              </div>
-            </div>
+            <ul className="space-y-2 text-sm text-gray-300">
+              {history.slice(0, 10).map((h, i) => (
+                <li key={i}>
+                  ✔ {h.title} (+{h.xp} XP)
+                </li>
+              ))}
+            </ul>
           </div>
-
-          {/* CENTER */}
-          <div className="space-y-6">
-            <StatsCard stats={stats} />
-
-            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Swords className="w-5 h-5 text-neon-purple" />
-                Missões de Hoje
-              </h3>
-
-              <div className="space-y-3">
-                {quests.map((quest, index) => (
-                  <div key={index} onClick={() => completeQuest(index)}>
-                    <QuestCard quest={quest} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT */}
-          <div className="space-y-6">
-            <StreakCard weeklyXP={stats.weeklyXP} currentStreak={stats.streak} />
-
-            <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
-              <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-neon-orange" />
-                Conquistas
-              </h3>
-
-              <div className="space-y-3">
-                {achievements.map((achievement, index) => (
-                  <AchievementCard key={index} achievement={achievement} />
-                ))}
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </div>
