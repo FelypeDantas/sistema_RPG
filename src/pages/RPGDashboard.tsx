@@ -1,173 +1,228 @@
-import {
-  Shield,
-  Swords,
-  Trophy,
-  Dumbbell,
-  Brain,
-  Users,
-  Wallet
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-import { AvatarCard } from "@/components/rpg/AvatarCard";
-import { AttributeBar } from "@/components/rpg/AttributeBar";
-import { QuestCard } from "@/components/rpg/QuestCard";
-import { StatsCard } from "@/components/rpg/StatsCard";
-import { StreakCard } from "@/components/rpg/StreakCard";
-import { MissionForm } from "@/components/rpg/MissionForm";
-import { TalentTree } from "@/components/rpg/TalentTree";
-
-import { usePlayer } from "@/hooks/usePlayer";
 import { useMissions, Mission } from "@/hooks/useMissions";
 import { useAchievements } from "@/hooks/useAchievements";
-import { usePlayerClass } from "@/hooks/usePlayerClass";
-import { useTalents } from "@/hooks/useTalents";
 
-const RPGDashboard = () => {
-  const player = usePlayer();
-  const missions = useMissions();
-  const achievements = useAchievements(player, missions);
-  const playerClass = usePlayerClass(player);
-  const talents = useTalents(player.level);
+// =====================
+// Tipos
+// =====================
+interface Player {
+  level: number;
+  currentXP: number;
+  nextLevelXP: number;
+  attributes: {
+    Físico: number;
+    Mente: number;
+    Social: number;
+    Finanças: number;
+  };
+}
 
-  const totalXP = missions.history.reduce(
-    (acc: number, h: any) => acc + (h.success ? h.xp : 0),
-    0
-  );
+// =====================
+// Constantes
+// =====================
+const PLAYER_STORAGE = "rpg_player_data";
 
-  const handleMissionComplete = (mission: Mission) => {
-    let successChance = 0.8;
-
-    // 🎯 Buff por talentos
-    if (talents.talents.find(t => t.id === "focus" && t.unlocked)) {
-      successChance += 0.1;
+// =====================
+// Componente
+// =====================
+export default function RPGDashboard() {
+  // 🧙 Player base
+  const [player, setPlayer] = useState<Player>({
+    level: 1,
+    currentXP: 0,
+    nextLevelXP: 100,
+    attributes: {
+      Físico: 0,
+      Mente: 0,
+      Social: 0,
+      Finanças: 0
     }
+  });
 
-    const success = missions.completeMission(mission, successChance);
+  // 🎯 Missões (BLINDADO)
+  const missionsHook = useMissions();
+  const missions = missionsHook ?? {
+    missions: [],
+    history: [],
+    addMission: () => {},
+    completeMission: () => false
+  };
+
+  // 🏆 Conquistas
+  const achievements = useAchievements(player, missions);
+
+  // =====================
+  // Load Player
+  // =====================
+  useEffect(() => {
+    const stored = localStorage.getItem(PLAYER_STORAGE);
+    if (stored) {
+      setPlayer(JSON.parse(stored));
+    }
+  }, []);
+
+  // =====================
+  // Save Player
+  // =====================
+  useEffect(() => {
+    localStorage.setItem(PLAYER_STORAGE, JSON.stringify(player));
+  }, [player]);
+
+  // =====================
+  // Funções
+  // =====================
+  const gainXP = (xp: number) => {
+    setPlayer(prev => {
+      let currentXP = prev.currentXP + xp;
+      let level = prev.level;
+      let nextXP = prev.nextLevelXP;
+
+      while (currentXP >= nextXP) {
+        currentXP -= nextXP;
+        level += 1;
+        nextXP = Math.floor(nextXP * 1.25);
+      }
+
+      return {
+        ...prev,
+        level,
+        currentXP,
+        nextLevelXP: nextXP
+      };
+    });
+  };
+
+  const completeMission = (mission: Mission) => {
+    const success = missions.completeMission(mission, 0.8);
 
     if (success) {
-      player.gainXP(mission.xp, mission.attribute);
+      gainXP(mission.xp);
+
+      setPlayer(prev => ({
+        ...prev,
+        attributes: {
+          ...prev.attributes,
+          [mission.attribute]:
+            prev.attributes[mission.attribute] + 1
+        }
+      }));
     }
   };
 
+  // =====================
+  // Render
+  // =====================
   return (
-    <div className="min-h-screen bg-cyber-dark p-6">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="p-6 space-y-6">
 
-        {/* LEFT COLUMN */}
-        <div className="space-y-6">
-          <AvatarCard
-            player={{
-              name: "Player One",
-              title: playerClass.title,
-              level: player.level,
-              currentXP: player.xp,
-              nextLevelXP: player.nextLevelXP,
-              totalXP,
-              rank: playerClass.rank,
-              avatar: playerClass.avatar
-            }}
-            xpProgress={(player.xp / player.nextLevelXP) * 100}
-          />
+      {/* PLAYER CARD */}
+      <Card>
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-bold">🧙 Player</h2>
 
-          <div className="bg-cyber-card p-5 rounded-xl">
-            <h3 className="text-white flex items-center gap-2 mb-4">
-              <Shield className="w-5 h-5 text-neon-cyan" />
-              Atributos
-            </h3>
-
-            <AttributeBar attribute={{
-              name: "Físico",
-              value: player.attributes.Físico,
-              icon: Dumbbell,
-              color: "from-neon-red to-neon-orange"
-            }} />
-
-            <AttributeBar attribute={{
-              name: "Mente",
-              value: player.attributes.Mente,
-              icon: Brain,
-              color: "from-neon-blue to-neon-cyan"
-            }} />
-
-            <AttributeBar attribute={{
-              name: "Social",
-              value: player.attributes.Social,
-              icon: Users,
-              color: "from-neon-purple to-neon-pink"
-            }} />
-
-            <AttributeBar attribute={{
-              name: "Finanças",
-              value: player.attributes.Finanças,
-              icon: Wallet,
-              color: "from-neon-green to-neon-cyan"
-            }} />
+          <div className="flex justify-between text-sm">
+            <span>Nível {player.level}</span>
+            <span>
+              {player.currentXP} / {player.nextLevelXP} XP
+            </span>
           </div>
 
-          <TalentTree
-            talents={talents.talents}
-            points={talents.points}
-            onUnlock={talents.unlockTalent}
-          />
-        </div>
-
-        {/* CENTER COLUMN */}
-        <div className="space-y-6">
-          <StatsCard
-            stats={{
-              questsToday: missions.missions.filter(m => m.done).length,
-              totalQuests: missions.missions.length,
-              xpToday: missions.history.reduce(
-                (a: number, h: any) => a + (h.success ? h.xp : 0),
-                0
-              ),
-              streak: missions.history.filter(h => h.success).length,
-              weeklyXP: []
-            }}
+          <Progress
+            value={(player.currentXP / player.nextLevelXP) * 100}
           />
 
-          <MissionForm onAdd={missions.addMission} />
-
-          <div className="bg-cyber-card p-5 rounded-xl">
-            <h3 className="text-white flex items-center gap-2 mb-4">
-              <Swords className="w-5 h-5 text-neon-purple" />
-              Missões
-            </h3>
-
-            {missions.missions.map(mission => (
-              <QuestCard
-                key={mission.id}
-                quest={mission}
-                onComplete={() => handleMissionComplete(mission)}
-              />
+          <div className="flex gap-2 flex-wrap">
+            {Object.entries(player.attributes).map(([key, value]) => (
+              <Badge key={key} variant="secondary">
+                {key}: {value}
+              </Badge>
             ))}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* RIGHT COLUMN */}
-        <div className="space-y-6">
-          <StreakCard
-            weeklyXP={[]}
-            currentStreak={missions.history.filter(h => h.success).length}
-          />
+      {/* MISSÕES */}
+      <Card>
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-bold">🎯 Missões</h2>
 
-          <div className="bg-cyber-card p-5 rounded-xl">
-            <h3 className="text-white flex items-center gap-2 mb-4">
-              <Trophy className="w-5 h-5 text-neon-orange" />
-              Conquistas
-            </h3>
+          {missions.missions.length === 0 && (
+            <p className="text-sm opacity-70">
+              Nenhuma missão cadastrada
+            </p>
+          )}
 
-            <ul className="space-y-2 text-sm text-gray-300">
-              {achievements.unlocked.map(a => (
-                <li key={a.id}>🏆 {a.title}</li>
-              ))}
-            </ul>
+          {missions.missions.map(mission => (
+            <div
+              key={mission.id}
+              className="flex justify-between items-center border p-3 rounded"
+            >
+              <div>
+                <p className="font-semibold">{mission.title}</p>
+                <p className="text-sm opacity-70">
+                  +{mission.xp} XP • {mission.attribute}
+                </p>
+              </div>
+
+              <Button
+                disabled={mission.done}
+                onClick={() => completeMission(mission)}
+              >
+                {mission.done ? "Concluída" : "Executar"}
+              </Button>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* HISTÓRICO */}
+      <Card>
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-bold">📜 Histórico</h2>
+
+          {missions.history.length === 0 && (
+            <p className="text-sm opacity-70">
+              Nenhuma missão executada
+            </p>
+          )}
+
+          {missions.history.map((item, index) => (
+            <div
+              key={index}
+              className="flex justify-between text-sm border-b pb-1"
+            >
+              <span>{item.title}</span>
+              <span>
+                {item.success ? "✅ Sucesso" : "❌ Falha"}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* CONQUISTAS */}
+      <Card>
+        <CardContent className="space-y-4">
+          <h2 className="text-xl font-bold">🏆 Conquistas</h2>
+
+          {achievements.unlocked.length === 0 && (
+            <p className="text-sm opacity-70">
+              Nenhuma conquista desbloqueada
+            </p>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            {achievements.unlocked.map(a => (
+              <Badge key={a.id}>{a.title}</Badge>
+            ))}
           </div>
-        </div>
-
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default RPGDashboard;
+}
