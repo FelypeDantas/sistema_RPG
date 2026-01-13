@@ -1,28 +1,38 @@
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "life_rpg_missions";
-
 export interface Mission {
-  id: number;
+  id: string;
   title: string;
   xp: number;
   attribute: "Físico" | "Mente" | "Social" | "Finanças";
-  done: boolean;
+  done?: boolean;
 }
 
-export function useMissions() {
+interface MissionHistory {
+  id: string;
+  title: string;
+  xp: number;
+  success: boolean;
+  date: string;
+}
+
+const STORAGE_KEY = "rpg_missions_data";
+
+export const useMissions = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<MissionHistory[]>([]);
 
+  // 🔄 Load LocalStorage
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    const data = JSON.parse(saved);
-    setMissions(data.missions || []);
-    setHistory(data.history || []);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      setMissions(parsed.missions ?? []);
+      setHistory(parsed.history ?? []);
+    }
   }, []);
 
+  // 💾 Save LocalStorage
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -30,39 +40,41 @@ export function useMissions() {
     );
   }, [missions, history]);
 
-  const addMission = (mission: Omit<Mission, "id" | "done">) => {
-    setMissions(prev => [
-      ...prev,
-      { ...mission, id: Date.now(), done: false }
-    ]);
+  const addMission = (mission: Mission) => {
+    setMissions(prev => [...prev, mission]);
   };
 
   const completeMission = (
-  mission: Mission,
-  successChance = 0.8
-) => {
-  const roll = Math.random();
+    mission: Mission,
+    successChance = 0.8
+  ) => {
+    const success = Math.random() < successChance;
 
-  const success = roll <= successChance;
+    setHistory(prev => [
+      ...prev,
+      {
+        id: mission.id,
+        title: mission.title,
+        xp: mission.xp,
+        success,
+        date: new Date().toISOString()
+      }
+    ]);
 
-  setMissions(prev =>
-    prev.map(m =>
-      m.id === mission.id ? { ...m, done: true } : m
-    )
-  );
+    setMissions(prev =>
+      prev.map(m =>
+        m.id === mission.id ? { ...m, done: true } : m
+      )
+    );
 
-  setHistory(prev => [
-    {
-      title: mission.title,
-      xp: success ? mission.xp : 0,
-      attribute: mission.attribute,
-      success,
-      date: new Date().toISOString()
-    },
-    ...prev
-  ]);
+    return success;
+  };
 
-  return success;
+  // ⚠️ ISSO É O MAIS IMPORTANTE
+  return {
+    missions,
+    history,
+    addMission,
+    completeMission
+  };
 };
-
-}
