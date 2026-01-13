@@ -13,19 +13,37 @@ import { AvatarCard } from "@/components/rpg/AvatarCard";
 import { StreakCard } from "@/components/rpg/StreakCard";
 
 const RPGDashboard = () => {
-  // Player data
+
+  /* =========================
+     PLAYER DATA
+  ========================= */
+
   const playerData = {
     name: "Player One",
     title: "Cyber Warrior",
     level: 12,
     currentXP: 2450,
-    nextLevelXP: 3000,
     totalXP: 15450,
     rank: "Silver II",
     avatar: "🧑‍💻"
   };
 
-  // Attributes (0-100)
+  /* =========================
+     XP CALCULATION
+     nextLevelXP = 100 + (XPAtual * 90)
+  ========================= */
+
+  const nextLevelXP = 100 + (playerData.currentXP * 90);
+
+  const xpProgress = Math.min(
+    (playerData.currentXP / nextLevelXP) * 100,
+    100
+  );
+
+  /* =========================
+     ATTRIBUTES
+  ========================= */
+
   const attributes = [
     { 
       name: "Físico", 
@@ -61,7 +79,10 @@ const RPGDashboard = () => {
     }
   ];
 
-  // Achievements
+  /* =========================
+     ACHIEVEMENTS
+  ========================= */
+
   const achievements = [
     { 
       name: "Early Bird", 
@@ -97,7 +118,10 @@ const RPGDashboard = () => {
     }
   ];
 
-  // Active quests
+  /* =========================
+     ACTIVE QUESTS
+  ========================= */
+
   const activeQuests = [
     {
       title: "Treino Matinal",
@@ -136,7 +160,10 @@ const RPGDashboard = () => {
     }
   ];
 
-  // Stats
+  /* =========================
+     STATS
+  ========================= */
+
   const stats = {
     questsToday: 2,
     totalQuests: 5,
@@ -145,26 +172,25 @@ const RPGDashboard = () => {
     weeklyXP: [120, 95, 150, 80, 110, 0, 0]
   };
 
-  const xpProgress = (playerData.currentXP / playerData.nextLevelXP) * 100;
-
   return (
     <div className="min-h-screen bg-cyber-dark p-4 md:p-6 lg:p-8">
-      {/* Scan lines effect overlay */}
       <div className="fixed inset-0 pointer-events-none bg-scanlines opacity-5 z-50" />
-      
-      {/* Grid background */}
       <div className="fixed inset-0 bg-cyber-grid opacity-10" />
-      
+
       <div className="relative z-10 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+
+        {/* HEADER */}
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
               <span className="text-neon-cyan text-glow-cyan">LIFE</span>
               <span className="text-neon-purple text-glow-purple">.RPG</span>
             </h1>
-            <p className="text-gray-400 text-sm mt-1">Sistema de Gamificação Pessoal</p>
+            <p className="text-gray-400 text-sm mt-1">
+              Sistema de Gamificação Pessoal
+            </p>
           </div>
+
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 bg-cyber-card border border-neon-cyan/30 px-4 py-2 rounded-lg">
               <Flame className="w-5 h-5 text-neon-orange animate-pulse" />
@@ -174,35 +200,43 @@ const RPGDashboard = () => {
           </div>
         </header>
 
-        {/* Main Grid */}
+        {/* MAIN GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Avatar & Attributes */}
+
+          {/* LEFT */}
           <div className="space-y-6">
-            <AvatarCard player={playerData} xpProgress={xpProgress} />
-            
-            {/* Attributes */}
+            <AvatarCard
+              player={{
+                ...playerData,
+                nextLevelXP
+              }}
+              xpProgress={xpProgress}
+            />
+
             <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-neon-cyan" />
                 Atributos
               </h3>
+
               <div className="space-y-4">
-                {attributes.map((attr) => (
+                {attributes.map(attr => (
                   <AttributeBar key={attr.name} attribute={attr} />
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Center Column - Quests */}
+          {/* CENTER */}
           <div className="space-y-6">
             <StatsCard stats={stats} />
-            
+
             <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Swords className="w-5 h-5 text-neon-purple" />
                 Missões de Hoje
               </h3>
+
               <div className="space-y-3">
                 {activeQuests.map((quest, index) => (
                   <QuestCard key={index} quest={quest} />
@@ -211,22 +245,30 @@ const RPGDashboard = () => {
             </div>
           </div>
 
-          {/* Right Column - Achievements & Streak */}
+          {/* RIGHT */}
           <div className="space-y-6">
-            <StreakCard weeklyXP={stats.weeklyXP} currentStreak={stats.streak} />
-            
+            <StreakCard
+              weeklyXP={stats.weeklyXP}
+              currentStreak={stats.streak}
+            />
+
             <div className="bg-cyber-card border border-white/10 rounded-xl p-5">
               <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-neon-orange" />
                 Conquistas
               </h3>
+
               <div className="space-y-3">
                 {achievements.map((achievement, index) => (
-                  <AchievementCard key={index} achievement={achievement} />
+                  <AchievementCard
+                    key={index}
+                    achievement={achievement}
+                  />
                 ))}
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
