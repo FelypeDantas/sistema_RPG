@@ -6,21 +6,28 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RPGDashboard from "./pages/RPGDashboard";
 import NotFound from "./pages/NotFound";
 
+// 👉 NOVO
+import { PlayerProvider } from "@/context/PlayerContext";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RPGDashboard />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    {/* 👉 O PlayerProvider entra AQUI */}
+    <PlayerProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<RPGDashboard />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </PlayerProvider>
   </QueryClientProvider>
 );
 
