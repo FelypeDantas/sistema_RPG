@@ -14,23 +14,46 @@ import { QuestCard } from "@/components/rpg/QuestCard";
 import { StatsCard } from "@/components/rpg/StatsCard";
 import { StreakCard } from "@/components/rpg/StreakCard";
 import { MissionForm } from "@/components/rpg/MissionForm";
+import { TalentTree } from "@/components/rpg/TalentTree";
 
 import { usePlayer } from "@/hooks/usePlayer";
-import { useMissions } from "@/hooks/useMissions";
+import { useMissions, Mission } from "@/hooks/useMissions";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerClass } from "@/hooks/usePlayerClass";
+import { useTalents } from "@/hooks/useTalents";
 
 const RPGDashboard = () => {
   const player = usePlayer();
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
+  const talents = useTalents(player.level);
+
+  const totalXP = missions.history.reduce(
+    (acc: number, h: any) => acc + (h.success ? h.xp : 0),
+    0
+  );
+
+  const handleMissionComplete = (mission: Mission) => {
+    let successChance = 0.8;
+
+    // 🎯 Buff por talentos
+    if (talents.talents.find(t => t.id === "focus" && t.unlocked)) {
+      successChance += 0.1;
+    }
+
+    const success = missions.completeMission(mission, successChance);
+
+    if (success) {
+      player.gainXP(mission.xp, mission.attribute);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-cyber-dark p-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT */}
+        {/* LEFT COLUMN */}
         <div className="space-y-6">
           <AvatarCard
             player={{
@@ -39,7 +62,7 @@ const RPGDashboard = () => {
               level: player.level,
               currentXP: player.xp,
               nextLevelXP: player.nextLevelXP,
-              totalXP: missions.history.reduce((a, h) => a + h.xp, 0),
+              totalXP,
               rank: playerClass.rank,
               avatar: playerClass.avatar
             }}
@@ -80,16 +103,25 @@ const RPGDashboard = () => {
               color: "from-neon-green to-neon-cyan"
             }} />
           </div>
+
+          <TalentTree
+            talents={talents.talents}
+            points={talents.points}
+            onUnlock={talents.unlockTalent}
+          />
         </div>
 
-        {/* CENTER */}
+        {/* CENTER COLUMN */}
         <div className="space-y-6">
           <StatsCard
             stats={{
               questsToday: missions.missions.filter(m => m.done).length,
               totalQuests: missions.missions.length,
-              xpToday: missions.history.reduce((a, h) => a + h.xp, 0),
-              streak: missions.history.length,
+              xpToday: missions.history.reduce(
+                (a: number, h: any) => a + (h.success ? h.xp : 0),
+                0
+              ),
+              streak: missions.history.filter(h => h.success).length,
               weeklyXP: []
             }}
           />
@@ -106,18 +138,18 @@ const RPGDashboard = () => {
               <QuestCard
                 key={mission.id}
                 quest={mission}
-                onComplete={() => {
-                  missions.completeMission(mission);
-                  player.gainXP(mission.xp, mission.attribute);
-                }}
+                onComplete={() => handleMissionComplete(mission)}
               />
             ))}
           </div>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT COLUMN */}
         <div className="space-y-6">
-          <StreakCard weeklyXP={[]} currentStreak={missions.history.length} />
+          <StreakCard
+            weeklyXP={[]}
+            currentStreak={missions.history.filter(h => h.success).length}
+          />
 
           <div className="bg-cyber-card p-5 rounded-xl">
             <h3 className="text-white flex items-center gap-2 mb-4">

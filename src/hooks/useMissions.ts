@@ -37,28 +37,32 @@ export function useMissions() {
     ]);
   };
 
-  const completeMission = (mission: Mission) => {
-    setMissions(prev =>
-      prev.map(m =>
-        m.id === mission.id ? { ...m, done: true } : m
-      )
-    );
+  const completeMission = (
+  mission: Mission,
+  successChance = 0.8
+) => {
+  const roll = Math.random();
 
-    setHistory(prev => [
-      {
-        title: mission.title,
-        xp: mission.xp,
-        attribute: mission.attribute,
-        date: new Date().toISOString()
-      },
-      ...prev
-    ]);
-  };
+  const success = roll <= successChance;
 
-  return {
-    missions,
-    history,
-    addMission,
-    completeMission
-  };
+  setMissions(prev =>
+    prev.map(m =>
+      m.id === mission.id ? { ...m, done: true } : m
+    )
+  );
+
+  setHistory(prev => [
+    {
+      title: mission.title,
+      xp: success ? mission.xp : 0,
+      attribute: mission.attribute,
+      success,
+      date: new Date().toISOString()
+    },
+    ...prev
+  ]);
+
+  return success;
+};
+
 }
