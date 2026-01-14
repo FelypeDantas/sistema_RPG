@@ -1,4 +1,4 @@
-import { Check, Flame, Zap } from "lucide-react";
+import { Check, Zap } from "lucide-react";
 import { Mission } from "@/hooks/useMissions";
 
 interface QuestCardProps {
@@ -17,7 +17,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
   return (
     <div
       className={`
-        relative p-4 rounded-xl border transition-all duration-300
+        relative group p-4 rounded-xl border transition-all duration-300
         ${quest.done
           ? "bg-neon-green/10 border-neon-green/30"
           : "bg-cyber-darker border-white/10 hover:border-neon-cyan/50 hover:bg-cyber-card"
@@ -26,8 +26,6 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
     >
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
-          
-          {/* Checkbox */}
           <div
             onClick={() => {
               if (!quest.done) onComplete();
@@ -67,7 +65,6 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
           </div>
         </div>
 
-        {/* XP Reward */}
         <div
           className={`
             flex items-center gap-1 px-2 py-1 rounded-lg
@@ -89,7 +86,24 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
         </div>
       </div>
 
-      {/* Completed glow */}
+      {/* Tooltip da descrição */}
+      {quest.description && (
+        <div
+          className="
+            absolute z-20 left-1/2 -translate-x-1/2 top-full mt-3
+            w-64 p-3 rounded-lg
+            bg-black/90 border border-neon-cyan/30
+            text-xs text-gray-200
+            opacity-0 scale-95
+            group-hover:opacity-100 group-hover:scale-100
+            transition-all duration-200
+            pointer-events-none
+          "
+        >
+          {quest.description}
+        </div>
+      )}
+
       {quest.done && (
         <div className="absolute inset-0 rounded-xl bg-neon-green/5 animate-pulse pointer-events-none" />
       )}
