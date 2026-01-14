@@ -1,5 +1,6 @@
 import { Check, Zap } from "lucide-react";
 import { Mission } from "@/hooks/useMissions";
+import { useEffect, useState } from "react";
 
 interface QuestCardProps {
   quest: Mission;
@@ -14,10 +15,28 @@ const attributeColors: Record<string, string> = {
 };
 
 export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [hovering, setHovering] = useState(false);
+
+  useEffect(() => {
+    if (!hovering) {
+      setShowTooltip(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowTooltip(true);
+    }, 300); // ⏳ delay inteligente
+
+    return () => clearTimeout(timer);
+  }, [hovering]);
+
   return (
     <div
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
       className={`
-        relative group p-4 rounded-xl border transition-all duration-300
+        relative p-4 rounded-xl border transition-all duration-300
         ${quest.done
           ? "bg-neon-green/10 border-neon-green/30"
           : "bg-cyber-darker border-white/10 hover:border-neon-cyan/50 hover:bg-cyber-card"
@@ -55,13 +74,11 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
               {quest.title}
             </h4>
 
-            <div className="flex items-center gap-2 mt-1">
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full border ${attributeColors[quest.attribute]}`}
-              >
-                {quest.attribute}
-              </span>
-            </div>
+            <span
+              className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full border ${attributeColors[quest.attribute]}`}
+            >
+              {quest.attribute}
+            </span>
           </div>
         </div>
 
@@ -86,17 +103,15 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
         </div>
       </div>
 
-      {/* Tooltip da descrição */}
-      {quest.description && (
+      {/* Tooltip com delay */}
+      {quest.description && showTooltip && (
         <div
           className="
-            absolute z-20 left-1/2 -translate-x-1/2 top-full mt-3
+            absolute z-30 left-1/2 -translate-x-1/2 top-full mt-3
             w-64 p-3 rounded-lg
             bg-black/90 border border-neon-cyan/30
             text-xs text-gray-200
-            opacity-0 scale-95
-            group-hover:opacity-100 group-hover:scale-100
-            transition-all duration-200
+            animate-fade-in
             pointer-events-none
           "
         >
