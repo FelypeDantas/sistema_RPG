@@ -7,6 +7,7 @@ interface MissionFormProps {
 
 export const MissionForm = ({ onAdd }: MissionFormProps) => {
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [xp, setXP] = useState(10);
   const [attribute, setAttribute] =
     useState<"Mente" | "Físico" | "Social" | "Finanças">("Mente");
@@ -15,14 +16,16 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
     if (!title.trim()) return;
 
     onAdd({
-      id: crypto.randomUUID(), // 🔑 ID ÚNICO (ESSENCIAL)
+      id: crypto.randomUUID(),
       title,
+      description,
       xp,
       attribute,
       done: false
     });
 
     setTitle("");
+    setDescription("");
     setXP(10);
     setAttribute("Mente");
   };
@@ -34,6 +37,14 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         placeholder="Nova missão"
         value={title}
         onChange={e => setTitle(e.target.value)}
+      />
+
+      <textarea
+        className="w-full bg-black/40 border border-white/10 rounded px-3 py-2 text-white resize-none"
+        placeholder="Descrição da missão (visível ao passar o mouse)"
+        value={description}
+        onChange={e => setDescription(e.target.value)}
+        rows={3}
       />
 
       <div className="flex gap-2">
