@@ -30,14 +30,13 @@ const RPGDashboard = () => {
   const talents = useTalents(player.level);
 
   const totalXP = missions.history.reduce(
-    (acc: number, h: any) => acc + (h.success ? h.xp : 0),
+    (acc, h) => acc + (h.success ? h.xp : 0),
     0
   );
 
   const handleMissionComplete = (mission: Mission) => {
     let successChance = 0.8;
 
-    // 🎯 Buff por talentos
     if (talents.talents.find(t => t.id === "focus" && t.unlocked)) {
       successChance += 0.1;
     }
@@ -49,11 +48,36 @@ const RPGDashboard = () => {
     }
   };
 
+  /* =============================
+     📊 STREAK SEMANAL (FIX)
+  ============================== */
+
+  const now = new Date();
+
+  const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
+    const day = new Date();
+    day.setDate(now.getDate() - (6 - i));
+
+    const dayKey = day.toISOString().split("T")[0];
+
+    const xp = missions.history
+      .filter(
+        h =>
+          h.success &&
+          h.date.startsWith(dayKey)
+      )
+      .reduce((acc, h) => acc + h.xp, 0);
+
+    return xp;
+  });
+
+  const currentStreak = missions.history.filter(h => h.success).length;
+
   return (
     <div className="min-h-screen bg-cyber-dark p-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT COLUMN */}
+        {/* LEFT */}
         <div className="space-y-6">
           <AvatarCard
             player={{
@@ -75,33 +99,41 @@ const RPGDashboard = () => {
               Atributos
             </h3>
 
-            <AttributeBar attribute={{
-              name: "Físico",
-              value: player.attributes.Físico,
-              icon: Dumbbell,
-              color: "from-neon-red to-neon-orange"
-            }} />
+            <AttributeBar
+              attribute={{
+                name: "Físico",
+                value: player.attributes.Físico,
+                icon: Dumbbell,
+                color: "from-neon-red to-neon-orange"
+              }}
+            />
 
-            <AttributeBar attribute={{
-              name: "Mente",
-              value: player.attributes.Mente,
-              icon: Brain,
-              color: "from-neon-blue to-neon-cyan"
-            }} />
+            <AttributeBar
+              attribute={{
+                name: "Mente",
+                value: player.attributes.Mente,
+                icon: Brain,
+                color: "from-neon-blue to-neon-cyan"
+              }}
+            />
 
-            <AttributeBar attribute={{
-              name: "Social",
-              value: player.attributes.Social,
-              icon: Users,
-              color: "from-neon-purple to-neon-pink"
-            }} />
+            <AttributeBar
+              attribute={{
+                name: "Social",
+                value: player.attributes.Social,
+                icon: Users,
+                color: "from-neon-purple to-neon-pink"
+              }}
+            />
 
-            <AttributeBar attribute={{
-              name: "Finanças",
-              value: player.attributes.Finanças,
-              icon: Wallet,
-              color: "from-neon-green to-neon-cyan"
-            }} />
+            <AttributeBar
+              attribute={{
+                name: "Finanças",
+                value: player.attributes.Finanças,
+                icon: Wallet,
+                color: "from-neon-green to-neon-cyan"
+              }}
+            />
           </div>
 
           <TalentTree
@@ -111,18 +143,15 @@ const RPGDashboard = () => {
           />
         </div>
 
-        {/* CENTER COLUMN */}
+        {/* CENTER */}
         <div className="space-y-6">
           <StatsCard
             stats={{
               questsToday: missions.missions.filter(m => m.done).length,
               totalQuests: missions.missions.length,
-              xpToday: missions.history.reduce(
-                (a: number, h: any) => a + (h.success ? h.xp : 0),
-                0
-              ),
-              streak: missions.history.filter(h => h.success).length,
-              weeklyXP: []
+              xpToday: weeklyXP[6] ?? 0,
+              streak: currentStreak,
+              weeklyXP
             }}
           />
 
@@ -144,11 +173,11 @@ const RPGDashboard = () => {
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT */}
         <div className="space-y-6">
           <StreakCard
-            weeklyXP={[]}
-            currentStreak={missions.history.filter(h => h.success).length}
+            weeklyXP={weeklyXP}
+            currentStreak={currentStreak}
           />
 
           <div className="bg-cyber-card p-5 rounded-xl">
