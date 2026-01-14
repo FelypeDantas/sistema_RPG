@@ -2,6 +2,18 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "life_rpg_player";
 
+export type TraitId =
+  | "disciplinado"
+  | "impulsivo"
+  | "persistente"
+  | "econômico";
+
+export interface Trait {
+  id: TraitId;
+  name: string;
+  description: string;
+}
+
 export function usePlayer() {
   const [level, setLevel] = useState(1);
   const [xp, setXP] = useState(0);
@@ -13,24 +25,44 @@ export function usePlayer() {
     Finanças: 10
   });
 
+  const [traits, setTraits] = useState<Trait[]>([
+    {
+      id: "disciplinado",
+      name: "Disciplinado",
+      description: "Ganha mais XP ao manter streaks"
+    }
+  ]);
+
   const nextLevelXP = Math.floor(100 + xp * 0.9);
 
+  // 🔹 LOAD
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
 
     const data = JSON.parse(saved);
-    setLevel(data.level);
-    setXP(data.xp);
-    setAttributes(data.attributes);
+    setLevel(data.level ?? 1);
+    setXP(data.xp ?? 0);
+    setAttributes(data.attributes ?? attributes);
+    setTraits(data.traits ?? traits);
   }, []);
 
+  // 🔹 SAVE
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ level, xp, attributes })
+      JSON.stringify({
+        level,
+        xp,
+        attributes,
+        traits
+      })
     );
-  }, [level, xp, attributes]);
+  }, [level, xp, attributes, traits]);
+
+  const hasTrait = (id: TraitId) => {
+    return traits.some(t => t.id === id);
+  };
 
   const gainXP = (amount: number, attribute?: keyof typeof attributes) => {
     setXP(prev => {
@@ -57,6 +89,8 @@ export function usePlayer() {
     xp,
     nextLevelXP,
     attributes,
+    traits,
+    hasTrait,
     gainXP
   };
 }

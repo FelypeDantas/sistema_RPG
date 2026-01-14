@@ -34,6 +34,10 @@ const RPGDashboard = () => {
     0
   );
 
+  /* =============================
+     🎯 MISSÃO + TRAITS
+  ============================== */
+
   const handleMissionComplete = (mission: Mission) => {
     let successChance = 0.8;
 
@@ -41,18 +45,42 @@ const RPGDashboard = () => {
       successChance += 0.1;
     }
 
+    // Trait: impulsivo (menos chance)
+    if (player.hasTrait?.("impulsivo")) {
+      successChance -= 0.1;
+    }
+
     const success = missions.completeMission(mission, successChance);
 
-    if (success) {
-      player.gainXP(mission.xp, mission.attribute);
+    if (!success) return;
+
+    let finalXP = mission.xp;
+
+    // Trait: econômico
+    if (
+      player.hasTrait?.("econômico") &&
+      mission.attribute === "Finanças"
+    ) {
+      finalXP *= 1.2;
     }
+
+    // Trait: disciplinado (bonus com streak)
+    if (
+      player.hasTrait?.("disciplinado") &&
+      currentStreak >= 3
+    ) {
+      finalXP *= 1.1;
+    }
+
+    player.gainXP(Math.round(finalXP), mission.attribute);
   };
 
   /* =============================
-     📊 STREAK SEMANAL (FIX)
+     📊 STREAK SEMANAL (CORRETO)
   ============================== */
 
   const now = new Date();
+  const todayKey = now.toISOString().split("T")[0];
 
   const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
     const day = new Date();
@@ -60,18 +88,35 @@ const RPGDashboard = () => {
 
     const dayKey = day.toISOString().split("T")[0];
 
-    const xp = missions.history
-      .filter(
-        h =>
-          h.success &&
-          h.date.startsWith(dayKey)
-      )
+    return missions.history
+      .filter(h => h.success && h.date.startsWith(dayKey))
       .reduce((acc, h) => acc + h.xp, 0);
-
-    return xp;
   });
 
-  const currentStreak = missions.history.filter(h => h.success).length;
+  // 🔥 STREAK REAL (dias consecutivos)
+  let streak = 0;
+
+  for (let i = 0; i < 365; i++) {
+    const day = new Date();
+    day.setDate(now.getDate() - i);
+    const key = day.toISOString().split("T")[0];
+
+    const didSomething = missions.history.some(
+      h => h.success && h.date.startsWith(key)
+    );
+
+    if (didSomething) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  // Trait: persistente (não quebra no primeiro dia)
+  const currentStreak =
+    streak === 0 && player.hasTrait?.("persistente")
+      ? 1
+      : streak;
 
   return (
     <div className="min-h-screen bg-cyber-dark p-6">
