@@ -1,9 +1,31 @@
 import { useState } from "react";
+import { Mission } from "@/hooks/useMissions";
 
-export const MissionForm = ({ onAdd }: { onAdd: any }) => {
+interface MissionFormProps {
+  onAdd: (mission: Mission) => void;
+}
+
+export const MissionForm = ({ onAdd }: MissionFormProps) => {
   const [title, setTitle] = useState("");
   const [xp, setXP] = useState(10);
-  const [attribute, setAttribute] = useState("Mente");
+  const [attribute, setAttribute] =
+    useState<"Mente" | "Físico" | "Social" | "Finanças">("Mente");
+
+  const handleAdd = () => {
+    if (!title.trim()) return;
+
+    onAdd({
+      id: crypto.randomUUID(), // 🔑 ID ÚNICO (ESSENCIAL)
+      title,
+      xp,
+      attribute,
+      done: false
+    });
+
+    setTitle("");
+    setXP(10);
+    setAttribute("Mente");
+  };
 
   return (
     <div className="bg-cyber-card p-4 rounded-xl space-y-3">
@@ -20,27 +42,26 @@ export const MissionForm = ({ onAdd }: { onAdd: any }) => {
           className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-2 text-white"
           value={xp}
           onChange={e => setXP(Number(e.target.value))}
+          min={1}
         />
 
         <select
           className="bg-black/40 border border-white/10 rounded px-3 py-2 text-white"
           value={attribute}
-          onChange={e => setAttribute(e.target.value)}
+          onChange={e =>
+            setAttribute(e.target.value as any)
+          }
         >
-          <option>Mente</option>
-          <option>Físico</option>
-          <option>Social</option>
-          <option>Finanças</option>
+          <option value="Mente">Mente</option>
+          <option value="Físico">Físico</option>
+          <option value="Social">Social</option>
+          <option value="Finanças">Finanças</option>
         </select>
       </div>
 
       <button
-        className="w-full bg-neon-purple/80 hover:bg-neon-purple text-white py-2 rounded"
-        onClick={() => {
-          if (!title) return;
-          onAdd({ title, xp, attribute });
-          setTitle("");
-        }}
+        className="w-full bg-neon-purple/80 hover:bg-neon-purple text-white py-2 rounded transition"
+        onClick={handleAdd}
       >
         Criar Missão
       </button>
