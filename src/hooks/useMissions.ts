@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type MissionAttribute =
   | "Mente"
@@ -19,12 +19,30 @@ interface MissionHistory {
   id: string;
   xp: number;
   success: boolean;
-  date: Date;
+  date: string;
 }
 
+const STORAGE_KEY = "rpg_missions";
+const HISTORY_KEY = "rpg_mission_history";
+
 export function useMissions() {
-  const [missions, setMissions] = useState<Mission[]>([]);
-  const [history, setHistory] = useState<MissionHistory[]>([]);
+  const [missions, setMissions] = useState<Mission[]>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  const [history, setHistory] = useState<MissionHistory[]>(() => {
+    const stored = localStorage.getItem(HISTORY_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
+  }, [missions]);
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  }, [history]);
 
   function addMission(mission: Mission) {
     setMissions(prev => [...prev, mission]);
@@ -50,7 +68,7 @@ export function useMissions() {
         id: mission.id,
         xp: mission.xp,
         success,
-        date: new Date()
+        date: new Date().toISOString()
       }
     ]);
 
