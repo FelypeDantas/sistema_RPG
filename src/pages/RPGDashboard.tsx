@@ -36,13 +36,17 @@ const RPGDashboard = () => {
   const playerClass = usePlayerClass(player);
   const talents = useTalents(player.level);
 
+  /* =============================
+     🧮 XP TOTAL
+  ============================== */
+
   const totalXP = missions.history.reduce(
     (acc, h) => acc + (h.success ? h.xp : 0),
     0
   );
 
   /* =============================
-     🎯 MISSÃO + TRAITS
+     🎯 MISSÕES + TRAITS
   ============================== */
 
   const handleMissionComplete = (mission: Mission) => {
@@ -57,7 +61,6 @@ const RPGDashboard = () => {
     }
 
     const success = missions.completeMission(mission, successChance);
-
     if (!success) return;
 
     let finalXP = mission.xp;
@@ -80,7 +83,7 @@ const RPGDashboard = () => {
   };
 
   /* =============================
-     📊 STREAK SEMANAL
+     📊 XP SEMANAL
   ============================== */
 
   const now = new Date();
@@ -88,11 +91,10 @@ const RPGDashboard = () => {
   const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
     const day = new Date();
     day.setDate(now.getDate() - (6 - i));
-
-    const dayKey = day.toISOString().split("T")[0];
+    const key = day.toISOString().split("T")[0];
 
     return missions.history
-      .filter(h => h.success && h.date.startsWith(dayKey))
+      .filter(h => h.success && h.date.startsWith(key))
       .reduce((acc, h) => acc + h.xp, 0);
   });
 
@@ -125,7 +127,7 @@ const RPGDashboard = () => {
       <div className="min-h-screen bg-cyber-dark p-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* LEFT */}
+          {/* ================= LEFT ================= */}
           <div className="space-y-6">
             <div
               onClick={() => setIsProfileOpen(true)}
@@ -196,7 +198,7 @@ const RPGDashboard = () => {
             />
           </div>
 
-          {/* CENTER */}
+          {/* ================= CENTER ================= */}
           <div className="space-y-6">
             <StatsCard
               stats={{
@@ -230,7 +232,7 @@ const RPGDashboard = () => {
             </div>
           </div>
 
-          {/* RIGHT */}
+          {/* ================= RIGHT ================= */}
           <div className="space-y-6">
             <StreakCard
               weeklyXP={weeklyXP}
@@ -254,7 +256,7 @@ const RPGDashboard = () => {
         </div>
       </div>
 
-      {/* DRAWER DO PERSONAGEM */}
+      {/* ================= PROFILE DRAWER ================= */}
       <ProfileDrawer
         open={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}

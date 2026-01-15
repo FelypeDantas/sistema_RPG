@@ -15,20 +15,32 @@ interface PlayerData {
 interface AvatarCardProps {
   player: PlayerData;
   xpProgress: number;
+  onOpenProfile: () => void;
 }
 
-// 🔐 Função de segurança contra undefined
+// 🔐 Segurança contra undefined
 const safeNumber = (value?: number) =>
   typeof value === "number" && !isNaN(value) ? value : 0;
 
-export const AvatarCard = ({ player, xpProgress }: AvatarCardProps) => {
+export const AvatarCard = ({
+  player,
+  xpProgress,
+  onOpenProfile
+}: AvatarCardProps) => {
   const currentXP = safeNumber(player.currentXP);
   const nextLevelXP = safeNumber(player.nextLevelXP);
   const totalXP = safeNumber(player.totalXP);
 
   return (
-    <div className="bg-cyber-card border border-white/10 rounded-xl p-5 relative overflow-hidden">
-      {/* Glow effect */}
+    <div
+      onClick={onOpenProfile}
+      className="
+        bg-cyber-card border border-white/10 rounded-xl p-5
+        relative overflow-hidden cursor-pointer
+        hover:scale-[1.01] transition
+      "
+    >
+      {/* Glow */}
       <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/5 to-neon-purple/5 pointer-events-none" />
 
       {/* Header */}
@@ -41,9 +53,7 @@ export const AvatarCard = ({ player, xpProgress }: AvatarCardProps) => {
             <Star className="w-4 h-4 text-neon-yellow" />
           </h2>
 
-          <p className="text-sm text-gray-400">
-            {player.title}
-          </p>
+          <p className="text-sm text-gray-400">{player.title}</p>
 
           <div className="flex items-center gap-2 mt-1">
             <span className="text-neon-cyan font-semibold">
@@ -52,14 +62,12 @@ export const AvatarCard = ({ player, xpProgress }: AvatarCardProps) => {
 
             <ChevronUp className="w-4 h-4 text-neon-green" />
 
-            <span className="text-xs text-gray-400">
-              {player.rank}
-            </span>
+            <span className="text-xs text-gray-400">{player.rank}</span>
           </div>
         </div>
       </div>
 
-      {/* XP Bar */}
+      {/* XP */}
       <div className="space-y-2 relative z-10">
         <div className="flex justify-between text-xs text-gray-400">
           <span>
