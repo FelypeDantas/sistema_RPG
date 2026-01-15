@@ -1,91 +1,68 @@
-import { motion } from "framer-motion";
-import { Lock, CheckCircle, ChevronDown } from "lucide-react";
-import { Talent } from "@/hooks/useTalents";
+import { Lock, ChevronDown } from "lucide-react";
 
-interface TalentNodeProps {
-  talent: Talent;
-  canUnlock: boolean;
-  onUnlock: () => void;
+type Props = {
+  title: string;
+  x: number;
+  y: number;
+  progress: number;
+  locked?: boolean;
+  hasChildren?: boolean;
+  collapsed?: boolean;
   onToggle?: () => void;
-}
+};
 
-export function TalentNode({
-  talent,
-  canUnlock,
-  onUnlock,
+export default function TalentNode({
+  title,
+  x,
+  y,
+  progress,
+  locked,
+  hasChildren,
+  collapsed,
   onToggle
-}: TalentNodeProps) {
-  const unlocked = talent.unlocked;
-
+}: Props) {
   return (
-    <motion.div
-      className={`
-        absolute rounded-xl p-4 w-48
-        bg-cyber-card border text-center
-        ${
-          unlocked
-            ? "border-neon-green"
-            : canUnlock
-            ? "border-purple-500/50"
-            : "border-white/10 opacity-60"
-        }
-      `}
-      style={{
-        left: talent.node?.x ?? 0,
-        top: talent.node?.y ?? 0
-      }}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.25 }}
+    <div
+      className="absolute transition-transform duration-300"
+      style={{ left: x, top: y }}
     >
-      {/* Ícone */}
-      <div className="flex justify-center mb-2">
-        {unlocked ? (
-          <CheckCircle className="text-neon-green" />
-        ) : (
-          <Lock className="text-gray-500" />
-        )}
-      </div>
+      <div
+        className={`
+          w-48 rounded-xl border
+          bg-cyber-card p-4 text-center
+          ${locked ? "opacity-50" : "border-purple-500"}
+        `}
+      >
+        {locked && <Lock className="mx-auto mb-2 text-gray-400" />}
 
-      <h3 className="font-semibold text-sm">
-        {talent.title}
-      </h3>
+        <h3 className="font-semibold text-sm">{title}</h3>
 
-      <p className="text-[11px] text-gray-400 mt-1">
-        {talent.description}
-      </p>
+        <div className="mt-2 text-xs text-gray-400">
+          Treinado {progress}%
+        </div>
 
-      {/* Progresso (placeholder futuro) */}
-      {"progress" in talent && (
-        <p className="text-xs mt-1 text-purple-300">
-          Treinado {(talent as any).progress ?? 0}%
-        </p>
-      )}
+        <div className="mt-2 h-1 w-full bg-gray-700 rounded">
+          <div
+            className="h-full bg-purple-500 rounded transition-all"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
 
-      {/* Ações */}
-      <div className="mt-3 space-y-1">
-        {!unlocked && canUnlock && (
-          <button
-            onClick={onUnlock}
-            className="w-full text-xs px-2 py-1 rounded
-              bg-purple-600 hover:bg-purple-700 transition"
-          >
-            Desbloquear ({talent.cost})
-          </button>
-        )}
-
-        {talent.requires && onToggle && unlocked && (
+        {hasChildren && (
           <button
             onClick={onToggle}
-            className="w-full flex items-center justify-center gap-1
-              text-xs text-gray-300 hover:text-white"
+            className="mt-2 text-xs text-purple-400 flex items-center justify-center gap-1"
           >
-            <ChevronDown size={14} />
-            Expandir
+            <ChevronDown
+              className={`transition-transform ${
+                collapsed ? "-rotate-90" : ""
+              }`}
+              size={14}
+            />
+            Sub-habilidades
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
