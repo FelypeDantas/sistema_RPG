@@ -57,7 +57,7 @@ export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
             {/* Navegação */}
             <nav className="space-y-4">
               <button
-                onClick={() => goTo("/dashboard")}
+                onClick={() => goTo("/")}
                 className="w-full flex items-center gap-3 p-4 rounded-xl
                            bg-cyber-card border border-white/10
                            hover:border-neon-cyan transition"
