@@ -1,9 +1,7 @@
 import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
 import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
-import { usePanZoom } from "@/hooks/usePanZoom";
 
 import { TalentNode } from "@/components/rpg/TalentNode";
 import { TalentEdge } from "@/components/rpg/TalentEdge";
@@ -19,24 +17,21 @@ export default function TalentsTree() {
     canUnlock
   } = useTalents(level, playerClass);
 
-  const { containerRef, transform, handlers } = usePanZoom();
-
   const edges = talents
-    .filter(t => t.requires?.length && t.node)
+    .filter(t => t.requires && t.node)
     .flatMap(t =>
-      t.requires!
-        .map(reqId => {
-          const parent = talents.find(p => p.id === reqId);
-          if (!parent?.node) return null;
-          return { from: parent, to: t };
-        })
-        .filter(Boolean)
-    );
+      t.requires!.map(req => {
+        const parent = talents.find(p => p.id === req);
+        if (!parent?.node) return null;
+        return { from: parent, to: t };
+      })
+    )
+    .filter(Boolean) as { from: any; to: any }[];
 
   return (
-    <div className="min-h-screen bg-cyber-dark text-white overflow-hidden">
+    <div className="min-h-screen p-6 bg-cyber-dark text-white">
       {/* Header */}
-      <header className="p-6 flex items-center justify-between">
+      <header className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <GitBranch className="text-purple-400" />
@@ -52,49 +47,40 @@ export default function TalentsTree() {
 
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
+          className="flex items-center gap-2 text-sm
+            text-gray-300 hover:text-white"
         >
           <ArrowLeft />
-          Voltar ao Dashboard
+          Voltar
         </button>
       </header>
 
-      {/* Viewport */}
-      <div
-        ref={containerRef}
-        className="relative w-full h-[calc(100vh-120px)] cursor-grab"
-        {...handlers}
-      >
-        {/* Canvas transformável */}
-        <div
-          className="absolute inset-0"
-          style={transform}
-        >
-          {/* Edges */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {edges.map((edge, i) => (
-              <TalentEdge
-                key={i}
-                from={edge!.from}
-                to={edge!.to}
-              />
-            ))}
-          </svg>
-
-          {/* Nodes */}
-          {talents.map(talent => (
-            <TalentNode
-              key={talent.id}
-              talent={talent}
-              canUnlock={canUnlock(talent)}
-              onUnlock={unlockTalent}
+      {/* Grafo */}
+      <div className="relative w-full h-[600px] bg-cyber-card rounded-xl overflow-hidden">
+        {/* Edges */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          {edges.map((e, i) => (
+            <TalentEdge
+              key={i}
+              from={e.from}
+              to={e.to}
             />
           ))}
-        </div>
+        </svg>
+
+        {/* Nodes */}
+        {talents.map(talent => (
+          <TalentNode
+            key={talent.id}
+            talent={talent}
+            canUnlock={canUnlock(talent)}
+            onUnlock={() => unlockTalent(talent.id)}
+          />
+        ))}
       </div>
 
-      <p className="text-xs text-gray-500 text-center pb-6">
-        Arraste para mover • Scroll para zoom 🌍
+      <p className="text-xs text-gray-500 mt-6 text-center">
+        Em breve: sub-árvores colapsáveis, progresso real e hubs de classe 🌳
       </p>
     </div>
   );
