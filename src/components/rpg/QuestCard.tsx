@@ -1,6 +1,7 @@
 import { Check, Zap } from "lucide-react";
 import { Mission } from "@/hooks/useMissions";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface QuestCardProps {
   quest: Mission;
@@ -26,13 +27,23 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
 
     const timer = setTimeout(() => {
       setShowTooltip(true);
-    }, 300); // ⏳ delay inteligente
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [hovering]);
 
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{
+        opacity: 0,
+        y: -20,
+        scale: 0.96,
+        filter: "blur(4px)"
+      }}
+      transition={{ duration: 0.35, ease: "easeOut" }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
       className={`
@@ -122,6 +133,6 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       {quest.done && (
         <div className="absolute inset-0 rounded-xl bg-neon-green/5 animate-pulse pointer-events-none" />
       )}
-    </div>
+    </motion.div>
   );
 };

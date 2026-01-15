@@ -8,6 +8,8 @@ import {
   Wallet
 } from "lucide-react";
 
+import { AnimatePresence } from "framer-motion";
+
 import { AvatarCard } from "@/components/rpg/AvatarCard";
 import { AttributeBar } from "@/components/rpg/AttributeBar";
 import { QuestCard } from "@/components/rpg/QuestCard";
@@ -45,7 +47,6 @@ const RPGDashboard = () => {
       successChance += 0.1;
     }
 
-    // Trait: impulsivo (menos chance)
     if (player.hasTrait?.("impulsivo")) {
       successChance -= 0.1;
     }
@@ -56,7 +57,6 @@ const RPGDashboard = () => {
 
     let finalXP = mission.xp;
 
-    // Trait: econômico
     if (
       player.hasTrait?.("econômico") &&
       mission.attribute === "Finanças"
@@ -64,7 +64,6 @@ const RPGDashboard = () => {
       finalXP *= 1.2;
     }
 
-    // Trait: disciplinado (bonus com streak)
     if (
       player.hasTrait?.("disciplinado") &&
       currentStreak >= 3
@@ -76,11 +75,10 @@ const RPGDashboard = () => {
   };
 
   /* =============================
-     📊 STREAK SEMANAL (CORRETO)
+     📊 STREAK SEMANAL
   ============================== */
 
   const now = new Date();
-  const todayKey = now.toISOString().split("T")[0];
 
   const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
     const day = new Date();
@@ -93,7 +91,10 @@ const RPGDashboard = () => {
       .reduce((acc, h) => acc + h.xp, 0);
   });
 
-  // 🔥 STREAK REAL (dias consecutivos)
+  /* =============================
+     🔥 STREAK REAL
+  ============================== */
+
   let streak = 0;
 
   for (let i = 0; i < 365; i++) {
@@ -112,7 +113,6 @@ const RPGDashboard = () => {
     }
   }
 
-  // Trait: persistente (não quebra no primeiro dia)
   const currentStreak =
     streak === 0 && player.hasTrait?.("persistente")
       ? 1
@@ -192,7 +192,7 @@ const RPGDashboard = () => {
         <div className="space-y-6">
           <StatsCard
             stats={{
-              questsToday: missions.missions.filter(m => m.done).length,
+              questsToday: 0,
               totalQuests: missions.missions.length,
               xpToday: weeklyXP[6] ?? 0,
               streak: currentStreak,
@@ -208,13 +208,17 @@ const RPGDashboard = () => {
               Missões
             </h3>
 
-            {missions.missions.map(mission => (
-              <QuestCard
-                key={mission.id}
-                quest={mission}
-                onComplete={() => handleMissionComplete(mission)}
-              />
-            ))}
+            <AnimatePresence>
+              {missions.missions.map(mission => (
+                <QuestCard
+                  key={mission.id}
+                  quest={mission}
+                  onComplete={() =>
+                    handleMissionComplete(mission)
+                  }
+                />
+              ))}
+            </AnimatePresence>
           </div>
         </div>
 
