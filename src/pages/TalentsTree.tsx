@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 
 import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
+import { usePanZoom } from "@/hooks/usePanZoom";
 
-import { TalentNode } from "@/components/rpg/TalentNode";
-import { TalentEdge } from "@/components/rpg/TalentEdge";
+import { TalentNode } from "@/components/TalentNode";
+import { TalentEdge } from "@/components/TalentEdge";
 
 export default function TalentsTree() {
   const navigate = useNavigate();
-
   const { level, playerClass } = usePlayer();
 
   const {
@@ -19,9 +19,7 @@ export default function TalentsTree() {
     canUnlock
   } = useTalents(level, playerClass);
 
-  /* =============================
-     🔗 Gerar conexões (edges)
-  ============================== */
+  const { containerRef, transform, handlers } = usePanZoom();
 
   const edges = talents
     .filter(t => t.requires?.length && t.node)
@@ -37,9 +35,7 @@ export default function TalentsTree() {
 
   return (
     <div className="min-h-screen bg-cyber-dark text-white overflow-hidden">
-      {/* =============================
-          Header
-      ============================== */}
+      {/* Header */}
       <header className="p-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -56,47 +52,49 @@ export default function TalentsTree() {
 
         <button
           onClick={() => navigate("/")}
-          className="
-            flex items-center gap-2 text-sm
-            text-gray-300 hover:text-white transition
-          "
+          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
         >
           <ArrowLeft />
           Voltar ao Dashboard
         </button>
       </header>
 
-      {/* =============================
-          Container do Grafo
-      ============================== */}
-      <div className="relative w-full h-[calc(100vh-120px)] overflow-hidden">
-        {/* SVG das conexões */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
-          {edges.map((edge, i) => (
-            <TalentEdge
-              key={i}
-              from={edge!.from}
-              to={edge!.to}
+      {/* Viewport */}
+      <div
+        ref={containerRef}
+        className="relative w-full h-[calc(100vh-120px)] cursor-grab"
+        {...handlers}
+      >
+        {/* Canvas transformável */}
+        <div
+          className="absolute inset-0"
+          style={transform}
+        >
+          {/* Edges */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            {edges.map((edge, i) => (
+              <TalentEdge
+                key={i}
+                from={edge!.from}
+                to={edge!.to}
+              />
+            ))}
+          </svg>
+
+          {/* Nodes */}
+          {talents.map(talent => (
+            <TalentNode
+              key={talent.id}
+              talent={talent}
+              canUnlock={canUnlock(talent)}
+              onUnlock={unlockTalent}
             />
           ))}
-        </svg>
-
-        {/* Nós */}
-        {talents.map(talent => (
-          <TalentNode
-            key={talent.id}
-            talent={talent}
-            canUnlock={canUnlock(talent)}
-            onUnlock={unlockTalent}
-          />
-        ))}
+        </div>
       </div>
 
-      {/* =============================
-          Nota futura
-      ============================== */}
       <p className="text-xs text-gray-500 text-center pb-6">
-        Em breve: pan, zoom e sub-árvores avançadas 🌐
+        Arraste para mover • Scroll para zoom 🌍
       </p>
     </div>
   );
