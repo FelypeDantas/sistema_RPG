@@ -5,8 +5,8 @@ import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
 import { usePanZoom } from "@/hooks/usePanZoom";
 
-import { TalentNode } from "@/components/TalentNode";
-import { TalentEdge } from "@/components/TalentEdge";
+import { TalentNode } from "@/components/rpg/TalentNode";
+import { TalentEdge } from "@/components/rpg/TalentEdge";
 
 export default function TalentsTree() {
   const navigate = useNavigate();
