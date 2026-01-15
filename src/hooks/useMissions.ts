@@ -52,16 +52,14 @@ export function useMissions() {
     mission: Mission,
     successChance: number
   ) {
-    if (mission.done) return false;
-
     const success = Math.random() < successChance;
 
+    // Remove a missão da lista ativa
     setMissions(prev =>
-      prev.map(m =>
-        m.id === mission.id ? { ...m, done: true } : m
-      )
+      prev.filter(m => m.id !== mission.id)
     );
 
+    // Registra no histórico
     setHistory(prev => [
       ...prev,
       {
