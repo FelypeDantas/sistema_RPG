@@ -1,6 +1,17 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ScrollText } from "lucide-react";
-import { MissionHistory } from "@/hooks/useMissions";
+
+/* =============================
+   📜 TIPAGEM LOCAL
+   (não acopla ao hook)
+============================== */
+
+interface MissionHistory {
+  id: string;
+  xp: number;
+  success: boolean;
+  date: string;
+}
 
 interface ProfileDrawerProps {
   open: boolean;
@@ -38,17 +49,22 @@ export const ProfileDrawer = ({
             exit={{ x: "100%" }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
+            {/* Header */}
             <header className="flex items-center justify-between mb-6">
               <h2 className="text-white flex items-center gap-2">
-                <ScrollText className="text-neon-cyan" />
+                <ScrollText className="w-5 h-5 text-neon-cyan" />
                 Histórico de Quests
               </h2>
 
-              <button onClick={onClose}>
-                <X className="text-gray-400 hover:text-white" />
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-white transition"
+              >
+                <X />
               </button>
             </header>
 
+            {/* Conteúdo */}
             <ul className="space-y-3">
               {history.length === 0 && (
                 <p className="text-gray-400 text-sm">
@@ -69,7 +85,7 @@ export const ProfileDrawer = ({
                     "
                   >
                     <span
-                      className={`text-sm ${
+                      className={`text-sm font-medium ${
                         h.success
                           ? "text-neon-green"
                           : "text-neon-red"
