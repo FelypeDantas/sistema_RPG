@@ -31,3 +31,24 @@ export interface TalentEffect {
   successChance?: number;      // ex: 0.05 = +5%
   failurePenaltyReduction?: number; // ex: 0.05 = -5%
 }
+
+export const TALENTS: Talent[] = [
+  {
+    id: "focus",  
+    title: "Foco Profundo",
+    description: "+10% XP em missões mentais",
+    cost: 1,
+    unlocked: false,
+    effects: { xpMultiplier: 0.1 },
+    node: { x: 300, y: 80 }
+  },
+  {
+    id: "basic_discipline", 
+    title: "Disciplina Básica",
+    description: "Streak nunca começa em zero",
+    cost: 1,
+    unlocked: false,
+    requires: ["focus"],
+    effects: { streakBonus: 1 },
+    node: { x: 300, y: 180 }
+  }
