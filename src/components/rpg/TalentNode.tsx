@@ -1,5 +1,5 @@
 import { Lock, CheckCircle } from "lucide-react";
-import { Talent } from "@/hooks/useTalents";
+import { Talent } from "@/types/talent";
 
 interface TalentNodeProps {
   talent: Talent;
@@ -17,7 +17,7 @@ export function TalentNode({
   return (
     <div
       className={`
-        absolute rounded-xl p-4 w-52
+        absolute rounded-xl p-4 w-56
         bg-cyber-card border transition
         ${
           unlocked
@@ -28,12 +28,12 @@ export function TalentNode({
         }
       `}
       style={{
-        left: talent.node?.x ?? 0,
-        top: talent.node?.y ?? 0
+        left: talent.position.x,
+        top: talent.position.y
       }}
     >
       {/* Ícone */}
-      <div className="mb-2 flex justify-center">
+      <div className="flex justify-center mb-2">
         {unlocked ? (
           <CheckCircle className="text-neon-green" />
         ) : (
@@ -52,7 +52,7 @@ export function TalentNode({
       </p>
 
       {/* Requisitos */}
-      {talent.requires && !unlocked && (
+      {talent.requires?.length > 0 && !unlocked && (
         <p className="text-[10px] text-red-400 text-center mt-1">
           Requer: {talent.requires.join(", ")}
         </p>
@@ -64,9 +64,8 @@ export function TalentNode({
           <button
             onClick={() => onUnlock(talent.id)}
             className="
-              text-xs px-3 py-1 rounded-lg
-              bg-purple-600 hover:bg-purple-700
-              transition
+              text-xs px-3 py-1 rounded-md
+              bg-purple-600 hover:bg-purple-700 transition
             "
           >
             Desbloquear ({talent.cost})

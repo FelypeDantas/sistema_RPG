@@ -2,20 +2,38 @@ import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
-
-import { TalentNode } from "@/components/rpg/TalentNode";
-import { TalentEdge } from "@/components/rpg/TalentEdge";
+import { TalentNode } from "@/components/TalentNode";
+import { TalentEdge } from "@/components/TalentEdge";
+import { useRef, useState } from "react";
 
 export default function TalentsTree() {
   const navigate = useNavigate();
   const { level, playerClass } = usePlayer();
+  const { talents, points, unlockTalent, canUnlock } =
+    useTalents(level, playerClass);
 
-  const {
-    talents,
-    points,
-    unlockTalent,
-    canUnlock
-  } = useTalents(level, playerClass);
+  // 🖐️ pan
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const dragging = useRef(false);
+  const last = useRef({ x: 0, y: 0 });
+
+  function onMouseDown(e: React.MouseEvent) {
+    dragging.current = true;
+    last.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function onMouseMove(e: React.MouseEvent) {
+    if (!dragging.current) return;
+    setOffset(prev => ({
+      x: prev.x + (e.clientX - last.current.x),
+      y: prev.y + (e.clientY - last.current.y)
+    }));
+    last.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function onMouseUp() {
+    dragging.current = false;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white">
@@ -28,9 +46,7 @@ export default function TalentsTree() {
           </h1>
           <p className="text-sm text-gray-400">
             Pontos disponíveis:{" "}
-            <span className="text-purple-300 font-medium">
-              {points}
-            </span>
+            <span className="text-purple-300">{points}</span>
           </p>
         </div>
 
@@ -43,42 +59,70 @@ export default function TalentsTree() {
         </button>
       </header>
 
-      {/* =============================
-          Grafo
-      ============================== */}
-      <div className="relative w-full h-[900px] overflow-hidden bg-cyber-card rounded-xl border border-white/10">
+      {/* 🌳 Grafo */}
+      <div
+        className="
+          relative w-full h-[70vh]
+          overflow-hidden rounded-xl
+          border border-white/10
+          bg-black/20
+          cursor-grab
+        "
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+      >
         {/* SVG das conexões */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        <svg
+          className="absolute inset-0 w-full h-full"
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px)`
+          }}
+        >
           {talents.map(talent =>
-            talent.requires?.map(reqId => {
-              const from = talents.find(t => t.id === reqId);
-              if (!from) return null;
+            talent.connections?.map(connId => {
+              const target = talents.find(t => t.id === connId);
+              if (!target) return null;
 
               return (
                 <TalentEdge
-                  key={`${from.id}-${talent.id}`}
-                  from={from}
-                  to={talent}
+                  key={`${talent.id}-${connId}`}
+                  from={{
+                    x: talent.position.x + 112,
+                    y: talent.position.y + 40
+                  }}
+                  to={{
+                    x: target.position.x + 112,
+                    y: target.position.y
+                  }}
+                  active={talent.unlocked}
                 />
               );
             })
           )}
         </svg>
 
-        {/* Nós */}
-        {talents.map(talent => (
-          <TalentNode
-            key={talent.id}
-            talent={talent}
-            canUnlock={canUnlock(talent)}
-            onUnlock={unlockTalent}
-          />
-        ))}
+        {/* Nodes */}
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px)`
+          }}
+        >
+          {talents.map(talent => (
+            <TalentNode
+              key={talent.id}
+              talent={talent}
+              canUnlock={canUnlock(talent)}
+              onUnlock={unlockTalent}
+            />
+          ))}
+        </div>
       </div>
 
       <p className="text-xs text-gray-500 mt-6 text-center">
-        🌱 Cada nó representa uma habilidade real a ser aprendida e
-        dominada.
+        Arraste para explorar • Em breve: zoom, sub-árvores e classes avançadas
       </p>
     </div>
   );
