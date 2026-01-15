@@ -24,7 +24,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<RPGDashboard />} />
-            <Route path="/history" element={<QuestHistory />} />
+            <Route path="/quests/history" element={<QuestHistory />} />
             <Route path="/talents" element={<TalentsTree />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
