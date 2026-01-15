@@ -2,8 +2,8 @@ import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
-import { TalentNode } from "@/components/TalentNode";
-import { TalentEdge } from "@/components/TalentEdge";
+import { TalentNode } from "@/components/rpg/TalentNode";
+import { TalentEdge } from "@/components/rpg/TalentEdge";
 import { useRef, useState } from "react";
 
 export default function TalentsTree() {
