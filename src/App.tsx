@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import RPGDashboard from "./pages/RPGDashboard";
 import NotFound from "./pages/NotFound";
+import QuestHistory from "./pages/QuestHistory";
+import TalentsTree from "./pages/TalentsTree";
 
 // 👉 NOVO
 import { PlayerProvider } from "@/context/PlayerContext";
@@ -22,6 +24,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<RPGDashboard />} />
+            <Route path="/history" element={<QuestHistory />} />
+            <Route path="/talents" element={<TalentsTree />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
