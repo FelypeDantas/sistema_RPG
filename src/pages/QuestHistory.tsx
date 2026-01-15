@@ -21,7 +21,7 @@ export default function QuestHistory() {
         </div>
 
         <button
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/")}
           className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
         >
           <ArrowLeft />
