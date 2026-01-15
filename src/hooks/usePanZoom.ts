@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 export function usePanZoom() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,28 +32,31 @@ export function usePanZoom() {
     isPanning.current = false;
   };
 
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
+  // ✅ Hook para registrar wheel com passive: false
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-    setScale(s =>
-      Math.min(2, Math.max(0.4, s - e.deltaY * 0.001))
-    );
-  };
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setScale(s => Math.min(2, Math.max(0.4, s - e.deltaY * 0.001)));
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, []);
 
   return {
     containerRef,
     transform: {
-      transform: `
-        translate(${position.x}px, ${position.y}px)
-        scale(${scale})
-      `
+      transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`
     },
     handlers: {
       onMouseDown,
       onMouseMove,
       onMouseUp,
-      onMouseLeave: onMouseUp,
-      onWheel
+      onMouseLeave: onMouseUp
+      // não precisamos mais de onWheel aqui
     }
   };
 }
