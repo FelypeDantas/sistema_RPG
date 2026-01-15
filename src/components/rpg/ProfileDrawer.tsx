@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ScrollText, GitBranch } from "lucide-react";
+import { X, ScrollText, GitBranch, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileDrawerProps {
@@ -7,15 +7,12 @@ interface ProfileDrawerProps {
   onClose: () => void;
 }
 
-export const ProfileDrawer = ({
-  open,
-  onClose
-}: ProfileDrawerProps) => {
+export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
   const navigate = useNavigate();
 
   const goTo = (path: string) => {
-    onClose();
     navigate(path);
+    onClose();
   };
 
   return (
@@ -45,55 +42,48 @@ export const ProfileDrawer = ({
           >
             {/* Header */}
             <header className="flex items-center justify-between mb-8">
-              <h2 className="text-white flex items-center gap-2">
-                <ScrollText className="w-5 h-5 text-neon-cyan" />
-                Perfil do Personagem
+              <h2 className="text-white text-lg font-semibold">
+                Menu do Personagem
               </h2>
 
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-white transition"
+                className="text-gray-400 hover:text-white"
               >
                 <X />
               </button>
             </header>
 
-            {/* Menu */}
-            <nav className="space-y-3">
+            {/* Navegação */}
+            <nav className="space-y-4">
+              <button
+                onClick={() => goTo("/dashboard")}
+                className="w-full flex items-center gap-3 p-4 rounded-xl
+                           bg-cyber-card border border-white/10
+                           hover:border-neon-cyan transition"
+              >
+                <LayoutDashboard className="text-neon-cyan" />
+                Dashboard
+              </button>
+
               <button
                 onClick={() => goTo("/quests/history")}
-                className="
-                  w-full flex items-center justify-between
-                  p-4 rounded-lg
-                  border border-white/10
-                  bg-cyber-card
-                  hover:border-neon-cyan/60
-                  hover:bg-cyber-card/80
-                  transition
-                "
+                className="w-full flex items-center gap-3 p-4 rounded-xl
+                           bg-cyber-card border border-white/10
+                           hover:border-neon-green transition"
               >
-                <span className="flex items-center gap-2 text-sm">
-                  <ScrollText className="w-4 h-4 text-neon-cyan" />
-                  Histórico de Quests
-                </span>
+                <ScrollText className="text-neon-green" />
+                Histórico de Quests
               </button>
 
               <button
                 onClick={() => goTo("/talents")}
-                className="
-                  w-full flex items-center justify-between
-                  p-4 rounded-lg
-                  border border-white/10
-                  bg-cyber-card
-                  hover:border-purple-400/60
-                  hover:bg-cyber-card/80
-                  transition
-                "
+                className="w-full flex items-center gap-3 p-4 rounded-xl
+                           bg-cyber-card border border-white/10
+                           hover:border-purple-400 transition"
               >
-                <span className="flex items-center gap-2 text-sm">
-                  <GitBranch className="w-4 h-4 text-purple-400" />
-                  Árvore de Habilidades
-                </span>
+                <GitBranch className="text-purple-400" />
+                Árvore de Habilidades
               </button>
             </nav>
           </motion.aside>
