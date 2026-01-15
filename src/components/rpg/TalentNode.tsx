@@ -1,7 +1,7 @@
 import { Lock, CheckCircle } from "lucide-react";
-import { Talent } from "@/types/talent";
+import { Talent } from "@/hooks/useTalents";
 
-interface TalentNodeProps {
+interface Props {
   talent: Talent;
   canUnlock: boolean;
   onUnlock: (id: string) => void;
@@ -11,16 +11,16 @@ export function TalentNode({
   talent,
   canUnlock,
   onUnlock
-}: TalentNodeProps) {
-  const unlocked = talent.unlocked;
+}: Props) {
+  if (!talent.node) return null;
 
   return (
     <div
       className={`
-        absolute rounded-xl p-4 w-56
-        bg-cyber-card border transition
+        absolute rounded-xl p-4 w-52
+        border bg-cyber-card transition
         ${
-          unlocked
+          talent.unlocked
             ? "border-neon-green"
             : canUnlock
             ? "border-purple-500/60 hover:border-purple-400"
@@ -28,13 +28,13 @@ export function TalentNode({
         }
       `}
       style={{
-        left: talent.position.x,
-        top: talent.position.y
+        left: talent.node.x,
+        top: talent.node.y
       }}
     >
       {/* Ícone */}
-      <div className="flex justify-center mb-2">
-        {unlocked ? (
+      <div className="mb-2 flex justify-center">
+        {talent.unlocked ? (
           <CheckCircle className="text-neon-green" />
         ) : (
           <Lock className="text-gray-500" />
@@ -42,7 +42,7 @@ export function TalentNode({
       </div>
 
       {/* Título */}
-      <h3 className="text-sm font-semibold text-center">
+      <h3 className="font-semibold text-center text-sm">
         {talent.title}
       </h3>
 
@@ -52,7 +52,7 @@ export function TalentNode({
       </p>
 
       {/* Requisitos */}
-      {talent.requires?.length > 0 && !unlocked && (
+      {talent.requires && !talent.unlocked && (
         <p className="text-[10px] text-red-400 text-center mt-1">
           Requer: {talent.requires.join(", ")}
         </p>
@@ -60,25 +60,26 @@ export function TalentNode({
 
       {/* Ação */}
       <div className="mt-3 flex justify-center">
-        {!unlocked && canUnlock && (
+        {!talent.unlocked && canUnlock && (
           <button
             onClick={() => onUnlock(talent.id)}
             className="
               text-xs px-3 py-1 rounded-md
-              bg-purple-600 hover:bg-purple-700 transition
+              bg-purple-600 hover:bg-purple-700
+              transition
             "
           >
             Desbloquear ({talent.cost})
           </button>
         )}
 
-        {unlocked && (
+        {talent.unlocked && (
           <span className="text-xs text-neon-green">
             Desbloqueado
           </span>
         )}
 
-        {!unlocked && !canUnlock && (
+        {!talent.unlocked && !canUnlock && (
           <span className="text-xs text-gray-500">
             Bloqueado
           </span>

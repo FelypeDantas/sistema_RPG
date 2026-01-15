@@ -1,23 +1,21 @@
-interface TalentEdgeProps {
-  from: { x: number; y: number };
-  to: { x: number; y: number };
-  active?: boolean;
+import { Talent } from "@/hooks/useTalents";
+
+interface Props {
+  from: Talent;
+  to: Talent;
 }
 
-export function TalentEdge({
-  from,
-  to,
-  active = false
-}: TalentEdgeProps) {
+export function TalentEdge({ from, to }: Props) {
+  if (!from.node || !to.node) return null;
+
   return (
     <line
-      x1={from.x}
-      y1={from.y}
-      x2={to.x}
-      y2={to.y}
-      stroke={active ? "#22c55e" : "rgba(255,255,255,0.2)"}
+      x1={from.node.x + 104}
+      y1={from.node.y + 40}
+      x2={to.node.x + 104}
+      y2={to.node.y + 40}
+      stroke="rgba(168,85,247,0.45)"
       strokeWidth={2}
     />
   );
 }
-
