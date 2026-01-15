@@ -1,29 +1,23 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ScrollText } from "lucide-react";
-
-/* =============================
-   📜 TIPAGEM LOCAL
-   (não acopla ao hook)
-============================== */
-
-interface MissionHistory {
-  id: string;
-  xp: number;
-  success: boolean;
-  date: string;
-}
+import { X, ScrollText, GitBranch } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface ProfileDrawerProps {
   open: boolean;
   onClose: () => void;
-  history: MissionHistory[];
 }
 
 export const ProfileDrawer = ({
   open,
-  onClose,
-  history
+  onClose
 }: ProfileDrawerProps) => {
+  const navigate = useNavigate();
+
+  const goTo = (path: string) => {
+    onClose();
+    navigate(path);
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -42,7 +36,7 @@ export const ProfileDrawer = ({
             className="
               fixed right-0 top-0 h-full w-full max-w-md
               bg-cyber-dark border-l border-white/10
-              z-50 p-6 overflow-y-auto
+              z-50 p-6
             "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -50,10 +44,10 @@ export const ProfileDrawer = ({
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
             {/* Header */}
-            <header className="flex items-center justify-between mb-6">
+            <header className="flex items-center justify-between mb-8">
               <h2 className="text-white flex items-center gap-2">
                 <ScrollText className="w-5 h-5 text-neon-cyan" />
-                Histórico de Quests
+                Perfil do Personagem
               </h2>
 
               <button
@@ -64,42 +58,44 @@ export const ProfileDrawer = ({
               </button>
             </header>
 
-            {/* Conteúdo */}
-            <ul className="space-y-3">
-              {history.length === 0 && (
-                <p className="text-gray-400 text-sm">
-                  Nenhuma quest finalizada ainda.
-                </p>
-              )}
+            {/* Menu */}
+            <nav className="space-y-3">
+              <button
+                onClick={() => goTo("/quests/history")}
+                className="
+                  w-full flex items-center justify-between
+                  p-4 rounded-lg
+                  border border-white/10
+                  bg-cyber-card
+                  hover:border-neon-cyan/60
+                  hover:bg-cyber-card/80
+                  transition
+                "
+              >
+                <span className="flex items-center gap-2 text-sm">
+                  <ScrollText className="w-4 h-4 text-neon-cyan" />
+                  Histórico de Quests
+                </span>
+              </button>
 
-              {history
-                .slice()
-                .reverse()
-                .map(h => (
-                  <li
-                    key={h.id + h.date}
-                    className="
-                      p-3 rounded-lg border border-white/10
-                      bg-cyber-card
-                      flex justify-between items-center
-                    "
-                  >
-                    <span
-                      className={`text-sm font-medium ${
-                        h.success
-                          ? "text-neon-green"
-                          : "text-neon-red"
-                      }`}
-                    >
-                      {h.success ? "✔ Sucesso" : "✖ Falha"}
-                    </span>
-
-                    <span className="text-xs text-gray-400">
-                      +{h.xp} XP
-                    </span>
-                  </li>
-                ))}
-            </ul>
+              <button
+                onClick={() => goTo("/talents")}
+                className="
+                  w-full flex items-center justify-between
+                  p-4 rounded-lg
+                  border border-white/10
+                  bg-cyber-card
+                  hover:border-purple-400/60
+                  hover:bg-cyber-card/80
+                  transition
+                "
+              >
+                <span className="flex items-center gap-2 text-sm">
+                  <GitBranch className="w-4 h-4 text-purple-400" />
+                  Árvore de Habilidades
+                </span>
+              </button>
+            </nav>
           </motion.aside>
         </>
       )}
