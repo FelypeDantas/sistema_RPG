@@ -41,7 +41,9 @@ export const AvatarCard = ({ player, xpProgress }: AvatarCardProps) => {
             <Star className="w-4 h-4 text-neon-yellow" />
           </h2>
 
-          <p className="text-sm text-gray-400">{player.title}</p>
+          <p className="text-sm text-gray-400">
+            {player.title}
+          </p>
 
           <div className="flex items-center gap-2 mt-1">
             <span className="text-neon-cyan font-semibold">
@@ -50,7 +52,9 @@ export const AvatarCard = ({ player, xpProgress }: AvatarCardProps) => {
 
             <ChevronUp className="w-4 h-4 text-neon-green" />
 
-            <span className="text-xs text-gray-400">{player.rank}</span>
+            <span className="text-xs text-gray-400">
+              {player.rank}
+            </span>
           </div>
         </div>
       </div>
