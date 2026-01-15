@@ -18,7 +18,7 @@ export interface Talent {
   description: string;
   cost: number;
   unlocked: boolean;
-  requires?: string[];         // pré-requisitos
+  requires?: string[];
   effects?: TalentEffect;
   node?: {
     x: number;
@@ -38,8 +38,6 @@ export function useTalents(
   playerLevel: number,
   playerClass?: string
 ) {
-  const [points, setPoints] = useState(0);
-
   const [talents, setTalents] = useState<Talent[]>([
     {
       id: "focus",
@@ -72,14 +70,6 @@ export function useTalents(
   ]);
 
   /* =============================
-     🎚 Pontos por nível
-  ============================= */
-
-  useEffect(() => {
-    setPoints(playerLevel - 1);
-  }, [playerLevel]);
-
-  /* =============================
      💾 Load
   ============================= */
 
@@ -105,6 +95,19 @@ export function useTalents(
   }, [talents]);
 
   /* =============================
+     🎚 Pontos disponíveis
+     (nível - custo total desbloqueado)
+  ============================= */
+
+  const spentPoints = useMemo(() => {
+    return talents
+      .filter(t => t.unlocked)
+      .reduce((acc, t) => acc + t.cost, 0);
+  }, [talents]);
+
+  const points = Math.max(playerLevel - 1 - spentPoints, 0);
+
+  /* =============================
      🔓 Validação de pré-requisitos
   ============================= */
 
@@ -112,13 +115,12 @@ export function useTalents(
     if (talent.unlocked) return false;
     if (points < talent.cost) return false;
 
-    if (talent.requires) {
-      return talent.requires.every(req =>
-        talents.find(t => t.id === req && t.unlocked)
-      );
-    }
+    if (!talent.requires || talent.requires.length === 0)
+      return true;
 
-    return true;
+    return talent.requires.every(req =>
+      talents.some(t => t.id === req && t.unlocked)
+    );
   };
 
   /* =============================
@@ -134,28 +136,20 @@ export function useTalents(
         t.id === id ? { ...t, unlocked: true } : t
       )
     );
-
-    setPoints(p => p - talent.cost);
   };
 
   /* =============================
-     🧮 Efeitos acumulados
+     🧮 Efeitos acumulados (talentos)
   ============================= */
 
-  const effects = useMemo(() => {
+  const talentEffects = useMemo(() => {
     return talents
-      .filter(t => t.unlocked)
+      .filter(t => t.unlocked && t.effects)
       .reduce(
         (acc, t) => {
-          if (t.effects?.xpMultiplier)
-            acc.xpMultiplier += t.effects.xpMultiplier;
-
-          if (t.effects?.streakBonus)
-            acc.streakBonus += t.effects.streakBonus;
-
-          if (t.effects?.successChance)
-            acc.successChance += t.effects.successChance;
-
+          acc.xpMultiplier += t.effects?.xpMultiplier ?? 0;
+          acc.streakBonus += t.effects?.streakBonus ?? 0;
+          acc.successChance += t.effects?.successChance ?? 0;
           return acc;
         },
         {
@@ -170,36 +164,45 @@ export function useTalents(
      🧙‍♂️ Sinergia com classe
   ============================= */
 
-  const classEffects = useMemo(() => {
-    if (!playerClass) return {};
+  const classEffects = useMemo<TalentEffect>(() => {
+    switch (playerClass) {
+      case "Mago":
+        return { xpMultiplier: 0.05 };
 
-    if (playerClass === "Mago") {
-      return { xpMultiplier: 0.05 };
+      case "Guerreiro":
+        return { streakBonus: 1 };
+
+      case "Estrategista":
+        return { successChance: 0.05 };
+
+      default:
+        return {};
     }
-
-    if (playerClass === "Guerreiro") {
-      return { streakBonus: 1 };
-    }
-
-    return {};
   }, [playerClass]);
+
+  /* =============================
+     ✨ Efeitos finais
+  ============================= */
+
+  const effects = {
+    xpMultiplier:
+      talentEffects.xpMultiplier +
+      (classEffects.xpMultiplier ?? 0),
+
+    streakBonus:
+      talentEffects.streakBonus +
+      (classEffects.streakBonus ?? 0),
+
+    successChance:
+      talentEffects.successChance +
+      (classEffects.successChance ?? 0)
+  };
 
   return {
     talents,
     points,
     unlockTalent,
     canUnlock,
-
-    effects: {
-      xpMultiplier:
-        effects.xpMultiplier +
-        (classEffects as any)?.xpMultiplier || 0,
-
-      streakBonus:
-        effects.streakBonus +
-        (classEffects as any)?.streakBonus || 0,
-
-      successChance: effects.successChance
-    }
+    effects
   };
 }
