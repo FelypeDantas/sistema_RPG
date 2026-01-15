@@ -63,7 +63,9 @@ export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
                            hover:border-neon-cyan transition"
               >
                 <LayoutDashboard className="text-neon-cyan" />
-                Dashboard
+                <span className="text-white font-medium">
+                  Dashboard
+                </span>
               </button>
 
               <button
@@ -73,7 +75,9 @@ export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
                            hover:border-neon-green transition"
               >
                 <ScrollText className="text-neon-green" />
-                Histórico de Quests
+                <span className="text-white font-medium">
+                  Histórico de Quests
+                </span>
               </button>
 
               <button
@@ -83,7 +87,9 @@ export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
                            hover:border-purple-400 transition"
               >
                 <GitBranch className="text-purple-400" />
-                Árvore de Habilidades
+                <span className="text-white font-medium">
+                  Árvore de Habilidades
+                </span>
               </button>
             </nav>
           </motion.aside>
