@@ -51,4 +51,15 @@ export const TALENTS: Talent[] = [
     requires: ["focus"],
     effects: { streakBonus: 1 },
     node: { x: 300, y: 180 }
+  },
+  {
+    id: "self_control",  
+    title: "Autocontrole",
+    description: "+5% chance de sucesso em missões difíceis",
+    cost: 2,
+    unlocked: false,
+    requires: ["basic_discipline"],
+    effects: { successChance: 0.05 },
+    node: { x: 300, y: 280 }
   }
+];
