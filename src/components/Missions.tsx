@@ -5,19 +5,20 @@ import { v4 as uuid } from "uuid";
 
 export function Missions() {
   const { gainXP } = usePlayer();
+
   const [missions, setMissions] = useState<Mission[]>([]);
   const [title, setTitle] = useState("");
   const [xp, setXp] = useState(50);
   const [tag, setTag] = useState("Geral");
 
   function addMission() {
-    if (!title) return;
+    if (!title.trim()) return;
 
     setMissions(prev => [
       ...prev,
       {
         id: uuid(),
-        title,
+        title: title.trim(),
         xp,
         tag,
         completed: false,
@@ -28,10 +29,20 @@ export function Missions() {
   }
 
   function completeMission(id: string) {
+    const mission = missions.find(
+      m => m.id === id && !m.completed
+    );
+
+    if (!mission) return;
+
+    // 🎯 Efeito colateral fora do setState
+    gainXP(mission.xp);
+
+    // 🧱 Atualização de estado pura
     setMissions(prev =>
       prev.map(m =>
-        m.id === id && !m.completed
-          ? (gainXP(m.xp), { ...m, completed: true })
+        m.id === id
+          ? { ...m, completed: true }
           : m
       )
     );
@@ -53,6 +64,7 @@ export function Missions() {
           type="number"
           className="bg-zinc-800 px-2 py-1 rounded w-20"
           value={xp}
+          min={1}
           onChange={e => setXp(Number(e.target.value))}
         />
 
@@ -76,6 +88,7 @@ export function Missions() {
           >
             <div className="flex justify-between items-center">
               <span>{m.title}</span>
+
               {!m.completed && (
                 <button
                   onClick={() => completeMission(m.id)}
