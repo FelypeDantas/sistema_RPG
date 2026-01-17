@@ -4,6 +4,8 @@ import { Mission } from "@/types/Mission";
 import { v4 as uuid } from "uuid";
 
 const DAILY_KEY = "rpg_daily_mission_date";
+const DAILY_DONE_KEY = "rpg_daily_completed";
+const ACHIEVEMENTS_KEY = "rpg_daily_achievements";
 
 const DAILY_QUESTS = [
   { title: "Estudar por 25 minutos", attribute: "Mente" },
@@ -16,32 +18,51 @@ function todayKey() {
   return new Date().toISOString().split("T")[0];
 }
 
+function streakBonus(streak: number) {
+  if (streak >= 14) return 1.5;
+  if (streak >= 7) return 1.25;
+  if (streak >= 3) return 1.1;
+  return 1;
+}
+
 export function Missions() {
-  const { gainXP, level, resetStreak } = usePlayer();
+  const {
+    gainXP,
+    loseXP,
+    level,
+    streak,
+    resetStreak,
+  } = usePlayer();
 
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [title, setTitle] = useState("");
-  const [xp, setXp] = useState(50);
-  const [tag, setTag] = useState("Geral");
+  const [dailyCount, setDailyCount] = useState(
+    Number(localStorage.getItem(DAILY_DONE_KEY) ?? 0)
+  );
+
+  const [achievements, setAchievements] = useState<string[]>(
+    JSON.parse(localStorage.getItem(ACHIEVEMENTS_KEY) ?? "[]")
+  );
 
   /* ===============================
-     🌅 QUEST DIÁRIA AVANÇADA
+     🌅 QUEST DIÁRIA + HARDCORE
   =============================== */
   useEffect(() => {
     const today = todayKey();
     const lastDaily = localStorage.getItem(DAILY_KEY);
 
-    // 🔥 Se o dia mudou e a diária anterior não foi concluída → quebra streak
     if (lastDaily && lastDaily !== today) {
       const unfinishedDaily = missions.find(
         m => m.tag === "Diária" && !m.completed
       );
 
       if (unfinishedDaily) {
-        resetStreak?.();
+        resetStreak();
+
+        // 💀 Hardcore penalty
+        const penalty = Math.round(20 + level * 10);
+        loseXP?.(penalty);
       }
 
-      // Remove diária expirada
       setMissions(prev =>
         prev.filter(m => m.tag !== "Diária")
       );
@@ -49,50 +70,28 @@ export function Missions() {
 
     if (lastDaily === today) return;
 
-    const alreadyExists = missions.some(
-      m => m.tag === "Diária" && !m.completed
-    );
-
-    if (alreadyExists) return;
-
     const random =
       DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
 
-    // 📈 XP escala com o nível
-    const dailyXP = Math.round(50 + level * 15);
-
-    const dailyMission: Mission = {
-      id: uuid(),
-      title: `Quest diária: ${random.title}`,
-      xp: dailyXP,
-      tag: "Diária",
-      attribute: random.attribute,
-      completed: false,
-    };
-
-    setMissions(prev => [...prev, dailyMission]);
-    localStorage.setItem(DAILY_KEY, today);
-  }, [missions, level, resetStreak]);
-
-  /* ===============================
-     ➕ ADD MISSÃO NORMAL
-  =============================== */
-  function addMission() {
-    if (!title.trim()) return;
+    const baseXP = Math.round(50 + level * 15);
+    const finalXP = Math.round(
+      baseXP * streakBonus(streak)
+    );
 
     setMissions(prev => [
       ...prev,
       {
         id: uuid(),
-        title: title.trim(),
-        xp,
-        tag,
+        title: `Quest diária: ${random.title}`,
+        xp: finalXP,
+        tag: "Diária",
+        attribute: random.attribute,
         completed: false,
       },
     ]);
 
-    setTitle("");
-  }
+    localStorage.setItem(DAILY_KEY, today);
+  }, [missions, level, streak]);
 
   /* ===============================
      ✅ CONCLUIR MISSÃO
@@ -101,47 +100,53 @@ export function Missions() {
     const mission = missions.find(
       m => m.id === id && !m.completed
     );
-
     if (!mission) return;
 
     gainXP(mission.xp);
 
+    if (mission.tag === "Diária") {
+      const newCount = dailyCount + 1;
+      setDailyCount(newCount);
+      localStorage.setItem(
+        DAILY_DONE_KEY,
+        String(newCount)
+      );
+
+      unlockAchievements(newCount);
+    }
+
     setMissions(prev =>
       prev.map(m =>
-        m.id === id
-          ? { ...m, completed: true }
-          : m
+        m.id === id ? { ...m, completed: true } : m
       )
+    );
+  }
+
+  /* ===============================
+     🏆 CONQUISTAS
+  =============================== */
+  function unlockAchievements(count: number) {
+    const unlocks: Record<number, string> = {
+      1: "🌅 Primeiro Amanhecer",
+      7: "🔥 Ritual da Semana",
+      30: "🏆 Disciplina Lendária",
+      100: "👁️ Entidade da Rotina",
+    };
+
+    if (!unlocks[count]) return;
+    if (achievements.includes(unlocks[count])) return;
+
+    const updated = [...achievements, unlocks[count]];
+    setAchievements(updated);
+    localStorage.setItem(
+      ACHIEVEMENTS_KEY,
+      JSON.stringify(updated)
     );
   }
 
   return (
     <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
       <h2 className="font-bold mb-2">Missões</h2>
-
-      <div className="flex gap-2 mb-3">
-        <input
-          className="bg-zinc-800 px-2 py-1 rounded"
-          placeholder="Missão"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-        />
-
-        <input
-          type="number"
-          className="bg-zinc-800 px-2 py-1 rounded w-20"
-          value={xp}
-          min={1}
-          onChange={e => setXp(Number(e.target.value))}
-        />
-
-        <button
-          onClick={addMission}
-          className="bg-purple-600 px-3 rounded"
-        >
-          +
-        </button>
-      </div>
 
       <ul className="space-y-2">
         {missions.map(m => (
@@ -158,7 +163,7 @@ export function Missions() {
                 {m.tag === "Diária" && "🌅 "}
                 {m.title}
                 {m.attribute && (
-                  <span className="text-xs text-zinc-400 ml-2">
+                  <span className="text-xs ml-2 text-zinc-400">
                     ({m.attribute})
                   </span>
                 )}
@@ -176,6 +181,12 @@ export function Missions() {
           </li>
         ))}
       </ul>
+
+      {achievements.length > 0 && (
+        <div className="mt-4 text-xs text-zinc-400">
+          🏆 {achievements.join(" • ")}
+        </div>
+      )}
     </div>
   );
 }
