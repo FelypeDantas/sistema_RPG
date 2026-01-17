@@ -6,11 +6,10 @@ import { v4 as uuid } from "uuid";
 const DAILY_KEY = "rpg_daily_mission_date";
 
 const DAILY_QUESTS = [
-  "Estudar por 25 minutos",
-  "Caminhar por 10 minutos",
-  "Organizar algo pequeno",
-  "Ler 5 páginas",
-  "Beber água conscientemente",
+  { title: "Estudar por 25 minutos", attribute: "Mente" },
+  { title: "Caminhar por 10 minutos", attribute: "Físico" },
+  { title: "Conversar com alguém", attribute: "Social" },
+  { title: "Organizar finanças do dia", attribute: "Finanças" },
 ];
 
 function todayKey() {
@@ -18,7 +17,7 @@ function todayKey() {
 }
 
 export function Missions() {
-  const { gainXP } = usePlayer();
+  const { gainXP, level, resetStreak } = usePlayer();
 
   const [missions, setMissions] = useState<Mission[]>([]);
   const [title, setTitle] = useState("");
@@ -26,11 +25,27 @@ export function Missions() {
   const [tag, setTag] = useState("Geral");
 
   /* ===============================
-     🌅 QUEST DIÁRIA AUTOMÁTICA
+     🌅 QUEST DIÁRIA AVANÇADA
   =============================== */
   useEffect(() => {
     const today = todayKey();
     const lastDaily = localStorage.getItem(DAILY_KEY);
+
+    // 🔥 Se o dia mudou e a diária anterior não foi concluída → quebra streak
+    if (lastDaily && lastDaily !== today) {
+      const unfinishedDaily = missions.find(
+        m => m.tag === "Diária" && !m.completed
+      );
+
+      if (unfinishedDaily) {
+        resetStreak?.();
+      }
+
+      // Remove diária expirada
+      setMissions(prev =>
+        prev.filter(m => m.tag !== "Diária")
+      );
+    }
 
     if (lastDaily === today) return;
 
@@ -40,20 +55,24 @@ export function Missions() {
 
     if (alreadyExists) return;
 
-    const randomQuest =
+    const random =
       DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
+
+    // 📈 XP escala com o nível
+    const dailyXP = Math.round(50 + level * 15);
 
     const dailyMission: Mission = {
       id: uuid(),
-      title: `Quest diária: ${randomQuest}`,
-      xp: 100,
+      title: `Quest diária: ${random.title}`,
+      xp: dailyXP,
       tag: "Diária",
+      attribute: random.attribute,
       completed: false,
     };
 
     setMissions(prev => [...prev, dailyMission]);
     localStorage.setItem(DAILY_KEY, today);
-  }, [missions]);
+  }, [missions, level, resetStreak]);
 
   /* ===============================
      ➕ ADD MISSÃO NORMAL
@@ -138,6 +157,11 @@ export function Missions() {
               <span>
                 {m.tag === "Diária" && "🌅 "}
                 {m.title}
+                {m.attribute && (
+                  <span className="text-xs text-zinc-400 ml-2">
+                    ({m.attribute})
+                  </span>
+                )}
               </span>
 
               {!m.completed && (
