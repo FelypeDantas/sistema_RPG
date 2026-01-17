@@ -1,7 +1,21 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePlayer } from "@/context/PlayerContext";
 import { Mission } from "@/types/Mission";
 import { v4 as uuid } from "uuid";
+
+const DAILY_KEY = "rpg_daily_mission_date";
+
+const DAILY_QUESTS = [
+  "Estudar por 25 minutos",
+  "Caminhar por 10 minutos",
+  "Organizar algo pequeno",
+  "Ler 5 páginas",
+  "Beber água conscientemente",
+];
+
+function todayKey() {
+  return new Date().toISOString().split("T")[0];
+}
 
 export function Missions() {
   const { gainXP } = usePlayer();
@@ -11,6 +25,39 @@ export function Missions() {
   const [xp, setXp] = useState(50);
   const [tag, setTag] = useState("Geral");
 
+  /* ===============================
+     🌅 QUEST DIÁRIA AUTOMÁTICA
+  =============================== */
+  useEffect(() => {
+    const today = todayKey();
+    const lastDaily = localStorage.getItem(DAILY_KEY);
+
+    if (lastDaily === today) return;
+
+    const alreadyExists = missions.some(
+      m => m.tag === "Diária" && !m.completed
+    );
+
+    if (alreadyExists) return;
+
+    const randomQuest =
+      DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
+
+    const dailyMission: Mission = {
+      id: uuid(),
+      title: `Quest diária: ${randomQuest}`,
+      xp: 100,
+      tag: "Diária",
+      completed: false,
+    };
+
+    setMissions(prev => [...prev, dailyMission]);
+    localStorage.setItem(DAILY_KEY, today);
+  }, [missions]);
+
+  /* ===============================
+     ➕ ADD MISSÃO NORMAL
+  =============================== */
   function addMission() {
     if (!title.trim()) return;
 
@@ -28,6 +75,9 @@ export function Missions() {
     setTitle("");
   }
 
+  /* ===============================
+     ✅ CONCLUIR MISSÃO
+  =============================== */
   function completeMission(id: string) {
     const mission = missions.find(
       m => m.id === id && !m.completed
@@ -35,10 +85,8 @@ export function Missions() {
 
     if (!mission) return;
 
-    // 🎯 Efeito colateral fora do setState
     gainXP(mission.xp);
 
-    // 🧱 Atualização de estado pura
     setMissions(prev =>
       prev.map(m =>
         m.id === id
@@ -87,7 +135,10 @@ export function Missions() {
             }`}
           >
             <div className="flex justify-between items-center">
-              <span>{m.title}</span>
+              <span>
+                {m.tag === "Diária" && "🌅 "}
+                {m.title}
+              </span>
 
               {!m.completed && (
                 <button
