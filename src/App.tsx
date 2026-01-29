@@ -7,6 +7,7 @@ import RPGDashboard from "./pages/RPGDashboard";
 import NotFound from "./pages/NotFound";
 import QuestHistory from "./pages/QuestHistory";
 import TalentsTree from "./pages/TalentsTree";
+import AttributesPage from "@/pages/AttributesPage";
 
 // 👉 NOVO
 import { PlayerProvider } from "@/context/PlayerContext";
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/" element={<RPGDashboard />} />
             <Route path="/quests/history" element={<QuestHistory />} />
             <Route path="/talents" element={<TalentsTree />} />
+            <Route path="/attributes" element={<AttributesPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ScrollText, GitBranch, LayoutDashboard } from "lucide-react";
+import { X, ScrollText, GitBranch, LayoutDashboard, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileDrawerProps {
@@ -91,6 +91,19 @@ export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
                   Árvore de Habilidades
                 </span>
               </button>
+
+              <button
+                onClick={() => goTo("/attributes")}
+                className="w-full flex items-center gap-3 p-4 rounded-xl
+             bg-cyber-card border border-white/10
+             hover:border-neon-orange transition"
+              >
+                <BookOpen className="text-neon-orange" />
+                <span className="text-white font-medium">
+                  Codex de Atributos
+                </span>
+              </button>
+
             </nav>
           </motion.aside>
         </>
