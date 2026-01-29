@@ -1,34 +1,49 @@
-// src/data/attributes.ts
-import {
-  Dumbbell,
-  Brain,
-  Users,
-  Wallet,
-  Heart,
-  Zap
-} from "lucide-react";
+import { Dumbbell, Brain, Users, Wallet } from "lucide-react";
 
-export const ALL_ATTRIBUTES = [
+export type Segment = {
+  id: string;
+  name: string;
+  description: string;
+  unlockLevel: number;
+  affectedByTalents?: string[];
+  evolvesWith?: string[];
+};
+
+export type Attribute = {
+  id: string;
+  name: string;
+  icon: any;
+  description: string;
+  segments: Segment[];
+};
+
+export const ALL_ATTRIBUTES: Attribute[] = [
   {
     id: "fisico",
     name: "Físico",
     icon: Dumbbell,
-    description: "Capacidade corporal, energia e resistência.",
+    description: "Domínio do corpo e disciplina física.",
     segments: [
       {
         id: "forca",
         name: "Força",
-        description: "Impacta tarefas físicas e treinos intensos."
+        description: "Capacidade de esforço bruto.",
+        unlockLevel: 1,
+        evolvesWith: ["Treino", "Exercício"]
       },
       {
         id: "resistencia",
         name: "Resistência",
-        description: "Define constância e tolerância ao esforço."
+        description: "Capacidade de manter esforço.",
+        unlockLevel: 3,
+        evolvesWith: ["Constância"]
       },
       {
         id: "agilidade",
         name: "Agilidade",
-        description: "Velocidade de reação e movimento."
+        description: "Velocidade e coordenação.",
+        unlockLevel: 6,
+        affectedByTalents: ["focus"]
       }
     ]
   },
@@ -36,22 +51,21 @@ export const ALL_ATTRIBUTES = [
     id: "mente",
     name: "Mente",
     icon: Brain,
-    description: "Capacidade cognitiva e foco mental.",
+    description: "Foco, cognição e criatividade.",
     segments: [
       {
         id: "foco",
         name: "Foco",
-        description: "Aumenta chance de sucesso em missões."
+        description: "Aumenta chance de sucesso.",
+        unlockLevel: 1,
+        affectedByTalents: ["focus"],
+        evolvesWith: ["Estudo"]
       },
       {
         id: "criatividade",
         name: "Criatividade",
-        description: "Desbloqueia soluções alternativas."
-      },
-      {
-        id: "memoria",
-        name: "Memória",
-        description: "Retenção de aprendizado."
+        description: "Soluções alternativas.",
+        unlockLevel: 5
       }
     ]
   }
