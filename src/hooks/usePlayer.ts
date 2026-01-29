@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "life_rpg_player";
+segments: Record<string, number>;
+
+segments: {
+  forca: 10,
+  foco: 20
+}
 
 export type TraitId =
   | "disciplinado"
@@ -46,6 +52,19 @@ export function usePlayer() {
     setAttributes(data.attributes ?? attributes);
     setTraits(data.traits ?? traits);
   }, []);
+
+  gainSegmentXP(segmentId: string, amount: number) {
+  set(state => ({
+    segments: {
+      ...state.segments,
+      [segmentId]: Math.min(
+        100,
+        (state.segments[segmentId] ?? 0) + amount
+      )
+    }
+  }));
+}
+
 
   // 🔹 SAVE
   useEffect(() => {
