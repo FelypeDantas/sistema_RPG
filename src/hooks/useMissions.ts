@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 
+/* =============================
+   🎯 TIPOS
+============================= */
+
 export type MissionAttribute =
   | "Mente"
   | "Físico"
@@ -13,17 +17,33 @@ export interface Mission {
   xp: number;
   attribute: MissionAttribute;
   done: boolean;
+
+  // 🧬 NOVO — segmento que a missão evolui
+  segment?: string;
+  segmentXP?: number;
 }
 
-interface MissionHistory {
+export interface MissionHistory {
   id: string;
   xp: number;
   success: boolean;
   date: string;
+
+  // 🧬 NOVO — persistência do progresso
+  segment?: string;
+  segmentXP?: number;
 }
+
+/* =============================
+   💾 STORAGE
+============================= */
 
 const STORAGE_KEY = "rpg_missions";
 const HISTORY_KEY = "rpg_mission_history";
+
+/* =============================
+   🧠 HOOK
+============================= */
 
 export function useMissions() {
   const [missions, setMissions] = useState<Mission[]>(() => {
@@ -36,17 +56,35 @@ export function useMissions() {
     return stored ? JSON.parse(stored) : [];
   });
 
+  /* =============================
+     📤 SAVE
+  ============================= */
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(missions)
+    );
   }, [missions]);
 
   useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    localStorage.setItem(
+      HISTORY_KEY,
+      JSON.stringify(history)
+    );
   }, [history]);
+
+  /* =============================
+     ➕ ADD
+  ============================= */
 
   function addMission(mission: Mission) {
     setMissions(prev => [...prev, mission]);
   }
+
+  /* =============================
+     ✅ COMPLETE
+  ============================= */
 
   function completeMission(
     mission: Mission,
@@ -54,24 +92,32 @@ export function useMissions() {
   ) {
     const success = Math.random() < successChance;
 
-    // Remove a missão da lista ativa
+    // Remove missão ativa
     setMissions(prev =>
       prev.filter(m => m.id !== mission.id)
     );
 
-    // Registra no histórico
+    // Salva no histórico (com segmento)
     setHistory(prev => [
       ...prev,
       {
         id: mission.id,
         xp: mission.xp,
         success,
-        date: new Date().toISOString()
+        date: new Date().toISOString(),
+
+        // 🧬 persistência de segmento
+        segment: mission.segment,
+        segmentXP: mission.segmentXP
       }
     ]);
 
     return success;
   }
+
+  /* =============================
+     📦 EXPORT
+  ============================= */
 
   return {
     missions,
