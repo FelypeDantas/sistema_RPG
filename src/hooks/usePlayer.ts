@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "life_rpg_player";
-segments: Record<string, number>;
 
-segments: {
-  forca: 10,
-  foco: 20
-}
+/* =============================
+   🧬 TRAITS
+============================= */
 
 export type TraitId =
   | "disciplinado"
@@ -20,6 +18,10 @@ export interface Trait {
   description: string;
 }
 
+/* =============================
+   🎮 PLAYER HOOK
+============================= */
+
 export function usePlayer() {
   const [level, setLevel] = useState(1);
   const [xp, setXP] = useState(0);
@@ -29,6 +31,12 @@ export function usePlayer() {
     Mente: 10,
     Social: 10,
     Finanças: 10
+  });
+
+  /* 🧬 SEGMENTOS */
+  const [segments, setSegments] = useState<Record<string, number>>({
+    forca: 10,
+    foco: 20
   });
 
   const [traits, setTraits] = useState<Trait[]>([
@@ -41,32 +49,28 @@ export function usePlayer() {
 
   const nextLevelXP = Math.floor(100 + xp * 0.9);
 
-  // 🔹 LOAD
+  /* =============================
+     📥 LOAD
+  ============================= */
+
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return;
 
     const data = JSON.parse(saved);
+
     setLevel(data.level ?? 1);
     setXP(data.xp ?? 0);
     setAttributes(data.attributes ?? attributes);
     setTraits(data.traits ?? traits);
+    setSegments(data.segments ?? segments);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  gainSegmentXP(segmentId: string, amount: number) {
-  set(state => ({
-    segments: {
-      ...state.segments,
-      [segmentId]: Math.min(
-        100,
-        (state.segments[segmentId] ?? 0) + amount
-      )
-    }
-  }));
-}
+  /* =============================
+     📤 SAVE
+  ============================= */
 
-
-  // 🔹 SAVE
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -74,16 +78,28 @@ export function usePlayer() {
         level,
         xp,
         attributes,
-        traits
+        traits,
+        segments
       })
     );
-  }, [level, xp, attributes, traits]);
+  }, [level, xp, attributes, traits, segments]);
+
+  /* =============================
+     🔍 HELPERS
+  ============================= */
 
   const hasTrait = (id: TraitId) => {
     return traits.some(t => t.id === id);
   };
 
-  const gainXP = (amount: number, attribute?: keyof typeof attributes) => {
+  /* =============================
+     ⭐ XP GLOBAL
+  ============================= */
+
+  const gainXP = (
+    amount: number,
+    attribute?: keyof typeof attributes
+  ) => {
     setXP(prev => {
       const total = prev + amount;
 
@@ -103,13 +119,33 @@ export function usePlayer() {
     }
   };
 
+  /* =============================
+     🧬 XP DE SEGMENTO
+  ============================= */
+
+  const gainSegmentXP = (segmentId: string, amount: number) => {
+    setSegments(prev => ({
+      ...prev,
+      [segmentId]: Math.min(
+        100,
+        (prev[segmentId] ?? 0) + amount
+      )
+    }));
+  };
+
+  /* =============================
+     📦 EXPORT
+  ============================= */
+
   return {
     level,
     xp,
     nextLevelXP,
     attributes,
+    segments,
     traits,
     hasTrait,
-    gainXP
+    gainXP,
+    gainSegmentXP
   };
 }
