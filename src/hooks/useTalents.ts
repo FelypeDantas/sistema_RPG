@@ -99,15 +99,16 @@ export function useTalents(level: number) {
   ============================= */
 
   useEffect(() => {
-    const unlockedCount = Object.values(talents).filter(
-      t => !t.locked
-    ).length;
+  const spentPoints = Object.values(talents).filter(
+    t => !t.locked
+  ).reduce((acc, t) => acc + t.cost, 0);
 
-    // 1 ponto por nível acima do 1
-    const totalPoints = Math.max(level - 1, 0);
+  const totalEarnedPoints = Math.max(level - 1, 0);
 
-    setPoints(totalPoints - unlockedCount);
-  }, [level, talents]);
+  const available = totalEarnedPoints - spentPoints;
+
+  setPoints(Math.max(available, 0));
+}, [level, talents]);
 
   /* =============================
      🔓 DESBLOQUEAR TALENTO
