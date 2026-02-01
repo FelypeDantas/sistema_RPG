@@ -7,13 +7,11 @@ import { useEffect, useState } from "react";
 export type TalentNodeData = {
   id: string;
   title: string;
-  description: string;
-  cost: number;
   category: "soft" | "hard" | "combat" | "mental";
   x: number;
   y: number;
-  progress: number;
-  locked: boolean;
+  progress: number; // 0–100
+  locked?: boolean;
   children?: string[];
   unlocksMission?: boolean;
 };
@@ -38,7 +36,7 @@ const initialTalents: Record<string, TalentNodeData> = {
   disciplina: {
     id: "disciplina",
     title: "Disciplina",
-    description: "Bônus de XP ao manter sequência de dias.",
+    description: "Bônus de XP quando mantém sequência de dias.",
     cost: 1,
     category: "mental",
     x: 300,
@@ -91,6 +89,9 @@ export function useTalents(level: number) {
   const [talents, setTalents] =
     useState<Record<string, TalentNodeData>>(initialTalents);
 
+  const [collapsed, setCollapsed] =
+    useState<Record<string, boolean>>({});
+
   const [points, setPoints] = useState(0);
 
   /* =============================
@@ -98,28 +99,29 @@ export function useTalents(level: number) {
   ============================= */
 
   useEffect(() => {
-    const spentPoints = Object.values(talents)
-      .filter(t => !t.locked)
-      .reduce((acc, t) => acc + t.cost, 0);
+  const spentPoints = Object.values(talents).filter(
+    t => !t.locked
+  ).reduce((acc, t) => acc + t.cost, 0);
 
-    // regra: 1 ponto por nível
-    const totalEarnedPoints = Math.max(level, 0);
+  const totalEarnedPoints = Math.max(level - 1, 0);
 
-    setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
-  }, [level, talents]);
+  const available = totalEarnedPoints - spentPoints;
+
+  setPoints(Math.max(available, 0));
+}, [level, talents]);
 
   /* =============================
      🔓 DESBLOQUEAR TALENTO
   ============================= */
 
   function unlockTalent(id: string) {
-    const talent = talents[id];
-    if (!talent) return;
-    if (!talent.locked) return;
-    if (points < talent.cost) return;
+    if (points <= 0) return;
 
     setTalents(prev => {
-      const updated = {
+      const talent = prev[id];
+      if (!talent || !talent.locked) return prev;
+
+      const updated: Record<string, TalentNodeData> = {
         ...prev,
         [id]: {
           ...talent,
@@ -128,7 +130,7 @@ export function useTalents(level: number) {
         }
       };
 
-      // libera filhos
+      // libera talentos filhos
       talent.children?.forEach(childId => {
         if (updated[childId]) {
           updated[childId] = {
@@ -143,12 +145,15 @@ export function useTalents(level: number) {
   }
 
   /* =============================
-     💡 TALENTOS SUGERIDOS
+     📦 UI
   ============================= */
 
-  const suggestedTalents = Object.values(talents).filter(
-    t => t.locked
-  );
+  function toggleCollapse(id: string) {
+    setCollapsed(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  }
 
   /* =============================
      📤 API
@@ -156,9 +161,10 @@ export function useTalents(level: number) {
 
   return {
     talents: Object.values(talents),
-    suggestedTalents,
     byId: talents,
     points,
-    unlockTalent
+    unlockTalent,
+    collapsed,
+    toggleCollapse
   };
 }
