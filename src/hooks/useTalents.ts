@@ -24,6 +24,8 @@ const initialTalents: Record<string, TalentNodeData> = {
   foco: {
     id: "foco",
     title: "Foco",
+    description: "Aumenta a chance de sucesso em missões.",
+    cost: 1,
     category: "mental",
     x: 100,
     y: 100,
@@ -34,6 +36,8 @@ const initialTalents: Record<string, TalentNodeData> = {
   disciplina: {
     id: "disciplina",
     title: "Disciplina",
+    description: "Bônus de XP quando mantém sequência de dias.",
+    cost: 1,
     category: "mental",
     x: 300,
     y: 220,
@@ -43,6 +47,8 @@ const initialTalents: Record<string, TalentNodeData> = {
   capoeira: {
     id: "capoeira",
     title: "Capoeira",
+    description: "Desbloqueia missões físicas avançadas.",
+    cost: 1,
     category: "combat",
     x: 600,
     y: 120,
@@ -54,6 +60,8 @@ const initialTalents: Record<string, TalentNodeData> = {
   ginga: {
     id: "ginga",
     title: "Ginga",
+    description: "Aumenta agilidade em missões físicas.",
+    cost: 1,
     category: "combat",
     x: 500,
     y: 260,
@@ -63,6 +71,8 @@ const initialTalents: Record<string, TalentNodeData> = {
   armada: {
     id: "armada",
     title: "Armada",
+    description: "Aumenta poder em desafios físicos.",
+    cost: 1,
     category: "combat",
     x: 700,
     y: 260,
