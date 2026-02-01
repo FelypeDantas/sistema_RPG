@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 /* =============================
    🧬 TIPOS
@@ -7,6 +7,8 @@ import { useEffect, useState } from "react";
 export type TalentNodeData = {
   id: string;
   title: string;
+  description: string;
+  cost: number;
   category: "soft" | "hard" | "combat" | "mental";
   x: number;
   y: number;
@@ -99,16 +101,15 @@ export function useTalents(level: number) {
   ============================= */
 
   useEffect(() => {
-  const spentPoints = Object.values(talents).filter(
-    t => !t.locked
-  ).reduce((acc, t) => acc + t.cost, 0);
+    const spentPoints = Object.values(talents)
+      .filter(t => !t.locked)
+      .reduce((acc, t) => acc + t.cost, 0);
 
-  const totalEarnedPoints = Math.max(level - 1, 0);
+    const totalEarnedPoints = Math.max(level - 1, 0);
+    const available = totalEarnedPoints - spentPoints;
 
-  const available = totalEarnedPoints - spentPoints;
-
-  setPoints(Math.max(available, 0));
-}, [level, talents]);
+    setPoints(Math.max(available, 0));
+  }, [level, talents]);
 
   /* =============================
      🔓 DESBLOQUEAR TALENTO
@@ -121,7 +122,7 @@ export function useTalents(level: number) {
       const talent = prev[id];
       if (!talent || !talent.locked) return prev;
 
-      const updated: Record<string, TalentNodeData> = {
+      const updated = {
         ...prev,
         [id]: {
           ...talent,
@@ -130,12 +131,12 @@ export function useTalents(level: number) {
         }
       };
 
-      // libera talentos filhos
+      // libera filhos (aparecem na árvore, mas continuam bloqueados)
       talent.children?.forEach(childId => {
         if (updated[childId]) {
           updated[childId] = {
             ...updated[childId],
-            locked: false
+            locked: true
           };
         }
       });
@@ -143,6 +144,23 @@ export function useTalents(level: number) {
       return updated;
     });
   }
+
+  /* =============================
+     ⭐ TALENTOS SUGERIDOS (DASHBOARD)
+  ============================= */
+
+  const suggestedTalents = useMemo(() => {
+    return Object.values(talents).filter(talent => {
+      if (!talent.locked) return false;
+
+      // verifica se algum pai está desbloqueado
+      const parents = Object.values(talents).filter(parent =>
+        parent.children?.includes(talent.id)
+      );
+
+      return parents.some(parent => !parent.locked);
+    });
+  }, [talents]);
 
   /* =============================
      📦 UI
@@ -160,7 +178,8 @@ export function useTalents(level: number) {
   ============================= */
 
   return {
-    talents: Object.values(talents),
+    talents: Object.values(talents),      // árvore completa
+    suggestedTalents,                     // dashboard
     byId: talents,
     points,
     unlockTalent,
