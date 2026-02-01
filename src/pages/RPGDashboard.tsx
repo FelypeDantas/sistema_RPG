@@ -34,7 +34,13 @@ const RPGDashboard = () => {
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
-  const talents = useTalents(player.level);
+
+  const {
+    talents,
+    suggestedTalents,
+    points,
+    unlockTalent
+  } = useTalents(player.level);
 
   /* =============================
      🧮 XP TOTAL
@@ -46,13 +52,39 @@ const RPGDashboard = () => {
   );
 
   /* =============================
-     🎯 MISSÕES + TRAITS
+     🔥 STREAK REAL
+  ============================== */
+
+  const now = new Date();
+  let streak = 0;
+
+  for (let i = 0; i < 365; i++) {
+    const day = new Date();
+    day.setDate(now.getDate() - i);
+    const key = day.toISOString().split("T")[0];
+
+    const didSomething = missions.history.some(
+      h => h.success && h.date.startsWith(key)
+    );
+
+    if (didSomething) streak++;
+    else break;
+  }
+
+  const currentStreak =
+    streak === 0 && player.hasTrait?.("persistente")
+      ? 1
+      : streak;
+
+  /* =============================
+     🎯 MISSÕES + TALENTOS
   ============================== */
 
   const handleMissionComplete = (mission: Mission) => {
     let successChance = 0.8;
 
-    if (talents.talents.find(t => t.id === "focus" && t.unlocked)) {
+    // 🎯 Foco (mental)
+    if (talents.find(t => t.id === "foco" && !t.locked)) {
       successChance += 0.1;
     }
 
@@ -86,8 +118,6 @@ const RPGDashboard = () => {
      📊 XP SEMANAL
   ============================== */
 
-  const now = new Date();
-
   const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
     const day = new Date();
     day.setDate(now.getDate() - (6 - i));
@@ -97,30 +127,6 @@ const RPGDashboard = () => {
       .filter(h => h.success && h.date.startsWith(key))
       .reduce((acc, h) => acc + h.xp, 0);
   });
-
-  /* =============================
-     🔥 STREAK REAL
-  ============================== */
-
-  let streak = 0;
-
-  for (let i = 0; i < 365; i++) {
-    const day = new Date();
-    day.setDate(now.getDate() - i);
-    const key = day.toISOString().split("T")[0];
-
-    const didSomething = missions.history.some(
-      h => h.success && h.date.startsWith(key)
-    );
-
-    if (didSomething) streak++;
-    else break;
-  }
-
-  const currentStreak =
-    streak === 0 && player.hasTrait?.("persistente")
-      ? 1
-      : streak;
 
   return (
     <>
@@ -154,47 +160,17 @@ const RPGDashboard = () => {
                 Atributos
               </h3>
 
-              <AttributeBar
-                attribute={{
-                  name: "Físico",
-                  value: player.attributes.Físico,
-                  icon: Dumbbell,
-                  color: "from-neon-red to-neon-orange"
-                }}
-              />
-
-              <AttributeBar
-                attribute={{
-                  name: "Mente",
-                  value: player.attributes.Mente,
-                  icon: Brain,
-                  color: "from-neon-blue to-neon-cyan"
-                }}
-              />
-
-              <AttributeBar
-                attribute={{
-                  name: "Social",
-                  value: player.attributes.Social,
-                  icon: Users,
-                  color: "from-neon-purple to-neon-pink"
-                }}
-              />
-
-              <AttributeBar
-                attribute={{
-                  name: "Finanças",
-                  value: player.attributes.Finanças,
-                  icon: Wallet,
-                  color: "from-neon-green to-neon-cyan"
-                }}
-              />
+              <AttributeBar attribute={{ name: "Físico", value: player.attributes.Físico, icon: Dumbbell, color: "from-neon-red to-neon-orange" }} />
+              <AttributeBar attribute={{ name: "Mente", value: player.attributes.Mente, icon: Brain, color: "from-neon-blue to-neon-cyan" }} />
+              <AttributeBar attribute={{ name: "Social", value: player.attributes.Social, icon: Users, color: "from-neon-purple to-neon-pink" }} />
+              <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan" }} />
             </div>
 
+            {/* 🌳 ÁRVORE COMPLETA */}
             <TalentTree
-              talents={talents.talents}
-              points={talents.points}
-              onUnlock={talents.unlockTalent}
+              talents={talents}
+              points={points}
+              onUnlock={unlockTalent}
             />
           </div>
 
@@ -239,6 +215,30 @@ const RPGDashboard = () => {
               currentStreak={currentStreak}
             />
 
+            {/* ⭐ TALENTOS SUGERIDOS */}
+            {suggestedTalents.length > 0 && (
+              <div className="bg-cyber-card p-5 rounded-xl">
+                <h3 className="text-white mb-4">Sugestões de Talento</h3>
+
+                <ul className="space-y-2">
+                  {suggestedTalents.map(talent => (
+                    <li
+                      key={talent.id}
+                      className="flex justify-between items-center text-sm text-gray-300"
+                    >
+                      <span>{talent.title}</span>
+                      <button
+                        onClick={() => unlockTalent(talent.id)}
+                        className="text-neon-cyan hover:underline"
+                      >
+                        Desbloquear
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
                 <Trophy className="w-5 h-5 text-neon-orange" />
@@ -256,7 +256,6 @@ const RPGDashboard = () => {
         </div>
       </div>
 
-      {/* ================= PROFILE DRAWER ================= */}
       <ProfileDrawer
         open={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
