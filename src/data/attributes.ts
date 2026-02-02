@@ -68,5 +68,47 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         unlockLevel: 5
       }
     ]
+  },
+  {
+    id: "social",
+    name: "Social",
+    icon: Users,
+    description: "Habilidades interpessoais.",
+    segments: [
+      {
+        id: "comunicacao",
+        name: "Comunicação",
+        description: "Expressar ideias claramente.",
+        unlockLevel: 2,
+        evolvesWith: ["Networking"]
+      },
+      {
+        id: "empatia",
+        name: "Empatia",
+        description: "Compreender emoções alheias.",
+        unlockLevel: 4
+      }
+    ]
+  },
+  {
+    id: "financeiro",
+    name: "Financeiro",
+    icon: Wallet,
+    description: "Gestão de recursos monetários.",
+    segments: [
+      {
+        id: "planejamento",
+        name: "Planejamento",
+        description: "Organização financeira eficaz.",
+        unlockLevel: 2,
+        evolvesWith: ["Orçamento"]
+      },
+      {
+        id: "investimento",
+        name: "Investimento",
+        description: "Crescimento de patrimônio.",
+        unlockLevel: 5
+      }
+    ]
   }
 ];
