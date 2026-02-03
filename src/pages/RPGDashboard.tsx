@@ -27,16 +27,20 @@ import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerClass } from "@/hooks/usePlayerClass";
 import { useTalents } from "@/hooks/useTalents";
 
+import "@/components/rpg/MissionModal.css";
+
 const RPGDashboard = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // 🆕 estado do modal
+  const [pendingMission, setPendingMission] =
+    useState<Mission | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const player = usePlayer();
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
-  const [pendingMission, setPendingMission] = useState<Mission | null>(null);
-  const [showConfirm, setShowConfirm] = useState(false);
-
 
   const {
     talents,
@@ -80,22 +84,15 @@ const RPGDashboard = () => {
       : streak;
 
   /* =============================
-     🎯 MISSÕES + TALENTOS
+     🎯 CONCLUIR MISSÃO (manual)
   ============================== */
 
-  const handleMissionComplete = (mission: Mission) => {
-    let successChance = 0.8;
+  const handleMissionComplete = (
+    mission: Mission,
+    success: boolean
+  ) => {
+    missions.completeMission(mission, success);
 
-    // 🎯 Foco (mental)
-    if (talents.find(t => t.id === "foco" && !t.locked)) {
-      successChance += 0.1;
-    }
-
-    if (player.hasTrait?.("impulsivo")) {
-      successChance -= 0.1;
-    }
-
-    const success = missions.completeMission(mission, successChance);
     if (!success) return;
 
     let finalXP = mission.xp;
@@ -169,7 +166,6 @@ const RPGDashboard = () => {
               <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan" }} />
             </div>
 
-            {/* 🌳 ÁRVORE COMPLETA */}
             <TalentTree
               talents={talents}
               points={points}
@@ -202,9 +198,10 @@ const RPGDashboard = () => {
                   <QuestCard
                     key={mission.id}
                     quest={mission}
-                    onComplete={() =>
-                      handleMissionComplete(mission)
-                    }
+                    onComplete={() => {
+                      setPendingMission(mission);
+                      setShowConfirm(true);
+                    }}
                   />
                 ))}
               </AnimatePresence>
@@ -218,7 +215,6 @@ const RPGDashboard = () => {
               currentStreak={currentStreak}
             />
 
-            {/* ⭐ TALENTOS SUGERIDOS */}
             {suggestedTalents.length > 0 && (
               <div className="bg-cyber-card p-5 rounded-xl">
                 <h3 className="text-white mb-4">Sugestões de Talento</h3>
@@ -258,6 +254,44 @@ const RPGDashboard = () => {
 
         </div>
       </div>
+
+      {/* 🧠 MODAL DE CONFIRMAÇÃO */}
+      {showConfirm && pendingMission && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Concluir Missão</h2>
+
+            <p>
+              Tem certeza de que deseja concluir a missão
+              <strong> "{pendingMission.title}"</strong>?
+            </p>
+
+            <div className="actions">
+              <button
+                className="fail"
+                onClick={() => {
+                  handleMissionComplete(pendingMission, false);
+                  setShowConfirm(false);
+                  setPendingMission(null);
+                }}
+              >
+                ❌ Falha
+              </button>
+
+              <button
+                className="success"
+                onClick={() => {
+                  handleMissionComplete(pendingMission, true);
+                  setShowConfirm(false);
+                  setPendingMission(null);
+                }}
+              >
+                ✅ Sucesso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ProfileDrawer
         open={isProfileOpen}
