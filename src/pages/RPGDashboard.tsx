@@ -34,6 +34,9 @@ const RPGDashboard = () => {
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
+  const [pendingMission, setPendingMission] = useState<Mission | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
 
   const {
     talents,
