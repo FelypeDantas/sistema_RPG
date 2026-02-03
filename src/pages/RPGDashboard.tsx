@@ -7,7 +7,8 @@ import {
   Dumbbell,
   Brain,
   Users,
-  Wallet
+  Wallet,
+  Pencil
 } from "lucide-react";
 
 import { AnimatePresence } from "framer-motion";
@@ -31,6 +32,7 @@ import "@/components/rpg/MissionModal.css";
 
 const RPGDashboard = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
 
   // 🆕 estado do modal
   const [pendingMission, setPendingMission] =
@@ -84,7 +86,7 @@ const RPGDashboard = () => {
       : streak;
 
   /* =============================
-     🎯 CONCLUIR MISSÃO (manual)
+     🎯 CONCLUIR MISSÃO
   ============================== */
 
   const handleMissionComplete = (
@@ -135,13 +137,39 @@ const RPGDashboard = () => {
 
           {/* ================= LEFT ================= */}
           <div className="space-y-6">
+
+            <div className="bg-cyber-card p-4 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                {!editingName ? (
+                  <h2 className="text-white text-lg font-semibold">
+                    {player.name}
+                  </h2>
+                ) : (
+                  <input
+                    value={player.name}
+                    onChange={e => player.updateName(e.target.value)}
+                    onBlur={() => setEditingName(false)}
+                    autoFocus
+                    className="bg-cyber-dark text-white px-2 py-1 rounded w-full"
+                  />
+                )}
+
+                <button
+                  onClick={() => setEditingName(!editingName)}
+                  className="text-gray-400 hover:text-neon-cyan"
+                >
+                  <Pencil size={16} />
+                </button>
+              </div>
+            </div>
+
             <div
               onClick={() => setIsProfileOpen(true)}
               className="cursor-pointer"
             >
               <AvatarCard
                 player={{
-                  name: "Player One",
+                  name: player.name,
                   title: playerClass.title,
                   level: player.level,
                   currentXP: player.xp,
@@ -217,7 +245,9 @@ const RPGDashboard = () => {
 
             {suggestedTalents.length > 0 && (
               <div className="bg-cyber-card p-5 rounded-xl">
-                <h3 className="text-white mb-4">Sugestões de Talento</h3>
+                <h3 className="text-white mb-4">
+                  Sugestões de Talento
+                </h3>
 
                 <ul className="space-y-2">
                   {suggestedTalents.map(talent => (
