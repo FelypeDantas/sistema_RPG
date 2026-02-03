@@ -18,7 +18,7 @@ export interface Mission {
   attribute: MissionAttribute;
   done: boolean;
 
-  // 🧬 NOVO — segmento que a missão evolui
+  // 🧬 segmento evolutivo
   segment?: string;
   segmentXP?: number;
 }
@@ -29,7 +29,6 @@ export interface MissionHistory {
   success: boolean;
   date: string;
 
-  // 🧬 NOVO — persistência do progresso
   segment?: string;
   segmentXP?: number;
 }
@@ -61,17 +60,11 @@ export function useMissions() {
   ============================= */
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(missions)
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
   }, [missions]);
 
   useEffect(() => {
-    localStorage.setItem(
-      HISTORY_KEY,
-      JSON.stringify(history)
-    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
 
   /* =============================
@@ -83,21 +76,17 @@ export function useMissions() {
   }
 
   /* =============================
-     ✅ COMPLETE
+     ✅ COMPLETE (manual)
   ============================= */
 
   function completeMission(
     mission: Mission,
-    successChance: number
+    success: boolean
   ) {
-    const success = Math.random() < successChance;
-
-    // Remove missão ativa
     setMissions(prev =>
       prev.filter(m => m.id !== mission.id)
     );
 
-    // Salva no histórico (com segmento)
     setHistory(prev => [
       ...prev,
       {
@@ -105,14 +94,10 @@ export function useMissions() {
         xp: mission.xp,
         success,
         date: new Date().toISOString(),
-
-        // 🧬 persistência de segmento
         segment: mission.segment,
         segmentXP: mission.segmentXP
       }
     ]);
-
-    return success;
   }
 
   /* =============================
