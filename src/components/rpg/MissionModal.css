@@ -2,10 +2,12 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal {
@@ -17,15 +19,20 @@
   max-width: 420px;
   text-align: center;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  animation: scaleIn 0.2s ease-out;
 }
 
 .modal h2 {
   margin-bottom: 12px;
+  font-size: 1.3rem;
+  font-weight: 600;
 }
 
 .modal p {
   font-size: 0.95rem;
   opacity: 0.9;
+  line-height: 1.4;
 }
 
 .actions {
@@ -42,14 +49,48 @@
   border: none;
   cursor: pointer;
   font-weight: bold;
+  transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+.actions button:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.actions button:active {
+  transform: scale(0.97);
 }
 
 button.fail {
   background: #7a1f1f;
   color: white;
+  box-shadow: 0 0 12px rgba(122, 31, 31, 0.4);
 }
 
 button.success {
   background: #1f7a3a;
   color: white;
+  box-shadow: 0 0 12px rgba(31, 122, 58, 0.4);
+}
+
+/* Animations */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
