@@ -75,5 +75,19 @@ export const TALENT_GRAPH: TalentNode[] = [
     effects: {
       xpMultiplier: 0.1
     }
+  },
+
+  {
+    id: "resiliente",
+    title: "Resiliente",
+    description: "Reduz penalidades por falhas em 50%",
+    category: "disciplina",
+    cost: 3,
+    requires: ["autocontrole"],
+    position: { x: 300, y: 380 },
+    effects: {
+      failurePenaltyReduction: 0.5
+    }
   }
+
 ];
