@@ -26,22 +26,18 @@ function streakBonus(streak: number) {
 }
 
 export function Missions() {
-  const {
-    gainXP,
-    loseXP,
-    level,
-    streak,
-    resetStreak,
-  } = usePlayer();
+  const { gainXP, loseXP, level, streak, resetStreak } = usePlayer();
 
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [dailyCount, setDailyCount] = useState(
-    Number(localStorage.getItem(DAILY_DONE_KEY) ?? 0)
-  );
+  const [dailyCount, setDailyCount] = useState(() => {
+    const stored = localStorage.getItem(DAILY_DONE_KEY);
+    return stored ? Number(stored) : 0;
+  });
 
-  const [achievements, setAchievements] = useState<string[]>(
-    JSON.parse(localStorage.getItem(ACHIEVEMENTS_KEY) ?? "[]")
-  );
+  const [achievements, setAchievements] = useState<string[]>(() => {
+    const stored = localStorage.getItem(ACHIEVEMENTS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  });
 
   /* ===============================
      🌅 QUEST DIÁRIA + HARDCORE
@@ -50,33 +46,25 @@ export function Missions() {
     const today = todayKey();
     const lastDaily = localStorage.getItem(DAILY_KEY);
 
+    // Se perdeu o dia, reset streak e aplica penalidade
     if (lastDaily && lastDaily !== today) {
-      const unfinishedDaily = missions.find(
-        m => m.tag === "Diária" && !m.completed
-      );
-
+      const unfinishedDaily = missions.find(m => m.tag === "Diária" && !m.completed);
       if (unfinishedDaily) {
         resetStreak();
-
-        // 💀 Hardcore penalty
         const penalty = Math.round(20 + level * 10);
         loseXP?.(penalty);
       }
 
-      setMissions(prev =>
-        prev.filter(m => m.tag !== "Diária")
-      );
+      setMissions(prev => prev.filter(m => m.tag !== "Diária"));
     }
 
+    // Se já criou a missão hoje, não faz nada
     if (lastDaily === today) return;
 
-    const random =
-      DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
-
+    // Cria missão diária aleatória
+    const random = DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
     const baseXP = Math.round(50 + level * 15);
-    const finalXP = Math.round(
-      baseXP * streakBonus(streak)
-    );
+    const finalXP = Math.round(baseXP * streakBonus(streak));
 
     setMissions(prev => [
       ...prev,
@@ -91,15 +79,13 @@ export function Missions() {
     ]);
 
     localStorage.setItem(DAILY_KEY, today);
-  }, [missions, level, streak]);
+  }, [level, streak]);
 
   /* ===============================
      ✅ CONCLUIR MISSÃO
   =============================== */
   function completeMission(id: string) {
-    const mission = missions.find(
-      m => m.id === id && !m.completed
-    );
+    const mission = missions.find(m => m.id === id && !m.completed);
     if (!mission) return;
 
     gainXP(mission.xp);
@@ -107,25 +93,18 @@ export function Missions() {
     if (mission.tag === "Diária") {
       const newCount = dailyCount + 1;
       setDailyCount(newCount);
-      localStorage.setItem(
-        DAILY_DONE_KEY,
-        String(newCount)
-      );
-
-      unlockAchievements(newCount);
+      localStorage.setItem(DAILY_DONE_KEY, String(newCount));
     }
 
     setMissions(prev =>
-      prev.map(m =>
-        m.id === id ? { ...m, completed: true } : m
-      )
+      prev.map(m => (m.id === id ? { ...m, completed: true } : m))
     );
   }
 
   /* ===============================
      🏆 CONQUISTAS
   =============================== */
-  function unlockAchievements(count: number) {
+  useEffect(() => {
     const unlocks: Record<number, string> = {
       1: "🌅 Primeiro Amanhecer",
       7: "🔥 Ritual da Semana",
@@ -133,16 +112,13 @@ export function Missions() {
       100: "👁️ Entidade da Rotina",
     };
 
-    if (!unlocks[count]) return;
-    if (achievements.includes(unlocks[count])) return;
-
-    const updated = [...achievements, unlocks[count]];
-    setAchievements(updated);
-    localStorage.setItem(
-      ACHIEVEMENTS_KEY,
-      JSON.stringify(updated)
-    );
-  }
+    const achievement = unlocks[dailyCount];
+    if (achievement && !achievements.includes(achievement)) {
+      const updated = [...achievements, achievement];
+      setAchievements(updated);
+      localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(updated));
+    }
+  }, [dailyCount, achievements]);
 
   return (
     <div className="rounded-xl border border-zinc-800 p-4 bg-zinc-900">
@@ -153,9 +129,7 @@ export function Missions() {
           <li
             key={m.id}
             className={`p-2 rounded border ${
-              m.completed
-                ? "border-green-600 opacity-60"
-                : "border-zinc-700"
+              m.completed ? "border-green-600 opacity-60" : "border-zinc-700"
             }`}
           >
             <div className="flex justify-between items-center">
@@ -163,9 +137,7 @@ export function Missions() {
                 {m.tag === "Diária" && "🌅 "}
                 {m.title}
                 {m.attribute && (
-                  <span className="text-xs ml-2 text-zinc-400">
-                    ({m.attribute})
-                  </span>
+                  <span className="text-xs ml-2 text-zinc-400">({m.attribute})</span>
                 )}
               </span>
 
