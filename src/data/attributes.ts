@@ -44,6 +44,12 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         description: "Velocidade e coordenação.",
         unlockLevel: 6,
         affectedByTalents: ["focus"]
+      },
+      {
+        id: "flexibilidade",
+        name: "Flexibilidade",
+        description: "Amplitude de movimento.",
+        unlockLevel: 8
       }
     ]
   },
@@ -66,6 +72,24 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Criatividade",
         description: "Soluções alternativas.",
         unlockLevel: 5
+      },
+      {
+        id: "memoria",
+        name: "Memória",
+        description: "Retenção de informações.",
+        unlockLevel: 7
+      },
+      {
+        id: "resiliencia",
+        name: "Resiliência",
+        description: "Superar desafios mentais.",
+        unlockLevel: 10
+      },
+      {
+        id: "inteligencia",
+        name: "Inteligência",
+        description: "Capacidade de aprendizado e adaptação.",
+        unlockLevel: 12
       }
     ]
   },
@@ -87,6 +111,19 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Empatia",
         description: "Compreender emoções alheias.",
         unlockLevel: 4
+      },
+      {
+        id: "lideranca",
+        name: "Liderança",
+        description: "Inspirar e guiar outros.",
+        unlockLevel: 6,
+        affectedByTalents: ["charisma"]
+      },
+      {
+        id: "trabalho_em_equipa",
+        name: "Trabalho em Equipa",
+        description: "Colaborar eficazmente.",
+        unlockLevel: 8
       }
     ]
   },
@@ -108,6 +145,24 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Investimento",
         description: "Crescimento de patrimônio.",
         unlockLevel: 5
+      },
+      {
+        id: "poupanca",
+        name: "Poupança",
+        description: "Economia para o futuro.",
+        unlockLevel: 7
+      },
+      {
+        id: "gestao_de_dividas",
+        name: "Gestão de Dívidas",
+        description: "Controlar e reduzir dívidas.",
+        unlockLevel: 10
+      },
+      { 
+        id: "renda_passiva",
+        name: "Renda Passiva",
+        description: "Gerar renda sem esforço contínuo.",
+        unlockLevel: 12
       }
     ]
   }
