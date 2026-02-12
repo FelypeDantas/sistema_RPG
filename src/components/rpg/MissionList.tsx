@@ -1,6 +1,5 @@
-import { useState } from "react";
-import { Mission } from "../../hooks/useMissions";
-import { useMissions } from "../../hooks/useMissions";
+import { useState, useCallback, useEffect } from "react";
+import { Mission, useMissions } from "../../hooks/useMissions";
 import "./MissionModal.css";
 
 export function MissionList() {
@@ -11,10 +10,41 @@ export function MissionList() {
 
   const [showConfirm, setShowConfirm] = useState(false);
 
+  const closeModal = useCallback(() => {
+    setShowConfirm(false);
+    setSelectedMission(null);
+  }, []);
+
+  const handleComplete = useCallback(
+    (success: boolean) => {
+      if (!selectedMission) return;
+      completeMission(selectedMission, success);
+      closeModal();
+    },
+    [selectedMission, completeMission, closeModal]
+  );
+
+  // Fecha modal com ESC
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeModal();
+      }
+    };
+
+    if (showConfirm) {
+      window.addEventListener("keydown", handleEsc);
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [showConfirm, closeModal]);
+
   return (
     <>
       <ul>
-        {missions.map(mission => (
+        {missions.map((mission) => (
           <li key={mission.id}>
             <h3>{mission.title}</h3>
             <p>{mission.description}</p>
@@ -33,7 +63,11 @@ export function MissionList() {
       </ul>
 
       {showConfirm && selectedMission && (
-        <div className="modal-overlay">
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+        >
           <div className="modal">
             <h2>Concluir Missão</h2>
 
@@ -45,22 +79,14 @@ export function MissionList() {
             <div className="actions">
               <button
                 className="fail"
-                onClick={() => {
-                  completeMission(selectedMission, false);
-                  setShowConfirm(false);
-                  setSelectedMission(null);
-                }}
+                onClick={() => handleComplete(false)}
               >
                 ❌ Falha
               </button>
 
               <button
                 className="success"
-                onClick={() => {
-                  completeMission(selectedMission, true);
-                  setShowConfirm(false);
-                  setSelectedMission(null);
-                }}
+                onClick={() => handleComplete(true)}
               >
                 ✅ Sucesso
               </button>
