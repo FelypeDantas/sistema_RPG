@@ -51,6 +51,18 @@ const CLASSES: PlayerClass[] = [
         description:
           "Alta recompensa com alto risco. XP maior, chance menor.",
         requirement: "Talento Impulsivo desbloqueado"
+      },
+      {
+        id: "sentinel",
+        name: "Sentinela",
+        description: "Resistente a falhas. Reduz penalidades e mantém streaks.",
+        requirement: "Talento Resiliente desbloqueado"
+      },
+      {
+        id: "champion",
+        name: "Campeão",
+        description: "Bônus de XP e chance de sucesso em missões difíceis.",
+        requirement: "Talento Foco + nível 10"
       }
     ]
   },
@@ -74,6 +86,20 @@ const CLASSES: PlayerClass[] = [
         description:
           "Ganha XP bônus ao revisar histórico e completar séries.",
         requirement: "10 quests de Mente concluídas"
+      },
+      {
+        id: "sage",
+        name: "Sábio",
+        description:
+          "Bônus de XP e chance de sucesso em missões difíceis.",
+        requirement: "Talento Foco + nível 10"
+      },
+      {
+        id: "alchemist",
+        name: "Alquimista",
+        description:
+          "Transforma falhas em aprendizado. Reduz penalidades e mantém streaks.",
+        requirement: "Talento Resiliente desbloqueado"
       }
     ]
   },
@@ -97,7 +123,14 @@ const CLASSES: PlayerClass[] = [
         description:
           "Falhas não quebram streak facilmente.",
         requirement: "Talento Persistente"
-      }
+      },
+      {
+        id: "shadow",
+        name: "Sombra", 
+        description:
+          "Bônus de XP e chance de sucesso em missões difíceis.",
+        requirement: "Talento Foco + nível 10"
+       },
     ]
   }
 ];
