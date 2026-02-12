@@ -1,14 +1,48 @@
-export const TraitsCard = ({ traits }) => (
-  <div className="bg-cyber-card p-4 rounded-xl">
-    <h3 className="text-white mb-3">Traits</h3>
+import { motion } from "framer-motion";
 
-    <ul className="space-y-2 text-sm text-gray-300">
-      {traits.map(t => (
-        <li key={t.id}>
-          ✦ <span className="text-white">{t.name}</span>
-          <p className="text-xs text-gray-500">{t.description}</p>
-        </li>
+type Trait = {
+  id: string;
+  name: string;
+  description: string;
+};
+
+type Props = {
+  traits: Trait[];
+};
+
+export const TraitsCard = ({ traits }: Props) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3 }}
+    className="bg-cyber-card p-5 rounded-xl border border-white/10"
+  >
+    <h3 className="text-white mb-4 font-semibold flex items-center gap-2">
+      ✨ Traits
+    </h3>
+
+    <ul className="space-y-3 text-sm text-gray-300">
+      {traits.map(trait => (
+        <motion.li
+          key={trait.id}
+          whileHover={{ scale: 1.02 }}
+          className="p-2 rounded-lg transition-colors hover:bg-white/5"
+        >
+          <div className="flex items-start gap-2">
+            <span className="text-neon-cyan mt-0.5">✦</span>
+
+            <div>
+              <p className="text-white font-medium">
+                {trait.name}
+              </p>
+
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                {trait.description}
+              </p>
+            </div>
+          </div>
+        </motion.li>
       ))}
     </ul>
-  </div>
+  </motion.div>
 );
