@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
    🎯 TIPOS
 ============================= */
 
-export type MissionAttribute =
-  | "Mente"
-  | "Físico"
-  | "Social"
-  | "Finanças";
+export type MissionAttribute = "Mente" | "Físico" | "Social" | "Finanças";
 
 export interface Mission {
   id: string;
@@ -16,9 +12,9 @@ export interface Mission {
   description: string;
   xp: number;
   attribute: MissionAttribute;
-  done: boolean;
+  completed: boolean;
 
-  // 🧬 segmento evolutivo
+  // 🧬 Segmento evolutivo (opcional)
   segment?: string;
   segmentXP?: number;
 }
@@ -46,13 +42,21 @@ const HISTORY_KEY = "rpg_mission_history";
 
 export function useMissions() {
   const [missions, setMissions] = useState<Mission[]>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
   });
 
   const [history, setHistory] = useState<MissionHistory[]>(() => {
-    const stored = localStorage.getItem(HISTORY_KEY);
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
   });
 
   /* =============================
@@ -76,16 +80,14 @@ export function useMissions() {
   }
 
   /* =============================
-     ✅ COMPLETE (manual)
+     ✅ COMPLETE
   ============================= */
 
-  function completeMission(
-    mission: Mission,
-    success: boolean
-  ) {
-    setMissions(prev =>
-      prev.filter(m => m.id !== mission.id)
-    );
+  function completeMission(missionId: string, success: boolean) {
+    const mission = missions.find(m => m.id === missionId);
+    if (!mission) return;
+
+    setMissions(prev => prev.filter(m => m.id !== missionId));
 
     setHistory(prev => [
       ...prev,
@@ -95,9 +97,20 @@ export function useMissions() {
         success,
         date: new Date().toISOString(),
         segment: mission.segment,
-        segmentXP: mission.segmentXP
-      }
+        segmentXP: mission.segmentXP,
+      },
     ]);
+  }
+
+  /* =============================
+     🔄 RESET
+  ============================= */
+
+  function resetMissions() {
+    setMissions([]);
+    setHistory([]);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(HISTORY_KEY);
   }
 
   /* =============================
@@ -108,6 +121,7 @@ export function useMissions() {
     missions,
     history,
     addMission,
-    completeMission
+    completeMission,
+    resetMissions,
   };
 }
