@@ -194,7 +194,7 @@ const RPGDashboard = () => {
               </h3>
 
               <AnimatePresence>
-                {missions.missions.map(mission => (
+                {missions.missions.filter(m => !m.done).map(mission => (
                   <QuestCard
                     key={mission.id}
                     quest={mission}
