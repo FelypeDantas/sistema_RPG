@@ -18,22 +18,17 @@ const attributeColors: Record<string, string> = {
 export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [hovering, setHovering] = useState(false);
-  const [displayXp, setDisplayXp] = useState(quest.done ? quest.xp : 0);
+  const [displayXp, setDisplayXp] = useState(quest.completed ? quest.xp : 0);
   const [burst, setBurst] = useState(false);
 
-  // Tooltip delay
+  // Tooltip imediato
   useEffect(() => {
-    if (!hovering) {
-      setShowTooltip(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowTooltip(true), 350);
-    return () => clearTimeout(timer);
+    setShowTooltip(hovering);
   }, [hovering]);
 
   // XP counter animation
   useEffect(() => {
-    if (!quest.done) return;
+    if (!quest.completed) return;
 
     let start = 0;
     const duration = 600;
@@ -50,21 +45,20 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
     }, 16);
 
     return () => clearInterval(counter);
-  }, [quest.done, quest.xp]);
+  }, [quest.completed, quest.xp]);
 
   // Sound + burst effect
   useEffect(() => {
-    if (!quest.done) return;
+    if (!quest.completed) return;
 
     setBurst(true);
-
-    const audio = new Audio("/complete.mp3"); // coloque o arquivo em /public
+    const audio = new Audio("/complete.mp3"); // coloque em /public
     audio.volume = 0.4;
     audio.play().catch(() => {});
 
     const timer = setTimeout(() => setBurst(false), 600);
     return () => clearTimeout(timer);
-  }, [quest.done]);
+  }, [quest.completed]);
 
   return (
     <motion.div
@@ -75,19 +69,18 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       transition={{ duration: 0.35 }}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
-      whileHover={!quest.done ? { scale: 1.02 } : {}}
+      whileHover={!quest.completed ? { scale: 1.02 } : {}}
       className={`
         relative p-4 rounded-xl border overflow-hidden
         transition-all duration-300
-        ${
-          quest.done
-            ? "bg-neon-green/10 border-neon-green/40 shadow-[0_0_25px_rgba(34,197,94,0.25)]"
-            : "bg-cyber-darker border-white/10 hover:border-neon-cyan/60 hover:bg-cyber-card"
+        ${quest.completed
+          ? "bg-neon-green/10 border-neon-green/40 shadow-[0_0_25px_rgba(34,197,94,0.25)]"
+          : "bg-cyber-darker border-white/10 hover:border-neon-cyan/60 hover:bg-cyber-card"
         }
       `}
     >
       {/* Holographic overlay */}
-      {!quest.done && hovering && (
+      {!quest.completed && hovering && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.08 }}
@@ -112,62 +105,37 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       <div className="flex items-start justify-between relative z-10">
         <div className="flex items-start gap-3">
           <div
-            onClick={() => {
-              if (!quest.done) onComplete();
-            }}
+            onClick={() => { if (!quest.completed) onComplete(); }}
             className={`
               w-6 h-6 rounded-lg border-2 flex items-center justify-center
               transition-all cursor-pointer
-              ${
-                quest.done
-                  ? "bg-neon-green border-neon-green"
-                  : "border-gray-600 hover:border-neon-cyan"
+              ${quest.completed
+                ? "bg-neon-green border-neon-green"
+                : "border-gray-600 hover:border-neon-cyan"
               }
             `}
           >
-            {quest.done && (
-              <Check className="w-4 h-4 text-cyber-dark" />
-            )}
+            {quest.completed && <Check className="w-4 h-4 text-cyber-dark" />}
           </div>
 
           <div>
-            <h4
-              className={`font-medium ${
-                quest.done
-                  ? "text-gray-400 line-through"
-                  : "text-white"
-              }`}
-            >
+            <h4 className={`font-medium ${quest.completed ? "text-gray-400 line-through" : "text-white"}`}>
               {quest.title}
             </h4>
 
-            <span
-              className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full border ${
-                attributeColors[quest.attribute]
-              }`}
-            >
+            <span className={`mt-1 inline-block text-xs px-2 py-0.5 rounded-full border ${attributeColors[quest.attribute]}`}>
               {quest.attribute}
             </span>
           </div>
         </div>
 
-        <div
-          className={`
-            flex items-center gap-1 px-2 py-1 rounded-lg
-            ${quest.done ? "bg-neon-green/20" : "bg-neon-cyan/10"}
-          `}
-        >
-          <Zap
-            className={`w-4 h-4 ${
-              quest.done ? "text-neon-green" : "text-neon-cyan"
-            }`}
-          />
-          <span
-            className={`font-bold text-sm ${
-              quest.done ? "text-neon-green" : "text-neon-cyan"
-            }`}
-          >
-            +{quest.done ? displayXp : quest.xp}
+        <div className={`
+          flex items-center gap-1 px-2 py-1 rounded-lg
+          ${quest.completed ? "bg-neon-green/20" : "bg-neon-cyan/10"}
+        `}>
+          <Zap className={`w-4 h-4 ${quest.completed ? "text-neon-green" : "text-neon-cyan"}`} />
+          <span className={`font-bold text-sm ${quest.completed ? "text-neon-green" : "text-neon-cyan"}`}>
+            +{quest.completed ? displayXp : quest.xp}
           </span>
         </div>
       </div>
