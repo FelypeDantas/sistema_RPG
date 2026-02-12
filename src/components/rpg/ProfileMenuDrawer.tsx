@@ -1,5 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ScrollText, GitBranch, X } from "lucide-react";
+import {
+  ScrollText,
+  GitBranch,
+  LayoutDashboard,
+  BookOpen,
+  X
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface ProfileMenuDrawerProps {
@@ -46,7 +52,7 @@ export const ProfileMenuDrawer = ({
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-lg font-bold text-white">
-                Perfil do Personagem
+                Menu do Personagem
               </h2>
 
               <button
@@ -59,6 +65,23 @@ export const ProfileMenuDrawer = ({
 
             {/* Menu */}
             <nav className="space-y-4">
+              {/* Dashboard */}
+              <button
+                onClick={() => goTo("/")}
+                className="
+                  w-full flex items-center gap-3 p-4 rounded-xl
+                  bg-cyber-card border border-white/10
+                  hover:border-neon-green/50 hover:bg-neon-green/10
+                  transition
+                "
+              >
+                <LayoutDashboard className="text-neon-green" />
+                <span className="text-white font-medium">
+                  Dashboard
+                </span>
+              </button>
+
+              {/* Histórico */}
               <button
                 onClick={() => goTo("/quests/history")}
                 className="
@@ -74,6 +97,7 @@ export const ProfileMenuDrawer = ({
                 </span>
               </button>
 
+              {/* Árvore de Habilidades */}
               <button
                 onClick={() => goTo("/skills")}
                 className="
@@ -86,6 +110,22 @@ export const ProfileMenuDrawer = ({
                 <GitBranch className="text-neon-cyan" />
                 <span className="text-white font-medium">
                   Árvore de Habilidades
+                </span>
+              </button>
+
+              {/* Codex de Atributos */}
+              <button
+                onClick={() => goTo("/attributes")}
+                className="
+                  w-full flex items-center gap-3 p-4 rounded-xl
+                  bg-cyber-card border border-white/10
+                  hover:border-neon-orange/50 hover:bg-neon-orange/10
+                  transition
+                "
+              >
+                <BookOpen className="text-neon-orange" />
+                <span className="text-white font-medium">
+                  Codex de Atributos
                 </span>
               </button>
             </nav>
