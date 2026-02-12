@@ -1,15 +1,16 @@
 import * as React from "react";
 import * as ToggleGroupPrimitive from "@radix-ui/react-toggle-group";
-import { Slot } from "@radix-ui/react-slot";
 import { type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
-import { toggleVariants } from "@/components/ui/toggle";
+import { Toggle, toggleVariants } from "@/components/ui/toggle";
 
-// --- Contexto seguro ---
-const ToggleGroupContext = React.createContext<VariantProps<typeof toggleVariants> | undefined>(undefined);
+// Contexto para compartilhar variantes do grupo
+const ToggleGroupContext = React.createContext<VariantProps<typeof toggleVariants>>({
+  variant: "default",
+  size: "default",
+});
 
-// --- ToggleGroup ---
 const ToggleGroup = React.forwardRef<
   React.ElementRef<typeof ToggleGroupPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Root> & VariantProps<typeof toggleVariants>
@@ -27,34 +28,30 @@ const ToggleGroup = React.forwardRef<
 
 ToggleGroup.displayName = ToggleGroupPrimitive.Root.displayName;
 
-// --- ToggleGroupItem ---
+// Item do grupo, herdando variantes do contexto
 const ToggleGroupItem = React.forwardRef<
-  React.ElementRef<typeof ToggleGroupPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> &
-    VariantProps<typeof toggleVariants> & { asChild?: boolean }
->(({ className, children, variant, size, asChild = false, ...props }, ref) => {
+  React.ElementRef<typeof TogglePrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof TogglePrimitive.Root> & VariantProps<typeof toggleVariants>
+>(({ className, variant, size, children, ...props }, ref) => {
   const context = React.useContext(ToggleGroupContext);
 
-  const Component = asChild ? Slot : ToggleGroupPrimitive.Item;
-
   return (
-    <Component
+    <Toggle
       ref={ref}
       className={cn(
         toggleVariants({
-          variant: variant ?? context?.variant ?? "default",
-          size: size ?? context?.size ?? "default",
+          variant: variant ?? context.variant,
+          size: size ?? context.size,
         }),
         className
       )}
       {...props}
     >
       {children}
-    </Component>
+    </Toggle>
   );
 });
 
-ToggleGroupItem.displayName = ToggleGroupPrimitive.Item.displayName;
+ToggleGroupItem.displayName = "ToggleGroupItem";
 
-// --- Export ---
 export { ToggleGroup, ToggleGroupItem };
