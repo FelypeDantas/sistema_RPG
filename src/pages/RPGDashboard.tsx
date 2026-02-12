@@ -1,15 +1,6 @@
+{/* RPGDashboard.tsx */}
 import { useState } from "react";
-
-import {
-  Shield,
-  Swords,
-  Trophy,
-  Dumbbell,
-  Brain,
-  Users,
-  Wallet
-} from "lucide-react";
-
+import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 
 import { AvatarCard } from "@/components/rpg/AvatarCard";
@@ -31,98 +22,46 @@ import "@/components/rpg/MissionModal.css";
 
 const RPGDashboard = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
-  // 🆕 estado do modal
-  const [pendingMission, setPendingMission] =
-    useState<Mission | null>(null);
+  const [pendingMission, setPendingMission] = useState<Mission | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const player = usePlayer();
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
+  const { talents, suggestedTalents, points, unlockTalent } = useTalents(player.level);
 
-  const {
-    talents,
-    suggestedTalents,
-    points,
-    unlockTalent
-  } = useTalents(player.level);
-
-  /* =============================
-     🧮 XP TOTAL
-  ============================== */
-
-  const totalXP = missions.history.reduce(
-    (acc, h) => acc + (h.success ? h.xp : 0),
-    0
-  );
-
-  /* =============================
-     🔥 STREAK REAL
-  ============================== */
+  const totalXP = missions.history.reduce((acc, h) => acc + (h.success ? h.xp : 0), 0);
 
   const now = new Date();
   let streak = 0;
-
   for (let i = 0; i < 365; i++) {
     const day = new Date();
     day.setDate(now.getDate() - i);
     const key = day.toISOString().split("T")[0];
-
-    const didSomething = missions.history.some(
-      h => h.success && h.date.startsWith(key)
-    );
-
+    const didSomething = missions.history.some(h => h.success && h.date.startsWith(key));
     if (didSomething) streak++;
     else break;
   }
+  const currentStreak = streak === 0 && player.hasTrait?.("persistente") ? 1 : streak;
 
-  const currentStreak =
-    streak === 0 && player.hasTrait?.("persistente")
-      ? 1
-      : streak;
-
-  /* =============================
-     🎯 CONCLUIR MISSÃO (manual)
-  ============================== */
-
-  const handleMissionComplete = (
-    mission: Mission,
-    success: boolean
-  ) => {
-    missions.completeMission(mission, success);
+  const handleMissionComplete = (mission: Mission, success: boolean) => {
+    // ✅ Remove a missão e adiciona no histórico imediatamente
+    missions.completeMission(mission.id, success);
 
     if (!success) return;
 
     let finalXP = mission.xp;
-
-    if (
-      player.hasTrait?.("econômico") &&
-      mission.attribute === "Finanças"
-    ) {
-      finalXP *= 1.2;
-    }
-
-    if (
-      player.hasTrait?.("disciplinado") &&
-      currentStreak >= 3
-    ) {
-      finalXP *= 1.1;
-    }
+    if (player.hasTrait?.("econômico") && mission.attribute === "Finanças") finalXP *= 1.2;
+    if (player.hasTrait?.("disciplinado") && currentStreak >= 3) finalXP *= 1.1;
 
     player.gainXP(Math.round(finalXP), mission.attribute);
   };
-
-  /* =============================
-     📊 XP SEMANAL
-  ============================== */
 
   const weeklyXP = Array.from({ length: 7 }).map((_, i) => {
     const day = new Date();
     day.setDate(now.getDate() - (6 - i));
     const key = day.toISOString().split("T")[0];
-
     return missions.history
       .filter(h => h.success && h.date.startsWith(key))
       .reduce((acc, h) => acc + h.xp, 0);
@@ -132,13 +71,10 @@ const RPGDashboard = () => {
     <>
       <div className="min-h-screen bg-cyber-dark p-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-          {/* ================= LEFT ================= */}
+          
+          {/* LEFT */}
           <div className="space-y-6">
-            <div
-              onClick={() => setIsProfileOpen(true)}
-              className="cursor-pointer"
-            >
+            <div onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
               <AvatarCard
                 player={{
                   name: "Player One",
@@ -156,8 +92,7 @@ const RPGDashboard = () => {
 
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
-                <Shield className="w-5 h-5 text-neon-cyan" />
-                Atributos
+                <Shield className="w-5 h-5 text-neon-cyan" /> Atributos
               </h3>
 
               <AttributeBar attribute={{ name: "Físico", value: player.attributes.Físico, icon: Dumbbell, color: "from-neon-red to-neon-orange" }} />
@@ -166,14 +101,10 @@ const RPGDashboard = () => {
               <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan" }} />
             </div>
 
-            <TalentTree
-              talents={talents}
-              points={points}
-              onUnlock={unlockTalent}
-            />
+            <TalentTree talents={talents} points={points} onUnlock={unlockTalent} />
           </div>
 
-          {/* ================= CENTER ================= */}
+          {/* CENTER */}
           <div className="space-y-6">
             <StatsCard
               stats={{
@@ -189,12 +120,11 @@ const RPGDashboard = () => {
 
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
-                <Swords className="w-5 h-5 text-neon-purple" />
-                Missões
+                <Swords className="w-5 h-5 text-neon-purple" /> Missões
               </h3>
 
               <AnimatePresence>
-                {missions.missions.filter(m => !m.done).map(mission => (
+                {missions.missions.map(mission => (
                   <QuestCard
                     key={mission.id}
                     quest={mission}
@@ -208,30 +138,18 @@ const RPGDashboard = () => {
             </div>
           </div>
 
-          {/* ================= RIGHT ================= */}
+          {/* RIGHT */}
           <div className="space-y-6">
-            <StreakCard
-              weeklyXP={weeklyXP}
-              currentStreak={currentStreak}
-            />
+            <StreakCard weeklyXP={weeklyXP} currentStreak={currentStreak} />
 
             {suggestedTalents.length > 0 && (
               <div className="bg-cyber-card p-5 rounded-xl">
                 <h3 className="text-white mb-4">Sugestões de Talento</h3>
-
                 <ul className="space-y-2">
                   {suggestedTalents.map(talent => (
-                    <li
-                      key={talent.id}
-                      className="flex justify-between items-center text-sm text-gray-300"
-                    >
+                    <li key={talent.id} className="flex justify-between items-center text-sm text-gray-300">
                       <span>{talent.title}</span>
-                      <button
-                        onClick={() => unlockTalent(talent.id)}
-                        className="text-neon-cyan hover:underline"
-                      >
-                        Desbloquear
-                      </button>
+                      <button onClick={() => unlockTalent(talent.id)} className="text-neon-cyan hover:underline">Desbloquear</button>
                     </li>
                   ))}
                 </ul>
@@ -240,10 +158,8 @@ const RPGDashboard = () => {
 
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
-                <Trophy className="w-5 h-5 text-neon-orange" />
-                Conquistas
+                <Trophy className="w-5 h-5 text-neon-orange" /> Conquistas
               </h3>
-
               <ul className="space-y-2 text-sm text-gray-300">
                 {achievements.unlocked.map(a => (
                   <li key={a.id}>🏆 {a.title}</li>
@@ -255,16 +171,12 @@ const RPGDashboard = () => {
         </div>
       </div>
 
-      {/* 🧠 MODAL DE CONFIRMAÇÃO */}
+      {/* MODAL DE CONFIRMAÇÃO */}
       {showConfirm && pendingMission && (
         <div className="modal-overlay">
           <div className="modal">
             <h2>Concluir Missão</h2>
-
-            <p>
-              Tem certeza de que deseja concluir a missão
-              <strong> "{pendingMission.title}"</strong>?
-            </p>
+            <p>Tem certeza de que deseja concluir a missão <strong>"{pendingMission.title}"</strong>?</p>
 
             <div className="actions">
               <button
@@ -293,11 +205,7 @@ const RPGDashboard = () => {
         </div>
       )}
 
-      <ProfileDrawer
-        open={isProfileOpen}
-        onClose={() => setIsProfileOpen(false)}
-        history={missions.history}
-      />
+      <ProfileDrawer open={isProfileOpen} onClose={() => setIsProfileOpen(false)} history={missions.history} />
     </>
   );
 };
