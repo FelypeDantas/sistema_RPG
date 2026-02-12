@@ -70,16 +70,12 @@ const ToastContext = React.createContext<{
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, { toasts: [] });
 
-  // =========================
-  // Adicionar toast
-  // =========================
   const addToast = React.useCallback(
-    (toast: Omit<ToasterToast, "id" | "open">) => {
+    (toast: Omit<ToasterToast, "id" | "open">): ToasterToastController => {
       const id = uuid();
       const toastObj: ToasterToast = { ...toast, id, open: true };
       dispatch({ type: "ADD", toast: toastObj });
 
-      // Remove automático após delay
       const timeout = setTimeout(() => {
         dispatch({ type: "REMOVE", id });
       }, TOAST_REMOVE_DELAY);
@@ -87,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const dismiss = () => {
         clearTimeout(timeout);
         dispatch({ type: "DISMISS", id });
-        setTimeout(() => dispatch({ type: "REMOVE", id }), 300); // animação de saída
+        setTimeout(() => dispatch({ type: "REMOVE", id }), 300);
       };
 
       const update = (props: Partial<ToasterToast>) =>
@@ -100,12 +96,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const dismiss = React.useCallback((id: string) => dispatch({ type: "DISMISS", id }), []);
 
-  return (
-    <ToastContext.Provider value={{ state, addToast, dismiss }}>
-      {children}
-    </ToastContext.Provider>
-  );
+  // ✅ Garanta que o value tenha o tipo correto
+  const value: {
+    state: State;
+    addToast: (toast: Omit<ToasterToast, "id" | "open">) => ToasterToastController;
+    dismiss: (id: string) => void;
+  } = { state, addToast, dismiss };
+
+  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
 }
+
 
 // =========================
 // Hook
