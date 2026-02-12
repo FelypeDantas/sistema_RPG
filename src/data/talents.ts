@@ -61,5 +61,24 @@ export const TALENTS: Talent[] = [
     requires: ["basic_discipline"],
     effects: { successChance: 0.05 },
     node: { x: 300, y: 280 }
+  },
+  {
+    id: "resilient",
+    title: "Resiliente",
+    description: "Reduz penalidades por falhas em 50%",
+    cost: 3,
+    unlocked: false,
+    requires: ["self_control"],
+    effects: { failurePenaltyReduction: 0.5 },
+    node: { x: 300, y: 380 }
+  },
+  {
+    id: "clear_communication",
+    title: "Comunicação Clara", 
+    description: "+10% XP em missões sociais",
+    cost: 1,
+    unlocked: false,
+    effects: { xpMultiplier: 0.1 },
+    node: { x: 500, y: 180 }
   }
 ];
