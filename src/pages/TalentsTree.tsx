@@ -11,6 +11,14 @@ export default function TalentsTree() {
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white overflow-hidden">
       <header className="mb-8 flex items-center justify-between">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
+        >
+          <ArrowLeft />
+          Voltar
+        </button>
+        
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <GitBranch className="text-purple-400" />
@@ -20,14 +28,6 @@ export default function TalentsTree() {
             Evolução estratégica do personagem
           </p>
         </div>
-
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
-        >
-          <ArrowLeft />
-          Voltar
-        </button>
       </header>
 
       <div className="relative w-full h-[800px] border border-white/10 rounded-xl">
