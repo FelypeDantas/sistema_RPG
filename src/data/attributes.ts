@@ -50,6 +50,36 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Flexibilidade",
         description: "Amplitude de movimento.",
         unlockLevel: 8
+      },
+      {
+        id: "equilibrio",
+        name: "Equilíbrio",
+        description: "Estabilidade corporal.",
+        unlockLevel: 10
+      },
+      {
+        id: "resiliencia_fisica",
+        name: "Resiliência Física",
+        description: "Recuperação e adaptação a estressores físicos.",
+        unlockLevel: 12
+      },
+      {
+        id: "saude",
+        name: "Saúde",
+        description: "Estado geral de bem-estar físico.",
+        unlockLevel: 15
+      },
+      {
+        id: "vitalidade",
+        name: "Vitalidade",
+        description: "Energia e vigor para enfrentar desafios diários.",
+        unlockLevel: 18
+      },
+      {
+        id: "performance",
+        name: "Performance",
+        description: "Capacidade de alcançar resultados físicos excepcionais.",
+        unlockLevel: 20
       }
     ]
   },
@@ -142,6 +172,36 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Trabalho em Equipa",
         description: "Colaborar eficazmente.",
         unlockLevel: 8
+      },
+      {
+        id: "resolucao_de_conflitos",
+        name: "Resolução de Conflitos",
+        description: "Gerenciar e resolver desentendimentos.",
+        unlockLevel: 10
+      },
+      {
+        id: "inteligencia_social",
+        name: "Inteligência Social",
+        description: "Navegar em situações sociais complexas.",
+        unlockLevel: 12
+      },
+      {
+        id: "carisma",
+        name: "Carisma",
+        description: "Atração e influência sobre os outros.",
+        unlockLevel: 15
+      },
+      {
+        id: "habilidades_de_negociacao",
+        name: "Habilidades de Negociação",
+        description: "Alcançar acordos vantajosos.",
+        unlockLevel: 18
+      },
+      {
+        id: "inteligencia_cultural",
+        name: "Inteligência Cultural",
+        description: "Compreender e respeitar diferentes culturas.",
+        unlockLevel: 20
       }
     ]
   },
@@ -181,6 +241,24 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Renda Passiva",
         description: "Gerar renda sem esforço contínuo.",
         unlockLevel: 12
+      },
+      {
+        id: "inteligencia_financeira",
+        name: "Inteligência Financeira",  
+        description: "Tomar decisões financeiras inteligentes.",
+        unlockLevel: 15
+      },
+      {
+        id: "empreendedorismo",
+        name: "Empreendedorismo",
+        description: "Criar e gerir negócios de sucesso.",
+        unlockLevel: 18
+      },
+      {
+        id: "filantropia",
+        name: "Filantropia",
+        description: "Contribuir para o bem-estar social.",
+        unlockLevel: 20
       }
     ]
   }
