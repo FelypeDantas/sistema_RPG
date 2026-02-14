@@ -54,7 +54,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
     setBurst(true);
     const audio = new Audio("/complete.mp3"); // coloque em /public
     audio.volume = 0.4;
-    audio.play().catch(() => {});
+    audio.play().catch(() => { });
 
     const timer = setTimeout(() => setBurst(false), 600);
     return () => clearTimeout(timer);
@@ -71,14 +71,16 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       onMouseLeave={() => setHovering(false)}
       whileHover={!quest.completed ? { scale: 1.02 } : {}}
       className={`
-        relative p-4 rounded-xl border
-        transition-all duration-300
-        ${quest.completed
+    relative p-4 rounded-xl border
+    transition-all duration-300
+    ${hovering ? "z-50" : "z-0"}
+    ${quest.completed
           ? "bg-neon-green/10 border-neon-green/40 shadow-[0_0_25px_rgba(34,197,94,0.25)]"
           : "bg-cyber-darker border-white/10 hover:border-neon-cyan/60 hover:bg-cyber-card"
         }
-      `}
+  `}
     >
+
       {/* Holographic overlay */}
       {!quest.completed && hovering && (
         <motion.div
