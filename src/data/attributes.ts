@@ -90,6 +90,24 @@ export const ALL_ATTRIBUTES: Attribute[] = [
         name: "Inteligência",
         description: "Capacidade de aprendizado e adaptação.",
         unlockLevel: 12
+      },
+      {
+        id: "sabedoria",
+        name: "Sabedoria",
+        description: "Julgamento e tomada de decisões.",
+        unlockLevel: 15
+      },
+      {
+        id: "inteligencia_emocional",
+        name: "Inteligência Emocional",
+        description: "Gerenciar emoções próprias e alheias.",
+        unlockLevel: 18
+      },
+      {
+        id: "pensamento_critico",
+        name: "Pensamento Crítico",
+        description: "Analisar e avaliar informações de forma objetiva.",
+        unlockLevel: 20
       }
     ]
   },
