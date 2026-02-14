@@ -10,6 +10,14 @@ export default function QuestHistory() {
     <div className="min-h-screen p-6 bg-cyber-dark text-white">
       {/* Header */}
       <header className="mb-8 flex items-center justify-between">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
+        >
+          <ArrowLeft />
+          Voltar
+        </button>
+
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ScrollText className="text-neon-cyan" />
@@ -19,14 +27,6 @@ export default function QuestHistory() {
             Todas as missões já realizadas
           </p>
         </div>
-
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-sm text-gray-300 hover:text-white"
-        >
-          <ArrowLeft />
-          Voltar
-        </button>
       </header>
 
       {/* Lista */}
@@ -57,11 +57,10 @@ export default function QuestHistory() {
 
                 <div>
                   <p
-                    className={`font-medium ${
-                      quest.success
+                    className={`font-medium ${quest.success
                         ? "text-neon-green"
                         : "text-neon-red"
-                    }`}
+                      }`}
                   >
                     {quest.success ? "Sucesso" : "Falha"}
                   </p>
