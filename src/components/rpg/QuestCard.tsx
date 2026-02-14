@@ -71,7 +71,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       onMouseLeave={() => setHovering(false)}
       whileHover={!quest.completed ? { scale: 1.02 } : {}}
       className={`
-        relative p-4 rounded-xl border overflow-hidden
+        relative p-4 rounded-xl border
         transition-all duration-300
         ${quest.completed
           ? "bg-neon-green/10 border-neon-green/40 shadow-[0_0_25px_rgba(34,197,94,0.25)]"
