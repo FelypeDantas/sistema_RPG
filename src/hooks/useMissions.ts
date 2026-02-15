@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/services/firebase";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /* =============================
    🎯 TIPOS
@@ -78,7 +74,7 @@ export function useMissions() {
   }, [user]);
 
   /* ==============================
-     🌅 QUEST DIÁRIA
+     🌅 MISSÃO DIÁRIA
   ============================== */
 
   useEffect(() => {
@@ -86,17 +82,14 @@ export function useMissions() {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const alreadyExists = missions.some(m =>
-      m.id === `daily-${today}`
-    );
+    const alreadyExists = missions.some(m => m.id === `daily-${today}`);
 
     if (alreadyExists) return;
 
     const dailyMission: Mission = {
       id: `daily-${today}`,
       title: "Treino diário",
-      description:
-        "100 agachamentos, 20 flexões e 10 minutos de meditação",
+      description: "100 agachamentos, 20 flexões e 10 minutos de meditação",
       xp: 50,
       attribute: "Físico",
       completed: false,
@@ -115,15 +108,7 @@ export function useMissions() {
     async function saveData() {
       try {
         const docRef = doc(db, "users", user.uid);
-
-        await setDoc(
-          docRef,
-          {
-            missions,
-            history,
-          },
-          { merge: true }
-        );
+        await setDoc(docRef, { missions, history }, { merge: true });
       } catch (error) {
         console.error("Erro ao salvar dados:", error);
       }
@@ -133,7 +118,7 @@ export function useMissions() {
   }, [missions, history, user]);
 
   /* =============================
-     ➕ ADD
+     ➕ ADICIONAR MISSÃO
   ============================= */
 
   function addMission(mission: Mission) {
@@ -141,37 +126,34 @@ export function useMissions() {
   }
 
   /* =============================
-     ✅ COMPLETE
+     ✅ COMPLETAR MISSÃO
   ============================= */
 
   function completeMission(missionId: string, success: boolean) {
     const mission = missions.find(m => m.id === missionId);
     if (!mission) return;
 
-    setMissions(prev =>
-      prev.filter(m => m.id !== missionId)
-    );
+    // Remove a missão do dashboard
+    setMissions(prev => prev.filter(m => m.id !== missionId));
 
-    setHistory(prev =>
-      [
-        ...prev,
-        {
-          id: mission.id,
-          title: mission.title,
-          description: mission.description,
-          attribute: mission.attribute,
-          xp: mission.xp,
-          success,
-          date: new Date().toISOString(),
-          segment: mission.segment,
-          segmentXP: mission.segmentXP,
-        },
-      ].sort(
-        (a, b) =>
-          new Date(b.date).getTime() -
-          new Date(a.date).getTime()
-      )
-    );
+    // Adiciona ao histórico
+    setHistory(prev => [
+      ...prev,
+      {
+        id: mission.id,
+        title: mission.title,
+        description: mission.description,
+        attribute: mission.attribute,
+        xp: mission.xp,
+        success,
+        date: new Date().toISOString(),
+        segment: mission.segment,
+        segmentXP: mission.segmentXP,
+      },
+    ].sort(
+      (a, b) =>
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+    ));
   }
 
   /* =============================
@@ -181,9 +163,7 @@ export function useMissions() {
   const stats = useMemo(() => {
     const total = history.length;
     const successes = history.filter(h => h.success).length;
-    const successRate = total
-      ? Math.round((successes / total) * 100)
-      : 0;
+    const successRate = total ? Math.round((successes / total) * 100) : 0;
 
     const xpByAttribute: Record<MissionAttribute, number> = {
       Mente: 0,
@@ -199,9 +179,7 @@ export function useMissions() {
         xpByAttribute[h.attribute] += h.xp;
 
         if (h.segment) {
-          xpBySegment[h.segment] =
-            (xpBySegment[h.segment] || 0) +
-            (h.segmentXP || 0);
+          xpBySegment[h.segment] = (xpBySegment[h.segment] || 0) + (h.segmentXP || 0);
         }
       }
     });
@@ -215,7 +193,7 @@ export function useMissions() {
   }, [history]);
 
   /* =============================
-     🔄 RESET
+     🔄 RESETAR
   ============================= */
 
   function resetMissions() {
