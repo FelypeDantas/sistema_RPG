@@ -13,22 +13,24 @@ export function useIsMobile() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const mediaQuery = window.matchMedia(
-      `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
-    );
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
-    const handleChange = () => {
-      setIsMobile(mediaQuery.matches);
-    };
+    const handleChange = () => setIsMobile(mediaQuery.matches);
 
-    handleChange(); // sincroniza no mount
+    // fallback para navegadores antigos
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
 
-    mediaQuery.addEventListener?.("change", handleChange);
-    mediaQuery.addListener?.(handleChange); // fallback
-
+    // remove listener no cleanup
     return () => {
-      mediaQuery.removeEventListener?.("change", handleChange);
-      mediaQuery.removeListener?.(handleChange);
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
     };
   }, []);
 
