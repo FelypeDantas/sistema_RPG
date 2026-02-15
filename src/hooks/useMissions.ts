@@ -21,6 +21,10 @@ export interface Mission {
 
 export interface MissionHistory {
   id: string;
+  title: string;
+  description: string;
+  attribute: MissionAttribute;
+
   xp: number;
   success: boolean;
   date: string;
@@ -28,6 +32,7 @@ export interface MissionHistory {
   segment?: string;
   segmentXP?: number;
 }
+
 
 /* =============================
    💾 STORAGE
@@ -93,9 +98,14 @@ export function useMissions() {
       ...prev,
       {
         id: mission.id,
+        title: mission.title,
+        description: mission.description,
+        attribute: mission.attribute,
+
         xp: mission.xp,
         success,
         date: new Date().toISOString(),
+
         segment: mission.segment,
         segmentXP: mission.segmentXP,
       },
