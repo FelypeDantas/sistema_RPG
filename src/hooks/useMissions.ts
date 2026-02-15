@@ -27,7 +27,7 @@ export interface MissionHistory {
   attribute: MissionAttribute;
   xp: number;
   success: boolean;
-  date: string;
+  date: string; // ISO string
   segment?: string;
   segmentXP?: number;
 }
@@ -46,9 +46,8 @@ export function useMissions() {
   /* =============================
      ☁️ CARREGAR DADOS
   ============================= */
-
   useEffect(() => {
-    if (!user) {
+    if (!user?.uid) {
       setLoading(false);
       return;
     }
@@ -60,8 +59,8 @@ export function useMissions() {
 
         if (snapshot.exists()) {
           const data = snapshot.data();
-          setMissions(data.missions || []);
-          setHistory(data.history || []);
+          setMissions(Array.isArray(data.missions) ? data.missions : []);
+          setHistory(Array.isArray(data.history) ? data.history : []);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -71,14 +70,13 @@ export function useMissions() {
     }
 
     loadData();
-  }, [user]);
+  }, [user?.uid]);
 
   /* ==============================
      🌅 MISSÃO DIÁRIA
   ============================== */
-
   useEffect(() => {
-    if (!user) return;
+    if (!user?.uid) return;
 
     const today = new Date().toISOString().split("T")[0];
     const dailyId = `daily-${today}`;
@@ -99,22 +97,21 @@ export function useMissions() {
       completed: false,
     };
 
-    addMission(dailyMission); // chama a função que salva no Firebase
-  }, [user, missions, history]);
+    addMission(dailyMission);
+  }, [user?.uid, missions, history]);
 
   /* =============================
      ☁️ SALVAR AUTOMATICAMENTE
   ============================= */
-
   async function saveToFirestore(updatedMissions: Mission[], updatedHistory: MissionHistory[]) {
-    if (!user) return;
+    if (!user?.uid) return;
+
     try {
       const docRef = doc(db, "users", user.uid);
-      await setDoc(
-        docRef,
-        { missions: updatedMissions, history: updatedHistory },
-        { merge: true }
-      );
+      await setDoc(docRef, {
+        missions: updatedMissions,
+        history: updatedHistory
+      }, { merge: true });
     } catch (error) {
       console.error("Erro ao salvar dados:", error);
     }
@@ -123,7 +120,6 @@ export function useMissions() {
   /* =============================
      ➕ ADD MISSÃO
   ============================= */
-
   function addMission(mission: Mission) {
     setMissions(prevMissions => {
       const newMissions = [...prevMissions, mission];
@@ -135,7 +131,6 @@ export function useMissions() {
   /* =============================
      ✅ CONCLUIR MISSÃO
   ============================= */
-
   function completeMission(missionId: string, success: boolean) {
     setMissions(prevMissions => {
       const mission = prevMissions.find(m => m.id === missionId);
@@ -144,7 +139,7 @@ export function useMissions() {
       const newMissions = prevMissions.filter(m => m.id !== missionId);
 
       setHistory(prevHistory => {
-        const newHistory = [
+        const newHistory: MissionHistory[] = [
           ...prevHistory,
           {
             id: mission.id,
@@ -159,7 +154,6 @@ export function useMissions() {
           },
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-        // ✅ salva no Firestore usando arrays atualizados
         saveToFirestore(newMissions, newHistory);
         return newHistory;
       });
@@ -171,7 +165,6 @@ export function useMissions() {
   /* =============================
      📊 ESTATÍSTICAS
   ============================= */
-
   const stats = useMemo(() => {
     const total = history.length;
     const successes = history.filter(h => h.success).length;
@@ -201,7 +194,6 @@ export function useMissions() {
   /* =============================
      🔄 RESET
   ============================= */
-
   function resetMissions() {
     setMissions([]);
     setHistory([]);
@@ -211,7 +203,6 @@ export function useMissions() {
   /* =============================
      📦 EXPORT
   ============================= */
-
   return {
     missions,
     history,
