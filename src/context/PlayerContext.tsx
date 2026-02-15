@@ -71,6 +71,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function addPrestige() {
+  setAttributes({
+    mente: 0,
+    fisico: 0,
+    social: 0,
+    financas: 0
+  });
+
+  setPrestige((prev) => prev + 1);
+}
+
   function incrementStreak() {
     setPlayer(prev => ({ ...prev, streak: prev.streak + 1 }));
   }
