@@ -2,64 +2,62 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 
+type Rarity = "common" | "rare" | "epic" | "legendary";
+
 type Talent = {
   id: string;
   title: string;
   description?: string;
   cost: number;
+  level: number;
+  maxLevel: number;
+  rarity: Rarity;
   locked?: boolean;
 };
 
 type TalentTreeProps = {
   talents: Talent[];
   points: number;
-  onUnlock: (id: string) => void;
+  onUpgrade: (id: string) => void;
+};
+
+const rarityStyles: Record<Rarity, string> = {
+  common: "border-gray-500 bg-gray-500/10",
+  rare: "border-neon-cyan bg-neon-cyan/10",
+  epic: "border-purple-500 bg-purple-500/10",
+  legendary: "border-yellow-400 bg-yellow-400/10"
 };
 
 export const TalentTree: React.FC<TalentTreeProps> = ({
   talents,
   points,
-  onUnlock
+  onUpgrade
 }) => {
-  const totalLockedCost = talents
-    .filter(t => t.locked)
-    .reduce((acc, t) => acc + t.cost, 0);
-
-  const progress =
-    totalLockedCost === 0
-      ? 100
-      : Math.min((points / totalLockedCost) * 100, 100);
-
   return (
     <div className="bg-cyber-card p-6 rounded-xl space-y-5 border border-white/10">
       <h3 className="text-white font-semibold flex items-center gap-2">
-        🗺️ Árvore de Talentos
+        🗺️ Árvore de Talentos Lendária
       </h3>
 
-      {/* Pontos + Barra */}
-      <div>
-        <p className="text-sm text-gray-400">
-          Pontos disponíveis:{" "}
-          <span className="text-neon-cyan font-semibold">
-            {points}
-          </span>
-        </p>
+      <p className="text-sm text-gray-400">
+        Pontos disponíveis:{" "}
+        <span className="text-neon-cyan font-semibold">
+          {points}
+        </span>
+      </p>
 
-        <div className="mt-2 h-2 bg-gray-800 rounded overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.6 }}
-            className="h-full bg-gradient-to-r from-purple-500 to-neon-cyan"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-3">
+      <div className="space-y-4">
         <AnimatePresence>
           {talents.map(talent => {
             const unlocked = !talent.locked;
-            const canUnlock = points >= talent.cost;
+            const maxed = talent.level >= talent.maxLevel;
+            const canUpgrade =
+              unlocked &&
+              !maxed &&
+              points >= talent.cost;
+
+            const progress =
+              (talent.level / talent.maxLevel) * 100;
 
             return (
               <motion.div
@@ -68,27 +66,19 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.25 }}
-                className={`p-4 rounded-lg border relative overflow-hidden transition-all ${
-                  unlocked
-                    ? "border-neon-green/50 bg-neon-green/10"
-                    : canUnlock
-                    ? "border-purple-500/50 bg-purple-500/5"
-                    : "border-white/10 bg-white/5"
-                }`}
+                className={`p-4 rounded-lg border relative overflow-hidden transition-all ${rarityStyles[talent.rarity]}`}
               >
-                {/* Glow quando pode desbloquear */}
-                {canUnlock && !unlocked && (
+                {/* Explosão suave quando maxa */}
+                {maxed && (
                   <motion.div
-                    className="absolute inset-0 bg-purple-500/10"
-                    animate={{ opacity: [0.1, 0.3, 0.1] }}
+                    className="absolute inset-0 bg-white/5"
+                    animate={{ opacity: [0.2, 0.4, 0.2] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   />
                 )}
 
                 <div className="relative flex justify-between items-center gap-4">
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       {!unlocked && (
                         <Lock
@@ -99,39 +89,53 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
                       <p className="text-white font-medium">
                         {talent.title}
                       </p>
+
+                      <span className="text-xs text-gray-400">
+                        Lv {talent.level}/{talent.maxLevel}
+                      </span>
                     </div>
 
                     {talent.description && (
-                      <p className="text-xs text-gray-400 max-w-xs">
+                      <p className="text-xs text-gray-300 max-w-xs">
                         {talent.description}
                       </p>
                     )}
+
+                    {/* Barra de nível */}
+                    <div className="h-1.5 w-full bg-black/40 rounded overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        transition={{ duration: 0.5 }}
+                        className="h-full bg-gradient-to-r from-white/60 to-white"
+                      />
+                    </div>
                   </div>
 
                   {!unlocked ? (
+                    <span className="text-xs text-gray-500">
+                      Bloqueado
+                    </span>
+                  ) : maxed ? (
+                    <span className="text-xs text-yellow-400 font-semibold">
+                      👑 Máximo
+                    </span>
+                  ) : (
                     <motion.button
                       whileTap={{ scale: 0.95 }}
                       whileHover={
-                        canUnlock ? { scale: 1.05 } : {}
+                        canUpgrade ? { scale: 1.05 } : {}
                       }
-                      disabled={!canUnlock}
-                      onClick={() => onUnlock(talent.id)}
+                      disabled={!canUpgrade}
+                      onClick={() => onUpgrade(talent.id)}
                       className={`text-xs px-4 py-1.5 rounded font-semibold transition-all ${
-                        canUnlock
-                          ? "bg-neon-purple hover:bg-neon-purple/80 text-white"
+                        canUpgrade
+                          ? "bg-white text-black hover:bg-white/80"
                           : "bg-gray-700 text-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      💎 {talent.cost} TP
+                      💎 {talent.cost}
                     </motion.button>
-                  ) : (
-                    <motion.span
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-xs text-neon-green font-semibold"
-                    >
-                      ✨ Desbloqueado
-                    </motion.span>
                   )}
                 </div>
               </motion.div>
