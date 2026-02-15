@@ -5,8 +5,8 @@ interface Attribute {
   name: string;
   value: number;
   icon: LucideIcon;
-  color: string;
-  bgColor: string;
+  gradient: string; // ex: "from-blue-500 to-cyan-400"
+  bgColor: string;  // ex: "bg-blue-500/20"
   description: string;
 }
 
@@ -17,19 +17,14 @@ interface AttributeBarProps {
 export const AttributeBar = memo(({ attribute }: AttributeBarProps) => {
   const Icon = attribute.icon;
 
-  // Garante que o valor fique entre 0 e 100
+  // Clamp seguro entre 0 e 100
   const safeValue = Math.min(Math.max(attribute.value, 0), 100);
 
-  const containerClasses = "group";
-
-  const barClasses = `
-    absolute inset-y-0 left-0
-    bg-gradient-to-r ${attribute.color}
-    rounded-full transition-all duration-700 ease-out
-  `;
+  const hasValue = safeValue > 0;
 
   return (
-    <div className={containerClasses}>
+    <div className="group">
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className={`p-1.5 rounded-lg ${attribute.bgColor}`}>
@@ -47,29 +42,37 @@ export const AttributeBar = memo(({ attribute }: AttributeBarProps) => {
           </div>
         </div>
 
-        <span className="text-white font-bold font-mono text-lg">
+        <span className="text-white font-bold font-mono text-lg tabular-nums">
           {safeValue}
         </span>
       </div>
 
+      {/* Progress */}
       <div
         className="relative h-2.5 bg-cyber-darker rounded-full overflow-hidden border border-white/5"
         role="progressbar"
+        aria-label={attribute.name}
         aria-valuenow={safeValue}
         aria-valuemin={0}
         aria-valuemax={100}
       >
         {/* Barra principal */}
         <div
-          className={barClasses}
+          className={`
+            absolute inset-y-0 left-0
+            bg-gradient-to-r ${attribute.gradient}
+            rounded-full transition-all duration-700 ease-out
+          `}
           style={{ width: `${safeValue}%` }}
         />
 
-        {/* Shimmer effect */}
-        <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
-          style={{ width: `${safeValue}%` }}
-        />
+        {/* Shimmer somente se tiver valor */}
+        {hasValue && (
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-20 animate-shimmer pointer-events-none"
+            style={{ width: `${safeValue}%` }}
+          />
+        )}
       </div>
     </div>
   );
