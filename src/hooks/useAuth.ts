@@ -1,6 +1,6 @@
 // src/services/auth.ts
 import { httpsCallable } from "firebase/functions";
-import { functions, auth } from "./firebase";
+import { functions, auth } from "@/services/firebase";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 interface CreateUserData {
