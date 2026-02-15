@@ -4,7 +4,8 @@ import {
   ScrollText,
   GitBranch,
   LayoutDashboard,
-  BookOpen
+  BookOpen,
+  Coins
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef } from "react";
@@ -12,6 +13,15 @@ import { useCallback, useEffect, useRef } from "react";
 interface ProfileDrawerProps {
   open: boolean;
   onClose: () => void;
+}
+
+interface NavItem {
+  label: string;
+  icon: any;
+  path: string;
+  hover: string;
+  color: string;
+  external?: boolean;
 }
 
 export const ProfileDrawer = ({
@@ -22,14 +32,19 @@ export const ProfileDrawer = ({
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const goTo = useCallback(
-    (path: string) => {
-      navigate(path);
+    (path: string, external?: boolean) => {
+      if (external) {
+        window.open(path, "_blank", "noopener,noreferrer");
+      } else {
+        navigate(path);
+      }
+
       onClose();
     },
     [navigate, onClose]
   );
 
-  // Fecha com ESC
+  // Fecha com ESC + trava scroll
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -47,7 +62,7 @@ export const ProfileDrawer = ({
     };
   }, [open, onClose]);
 
-  const navItems = [
+  const navItems: NavItem[] = [
     {
       label: "Dashboard",
       icon: LayoutDashboard,
@@ -78,10 +93,11 @@ export const ProfileDrawer = ({
     },
     {
       label: "Moedas",
-      icon: BookOpen,
+      icon: Coins,
       path: "https://meu-dashboard-financeiro.vercel.app/",
       hover: "hover:border-neon-yellow",
-      color: "text-neon-yellow"
+      color: "text-neon-yellow",
+      external: true
     }
   ];
 
@@ -137,7 +153,7 @@ export const ProfileDrawer = ({
                 return (
                   <button
                     key={item.path}
-                    onClick={() => goTo(item.path)}
+                    onClick={() => goTo(item.path, item.external)}
                     className={`
                       w-full flex items-center gap-3 p-4 rounded-xl
                       bg-cyber-card border border-white/10
