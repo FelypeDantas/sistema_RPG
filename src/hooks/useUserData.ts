@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { db } from "@/services/firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
-import { useAuth } from "@/hooks/useAuth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuth } from "./useAuth";
 
 export function useUserData() {
   const { user } = useAuth();
@@ -14,7 +14,7 @@ export function useUserData() {
       const docRef = doc(db, "users", user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) setData(docSnap.data());
-      else setData(null);
+      else setData({});
     };
 
     fetchData();
