@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { db } from "@/services/firebase";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthWithPlayer } from "@/hooks/useAuth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /* =============================
@@ -32,44 +32,19 @@ export interface MissionHistory {
   segmentXP?: number;
 }
 
-export interface PlayerData {
-  level: number;
-  xp: number;
-  attributes: Record<MissionAttribute, number>;
-  segments: Record<string, number>;
-  talents: { id: string; unlocked: boolean; effect?: { segmentBonus?: Record<string, number> } }[];
-  traits: { id: string; name: string; description: string }[];
-}
-
 /* =============================
-   🧠 HOOK INTEGRADO
+   🧠 HOOK
 ============================= */
 
-export function useLifeRPG() {
-  const { user } = useAuth();
+export function useMissions() {
+  const { user } = useAuthWithPlayer();
 
-  // ---------------- Player ----------------
-  const [player, setPlayer] = useState<PlayerData>({
-    level: 1,
-    xp: 0,
-    attributes: { Físico: 10, Mente: 10, Social: 10, Finanças: 10 },
-    segments: { forca: 10, foco: 20 },
-    talents: [
-      { id: "focus", unlocked: true, effect: { segmentBonus: { foco: 1.2 } } },
-      { id: "physical_mastery", unlocked: false, effect: { segmentBonus: { forca: 1.15, resistencia: 1.1 } } }
-    ],
-    traits: [{ id: "disciplinado", name: "Disciplinado", description: "Ganha mais XP ao manter streaks" }]
-  });
-
-  const nextLevelXP = Math.floor(100 + player.xp * 0.9);
-
-  // ---------------- Missions ----------------
   const [missions, setMissions] = useState<Mission[]>([]);
   const [history, setHistory] = useState<MissionHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   /* =============================
-     ☁️ CARREGAR DADOS FIRESTORE
+     ☁️ CARREGAR DADOS
   ============================= */
   useEffect(() => {
     if (!user?.uid) {
@@ -84,21 +59,11 @@ export function useLifeRPG() {
 
         if (snapshot.exists()) {
           const data = snapshot.data();
-
-          // Validar e carregar dados
           setMissions(Array.isArray(data.missions) ? data.missions : []);
           setHistory(Array.isArray(data.history) ? data.history : []);
-          if (data.player) {
-            setPlayer(prev => ({
-              ...prev,
-              ...data.player,
-              attributes: { ...prev.attributes, ...(data.player.attributes || {}) },
-              segments: { ...prev.segments, ...(data.player.segments || {}) },
-            }));
-          }
         }
-      } catch (err) {
-        console.error("Erro ao carregar dados:", err);
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
       } finally {
         setLoading(false);
       }
@@ -116,6 +81,7 @@ export function useLifeRPG() {
     const today = new Date().toISOString().split("T")[0];
     const dailyId = `daily-${today}`;
 
+    // ✅ Verifica se já existe nos missions ou no history
     const alreadyExists =
       missions.some(m => m.id === dailyId) ||
       history.some(h => h.id === dailyId);
@@ -135,38 +101,37 @@ export function useLifeRPG() {
   }, [user?.uid, missions, history]);
 
   /* =============================
-     💾 SALVAR NO FIRESTORE
+     ☁️ SALVAR AUTOMATICAMENTE
   ============================= */
-  const saveToFirestore = async (updatedMissions: Mission[], updatedHistory: MissionHistory[], updatedPlayer?: PlayerData) => {
+  async function saveToFirestore(updatedMissions: Mission[], updatedHistory: MissionHistory[]) {
     if (!user?.uid) return;
 
     try {
       const docRef = doc(db, "users", user.uid);
       await setDoc(docRef, {
-        missions: updatedMissions.map(m => ({ ...m })),
-        history: updatedHistory.map(h => ({ ...h })),
-        player: updatedPlayer ? { ...updatedPlayer } : player
+        missions: updatedMissions,
+        history: updatedHistory
       }, { merge: true });
-    } catch (err) {
-      console.error("Erro ao salvar Firestore:", err);
+    } catch (error) {
+      console.error("Erro ao salvar dados:", error);
     }
-  };
+  }
 
   /* =============================
      ➕ ADD MISSÃO
   ============================= */
-  const addMission = (mission: Mission) => {
-    setMissions(prev => {
-      const newMissions = [...prev, mission];
+  function addMission(mission: Mission) {
+    setMissions(prevMissions => {
+      const newMissions = [...prevMissions, mission];
       saveToFirestore(newMissions, history);
       return newMissions;
     });
-  };
+  }
 
   /* =============================
      ✅ CONCLUIR MISSÃO
   ============================= */
-  const completeMission = (missionId: string, success: boolean) => {
+  function completeMission(missionId: string, success: boolean) {
     setMissions(prevMissions => {
       const mission = prevMissions.find(m => m.id === missionId);
       if (!mission) return prevMissions;
@@ -186,13 +151,8 @@ export function useLifeRPG() {
             date: new Date().toISOString(),
             segment: mission.segment,
             segmentXP: mission.segmentXP,
-          }
+          },
         ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        // Atualizar XP do player
-        if (success) {
-          gainXP(mission.xp, mission.attribute);
-        }
 
         saveToFirestore(newMissions, newHistory);
         return newHistory;
@@ -200,28 +160,7 @@ export function useLifeRPG() {
 
       return newMissions;
     });
-  };
-
-  /* =============================
-     ⭐ XP E ATRIBUTOS
-  ============================= */
-  const gainXP = (amount: number, attribute?: MissionAttribute) => {
-    setPlayer(prev => {
-      let newXP = prev.xp + amount;
-      let newLevel = prev.level;
-
-      if (newXP >= nextLevelXP) {
-        newXP -= nextLevelXP;
-        newLevel += 1;
-      }
-
-      const newAttributes = attribute
-        ? { ...prev.attributes, [attribute]: prev.attributes[attribute] + 1 }
-        : { ...prev.attributes };
-
-      return { ...prev, xp: newXP, level: newLevel, attributes: newAttributes };
-    });
-  };
+  }
 
   /* =============================
      📊 ESTATÍSTICAS
@@ -253,24 +192,24 @@ export function useLifeRPG() {
   }, [history]);
 
   /* =============================
-     🔄 RESET COMPLETO
+     🔄 RESET
   ============================= */
-  const resetAll = () => {
+  function resetMissions() {
     setMissions([]);
     setHistory([]);
-    setPlayer(prev => ({ ...prev, level: 1, xp: 0, attributes: { Físico: 10, Mente: 10, Social: 10, Finanças: 10 } }));
     saveToFirestore([], []);
-  };
+  }
 
+  /* =============================
+     📦 EXPORT
+  ============================= */
   return {
-    player,
     missions,
     history,
     stats,
     loading,
     addMission,
     completeMission,
-    gainXP,
-    resetAll
+    resetMissions,
   };
 }
