@@ -2,8 +2,6 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { db } from "@/services/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
-const STORAGE_KEY = "life_rpg_player";
-
 export type TraitId = "disciplinado" | "impulsivo" | "persistente" | "econômico";
 export interface Trait { id: TraitId; name: string; description: string; }
 
@@ -30,55 +28,47 @@ export function usePlayerRealtime(userId?: string) {
   const nextLevelXP = useCallback(() => Math.floor(100 + xp * 0.9), [xp]);
 
   /* ==============================
-     LOAD LOCALSTORAGE
-  ============================== */
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const data = JSON.parse(saved);
-        setLevel(data.level ?? 1);
-        setXP(data.xp ?? 0);
-        setAttributes(data.attributes ?? attributes);
-        setSegments(data.segments ?? segments);
-        setTalents(data.talents ?? talents);
-        setTraits(data.traits ?? traits);
-      }
-    } catch { }
-  }, []);
-
-  /* ==============================
      FIRESTORE REALTIME SYNC
   ============================== */
   useEffect(() => {
     if (!userId) return;
-    const docRef = doc(db, "users", userId);
 
+    const docRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(docRef, snapshot => {
       const data = snapshot.data()?.player;
       if (!data) return;
 
-      setLevel(data.level ?? level);
-      setXP(data.xp ?? xp);
-      setAttributes(data.attributes ?? attributes);
-      setSegments(data.segments ?? segments);
-      setTalents(data.talents ?? talents);
-      setTraits(data.traits ?? traits);
-
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      // Valida e aplica dados
+      setLevel(typeof data.level === "number" ? data.level : 1);
+      setXP(typeof data.xp === "number" ? data.xp : 0);
+      setAttributes(typeof data.attributes === "object" ? data.attributes : { Físico: 10, Mente: 10, Social: 10, Finanças: 10 });
+      setSegments(typeof data.segments === "object" ? data.segments : { forca: 10, foco: 20 });
+      setTalents(Array.isArray(data.talents) ? data.talents : []);
+      setTraits(Array.isArray(data.traits) ? data.traits : []);
     });
 
     return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   /* ==============================
      SAVE FUNCTION (DEBOUNCED)
   ============================== */
   const savePlayer = useCallback(() => {
-    const data = { level, xp, attributes, segments, talents, traits };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     if (!userId) return;
+
+    const data = {
+      level,
+      xp,
+      attributes,
+      segments,
+      talents: talents.map(t => ({
+        id: t.id,
+        unlocked: t.unlocked,
+        effect: t.effect ? { ...t.effect } : undefined,
+      })),
+      traits: traits.map(t => ({ id: t.id, name: t.name, description: t.description })),
+    };
+
     const docRef = doc(db, "users", userId);
     setDoc(docRef, { player: data }, { merge: true }).catch(console.error);
   }, [level, xp, attributes, segments, talents, traits, userId]);
@@ -108,9 +98,7 @@ export function usePlayerRealtime(userId?: string) {
       return total;
     });
 
-    if (attribute) {
-      setAttributes(prev => ({ ...prev, [attribute]: prev[attribute] + 1 }));
-    }
+    if (attribute) setAttributes(prev => ({ ...prev, [attribute]: prev[attribute] + 1 }));
   }, [xp, attributes, level, nextLevelXP]);
 
   const gainSegmentXP = useCallback((segmentId: string, baseAmount: number) => {
@@ -126,9 +114,6 @@ export function usePlayerRealtime(userId?: string) {
     }));
   }, [talents]);
 
-  /* ==============================
-     UNDO
-  ============================== */
   const undoLast = useCallback(() => {
     const last = undoStack.current.pop();
     if (!last) return;
