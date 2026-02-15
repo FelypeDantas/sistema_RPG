@@ -21,13 +21,6 @@ export interface MissionHistory extends Omit<Mission, "completed"> {
   date: string;
 }
 
-const DAILY_MISSION_TEMPLATE: Omit<Mission, "id" | "completed"> = {
-  title: "Treino diário",
-  description: "100 agachamentos, 20 flexões e 10 minutos de meditação",
-  xp: 50,
-  attribute: "Físico",
-};
-
 export function useMissions() {
   const { user } = useAuthWithPlayer();
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -98,22 +91,6 @@ export function useMissions() {
     })(),
     [user?.uid]
   );
-
-  // ==============================
-  // Missão diária
-  // ==============================
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const today = new Date().toISOString().split("T")[0];
-    const dailyId = `daily-${today}`;
-
-    const exists = missions.some(m => m.id === dailyId) || history.some(h => h.id === dailyId);
-    if (exists) return;
-
-    const dailyMission: Mission = { ...DAILY_MISSION_TEMPLATE, id: dailyId, completed: false };
-    addMission(dailyMission);
-  }, [user?.uid, missions, history]);
 
   // ==============================
   // Add mission
