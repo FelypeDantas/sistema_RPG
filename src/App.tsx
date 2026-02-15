@@ -11,6 +11,7 @@ import AttributesPage from "@/pages/AttributesPage";
 
 // 👉 NOVO
 import { PlayerProvider } from "@/context/PlayerContext";
+import { AuthPage } from "./pages/AuthPage";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
 
         <BrowserRouter>
           <Routes>
+            <Route path="login" element={<AuthPage />} />
             <Route path="/" element={<RPGDashboard />} />
             <Route path="/quests/history" element={<QuestHistory />} />
             <Route path="/talents" element={<TalentsTree />} />
