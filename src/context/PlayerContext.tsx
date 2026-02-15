@@ -1,98 +1,98 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
-interface Player {
-  level: number;
-  currentXP: number;
-  nextLevelXP: number;
-  streak: number; // dias consecutivos completando missões
-}
+type PlayerClass = "Guerreiro" | "Mago" | "Mercador" | "Diplomata" | null;
 
 interface PlayerContextType {
-  player: Player;
-  gainXP: (amount: number) => void;
+  xp: number;
+  level: number;
+  streak: number;
+  playerClass: PlayerClass;
+  chooseClass: (c: PlayerClass) => void;
+  gainXP: (amount: number, attribute?: string) => void;
   loseXP: (amount: number) => void;
-  resetPlayer: () => void;
-  incrementStreak: () => void;
   resetStreak: () => void;
-  prestige: number;
-  addPrestige: () => void;
 }
 
-const PlayerContext = createContext<PlayerContextType | null>(null);
+const PlayerContext = createContext<PlayerContextType>(
+  {} as PlayerContextType
+);
 
-export function PlayerProvider({ children }: { children: ReactNode }) {
-  const [player, setPlayer] = useState<Player>({
-    level: 1,
-    currentXP: 0,
-    nextLevelXP: 100,
-    streak: 0,
-  });
+const XP_KEY = "rpg_xp";
+const LEVEL_KEY = "rpg_level";
+const STREAK_KEY = "rpg_streak";
+const CLASS_KEY = "rpg_class";
 
-  function gainXP(amount: number) {
-    setPlayer(prev => {
-      let xp = prev.currentXP + amount;
-      let level = prev.level;
-      let nextXP = prev.nextLevelXP;
+function xpToNext(level: number) {
+  return Math.round(100 * Math.pow(level, 1.4));
+}
 
-      while (xp >= nextXP) {
-        xp -= nextXP;
-        level++;
-        nextXP = Math.floor(nextXP * 1.2);
-      }
+function classBonus(playerClass: PlayerClass, attribute?: string) {
+  if (!playerClass || !attribute) return 1;
 
-      return { ...prev, level, currentXP: xp, nextLevelXP: nextXP };
-    });
+  if (playerClass === "Guerreiro" && attribute === "Físico") return 1.2;
+  if (playerClass === "Mago" && attribute === "Mente") return 1.2;
+  if (playerClass === "Mercador" && attribute === "Finanças") return 1.2;
+  if (playerClass === "Diplomata" && attribute === "Social") return 1.2;
+
+  return 1;
+}
+
+export function PlayerProvider({ children }: { children: React.ReactNode }) {
+  const [xp, setXP] = useState(() => Number(localStorage.getItem(XP_KEY)) || 0);
+  const [level, setLevel] = useState(() => Number(localStorage.getItem(LEVEL_KEY)) || 1);
+  const [streak, setStreak] = useState(() => Number(localStorage.getItem(STREAK_KEY)) || 0);
+  const [playerClass, setPlayerClass] = useState<PlayerClass>(
+    () => (localStorage.getItem(CLASS_KEY) as PlayerClass) || null
+  );
+
+  useEffect(() => {
+    localStorage.setItem(XP_KEY, String(xp));
+    localStorage.setItem(LEVEL_KEY, String(level));
+    localStorage.setItem(STREAK_KEY, String(streak));
+  }, [xp, level, streak]);
+
+  function chooseClass(c: PlayerClass) {
+    setPlayerClass(c);
+    localStorage.setItem(CLASS_KEY, c || "");
+  }
+
+  function gainXP(amount: number, attribute?: string) {
+    const bonus = classBonus(playerClass, attribute);
+    const finalXP = Math.round(amount * bonus);
+
+    let newXP = xp + finalXP;
+    let newLevel = level;
+
+    while (newXP >= xpToNext(newLevel)) {
+      newXP -= xpToNext(newLevel);
+      newLevel++;
+    }
+
+    setXP(newXP);
+    setLevel(newLevel);
+    setStreak(prev => prev + 1);
   }
 
   function loseXP(amount: number) {
-    setPlayer(prev => {
-      let xp = prev.currentXP - amount;
-      let level = prev.level;
-      let nextXP = prev.nextLevelXP;
-
-      while (xp < 0 && level > 1) {
-        level--;
-        nextXP = Math.floor(nextXP / 1.2);
-        xp += nextXP;
-      }
-
-      if (xp < 0) xp = 0;
-
-      return { ...prev, level, currentXP: xp, nextLevelXP: nextXP };
-    });
-  }
-
-  function resetPlayer() {
-    setPlayer({
-      level: 1,
-      currentXP: 0,
-      nextLevelXP: 100,
-      streak: 0,
-    });
-  }
-
-  function addPrestige() {
-  setAttributes({
-    mente: 0,
-    fisico: 0,
-    social: 0,
-    financas: 0
-  });
-
-  setPrestige((prev) => prev + 1);
-}
-
-  function incrementStreak() {
-    setPlayer(prev => ({ ...prev, streak: prev.streak + 1 }));
+    setXP(prev => Math.max(prev - amount, 0));
   }
 
   function resetStreak() {
-    setPlayer(prev => ({ ...prev, streak: 0 }));
+    setStreak(0);
   }
 
   return (
     <PlayerContext.Provider
-      value={{ player, gainXP, loseXP, resetPlayer, incrementStreak, resetStreak }}
+      value={{
+        xp,
+        level,
+        streak,
+        playerClass,
+        chooseClass,
+        gainXP,
+        loseXP,
+        resetStreak,
+      }}
     >
       {children}
     </PlayerContext.Provider>
@@ -100,7 +100,5 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 }
 
 export function usePlayer() {
-  const ctx = useContext(PlayerContext);
-  if (!ctx) throw new Error("usePlayer must be used within PlayerProvider");
-  return ctx;
+  return useContext(PlayerContext);
 }
