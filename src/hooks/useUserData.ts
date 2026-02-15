@@ -5,7 +5,12 @@ import { useAuth } from "./useAuth";
 
 export function useUserData() {
   const { user } = useAuth();
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<any>({
+    missions: [],
+    level: 1,
+    xp: 0,
+    attributes: { Físico: 10, Mente: 10, Social: 10, Finanças: 10 },
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -14,7 +19,6 @@ export function useUserData() {
       const docRef = doc(db, "users", user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) setData(docSnap.data());
-      else setData({});
     };
 
     fetchData();

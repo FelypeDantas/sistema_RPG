@@ -14,7 +14,6 @@ export function AuthPage() {
     <div className="min-h-screen flex flex-col justify-center items-center bg-gray-900 text-white p-4">
       <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
         <h1 className="text-2xl font-bold mb-4">{isRegister ? "Registrar" : "Login"}</h1>
-
         {error && <p className="text-red-500 mb-2">{error}</p>}
 
         <input
@@ -24,7 +23,6 @@ export function AuthPage() {
           onChange={(e) => setEmail(e.target.value)}
           className="w-full p-2 mb-3 rounded bg-gray-700 text-white"
         />
-
         <input
           type="password"
           placeholder="Senha"
