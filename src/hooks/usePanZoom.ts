@@ -9,28 +9,42 @@ export function usePanZoom() {
   const isPanning = useRef(false);
   const last = useRef({ x: 0, y: 0 });
 
-  // ---------- Mouse Events ----------
+  /* ============================= */
+  /* ---------- MOUSE ---------- */
+  /* ============================= */
+
   const onMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault(); // evita seleção de texto
+    e.preventDefault();
     isPanning.current = true;
     last.current = { x: e.clientX, y: e.clientY };
   };
 
-  const onMouseMove = (e: React.MouseEvent) => {
-    if (!isPanning.current) return;
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPanning.current) return;
+      const dx = e.clientX - last.current.x;
+      const dy = e.clientY - last.current.y;
+      setPosition(pos => ({ x: pos.x + dx, y: pos.y + dy }));
+      last.current = { x: e.clientX, y: e.clientY };
+    };
 
-    const dx = e.clientX - last.current.x;
-    const dy = e.clientY - last.current.y;
+    const handleMouseUp = () => {
+      isPanning.current = false;
+    };
 
-    setPosition(pos => ({ x: pos.x + dx, y: pos.y + dy }));
-    last.current = { x: e.clientX, y: e.clientY };
-  };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
 
-  const onMouseUp = () => {
-    isPanning.current = false;
-  };
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
-  // ---------- Touch Events ----------
+  /* ============================= */
+  /* ---------- TOUCH ---------- */
+  /* ============================= */
+
   const onTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       isPanning.current = true;
@@ -38,34 +52,66 @@ export function usePanZoom() {
     }
   };
 
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!isPanning.current || e.touches.length !== 1) return;
+  useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isPanning.current || e.touches.length !== 1) return;
+      const dx = e.touches[0].clientX - last.current.x;
+      const dy = e.touches[0].clientY - last.current.y;
+      setPosition(pos => ({ x: pos.x + dx, y: pos.y + dy }));
+      last.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    };
 
-    const dx = e.touches[0].clientX - last.current.x;
-    const dy = e.touches[0].clientY - last.current.y;
+    const handleTouchEnd = () => {
+      isPanning.current = false;
+    };
 
-    setPosition(pos => ({ x: pos.x + dx, y: pos.y + dy }));
-    last.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  };
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd);
 
-  const onTouchEnd = () => {
-    isPanning.current = false;
-  };
+    return () => {
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
 
-  // ---------- Wheel Zoom ----------
+  const onTouchMove = (e: React.TouchEvent) => e.preventDefault();
+  const onTouchEnd = () => { isPanning.current = false; };
+
+  /* ============================= */
+  /* ---------- WHEEL / ZOOM ---------- */
+  /* ============================= */
+
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const zoomSpeed = 0.0015; // zoom mais suave
-      setScale(s => Math.min(3, Math.max(0.5, s - e.deltaY * zoomSpeed)));
+      const zoomSpeed = 0.0015;
+      const rect = el.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+
+      setScale(prevScale => {
+        const newScale = Math.min(3, Math.max(0.5, prevScale - e.deltaY * zoomSpeed));
+
+        // Ajusta posição para zoom centrado no cursor
+        setPosition(pos => ({
+          x: pos.x - offsetX * (newScale - prevScale),
+          y: pos.y - offsetY * (newScale - prevScale)
+        }));
+
+        return newScale;
+      });
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
     return () => el.removeEventListener("wheel", handleWheel);
   }, []);
+
+  /* ============================= */
+  /* ---------- RETURN ---------- */
+  /* ============================= */
 
   return {
     containerRef,
@@ -74,9 +120,9 @@ export function usePanZoom() {
     },
     handlers: {
       onMouseDown,
-      onMouseMove,
-      onMouseUp,
-      onMouseLeave: onMouseUp,
+      onMouseMove: (e: React.MouseEvent) => e.preventDefault(), // move é global
+      onMouseUp: () => { isPanning.current = false; },
+      onMouseLeave: () => { isPanning.current = false; },
       onTouchStart,
       onTouchMove,
       onTouchEnd
