@@ -11,7 +11,7 @@ import { MissionForm } from "@/components/rpg/MissionForm";
 import { TalentTree } from "@/components/rpg/TalentTree";
 import { ProfileDrawer } from "@/components/rpg/ProfileDrawer";
 
-import { usePlayer } from "@/hooks/usePlayer";
+import { usePlayerRealtime } from "@/hooks/usePlayer";
 import { useMissions, Mission } from "@/hooks/useMissions";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerClass } from "@/hooks/usePlayerClass";
@@ -24,7 +24,7 @@ const RPGDashboardContent = () => {
   const [pendingMission, setPendingMission] = useState<Mission | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const player = usePlayer();
+  const player = usePlayerRealtime();
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
