@@ -1,6 +1,5 @@
-// database.ts
 import { doc, setDoc, getDoc } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "@/services/firebase";
 
 // Salva dados do usuário
 export async function saveUserData(userId: string, data: any) {
