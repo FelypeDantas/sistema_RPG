@@ -3,9 +3,9 @@ import { db } from "@/services/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-/* =============================
-   🎯 TIPOS
-============================= */
+/* ============================= */
+/* 🎯 TIPOS                     */
+/* ============================= */
 
 export type MissionAttribute = "Mente" | "Físico" | "Social" | "Finanças";
 
@@ -32,9 +32,9 @@ export interface MissionHistory {
   segmentXP?: number;
 }
 
-/* =============================
-   🧠 HOOK
-============================= */
+/* ============================= */
+/* 🧠 HOOK PRINCIPAL             */
+/* ============================= */
 
 export function useMissions() {
   const { user } = useAuth();
@@ -43,9 +43,9 @@ export function useMissions() {
   const [history, setHistory] = useState<MissionHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* =============================
-     ☁️ CARREGAR DADOS
-  ============================= */
+  /* ============================= */
+  /* ☁️ CARREGAR DADOS INICIAIS    */
+  /* ============================= */
 
   useEffect(() => {
     if (!user) {
@@ -53,7 +53,7 @@ export function useMissions() {
       return;
     }
 
-    async function loadData() {
+    const loadData = async () => {
       try {
         const docRef = doc(db, "users", user.uid);
         const snapshot = await getDoc(docRef);
@@ -62,23 +62,42 @@ export function useMissions() {
           const data = snapshot.data();
           setMissions(data.missions || []);
           setHistory(data.history || []);
+        } else {
+          // inicializa dados do usuário
+          await setDoc(docRef, { missions: [], history: [] });
+          setMissions([]);
+          setHistory([]);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     loadData();
   }, [user]);
 
-  /* ==============================
-     🌅 MISSÃO DIÁRIA
-  ============================== */
+  /* ============================= */
+  /* 🔄 FUNÇÃO DE SALVAR NO FIREBASE */
+  /* ============================= */
+
+  const saveToFirestore = async (updatedMissions: Mission[], updatedHistory: MissionHistory[]) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, "users", user.uid);
+      await setDoc(docRef, { missions: updatedMissions, history: updatedHistory }, { merge: true });
+    } catch (error) {
+      console.error("Erro ao salvar dados:", error);
+    }
+  };
+
+  /* ============================= */
+  /* 🌅 MISSÃO DIÁRIA              */
+  /* ============================= */
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || loading) return;
 
     const today = new Date().toISOString().split("T")[0];
     const alreadyExists = missions.some(m => m.id === `daily-${today}`);
@@ -93,76 +112,60 @@ export function useMissions() {
       completed: false,
     };
 
-    addMission(dailyMission); // ✅ chama a função que salva no Firebase
-  }, [user, missions]);
+    addMission(dailyMission);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading]); // dispara apenas após carregar dados
 
-  /* =============================
-     ☁️ SALVAR AUTOMATICAMENTE
-  ============================= */
+  /* ============================= */
+  /* ➕ ADD MISSÃO                  */
+  /* ============================= */
 
-  async function saveToFirestore(updatedMissions: Mission[], updatedHistory: MissionHistory[]) {
-    if (!user) return;
-    try {
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(
-        docRef,
-        { missions: updatedMissions, history: updatedHistory },
-        { merge: true }
-      );
-    } catch (error) {
-      console.error("Erro ao salvar dados:", error);
-    }
-  }
-
-  /* =============================
-     ➕ ADD MISSÃO
-  ============================= */
-
-  function addMission(mission: Mission) {
-    setMissions(prev => {
-      const newMissions = [...prev, mission];
-      saveToFirestore(newMissions, history);
+  const addMission = (mission: Mission) => {
+    setMissions(prevMissions => {
+      const newMissions = [...prevMissions, mission];
+      saveToFirestore(newMissions, history); // usa estado atualizado
       return newMissions;
     });
-  }
+  };
 
-  /* =============================
-     ✅ CONCLUIR MISSÃO
-  ============================= */
+  /* ============================= */
+  /* ✅ COMPLETAR MISSÃO            */
+  /* ============================= */
 
-  function completeMission(missionId: string, success: boolean) {
-    const mission = missions.find(m => m.id === missionId);
-    if (!mission) return;
+  const completeMission = (missionId: string, success: boolean) => {
+    setMissions(prevMissions => {
+      const mission = prevMissions.find(m => m.id === missionId);
+      if (!mission) return prevMissions;
 
-    setMissions(prev => {
-      const newMissions = prev.filter(m => m.id !== missionId);
+      const newMissions = prevMissions.filter(m => m.id !== missionId);
+
+      setHistory(prevHistory => {
+        const newHistory: MissionHistory[] = [
+          ...prevHistory,
+          {
+            id: mission.id,
+            title: mission.title,
+            description: mission.description,
+            attribute: mission.attribute,
+            xp: mission.xp,
+            success,
+            date: new Date().toISOString(),
+            segment: mission.segment,
+            segmentXP: mission.segmentXP,
+          },
+        ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        saveToFirestore(newMissions, newHistory); // salva arrays atualizados
+        return newHistory;
+      });
+
       return newMissions;
     });
+  };
 
-    setHistory(prev => {
-      const newHistory = [
-        ...prev,
-        {
-          id: mission.id,
-          title: mission.title,
-          description: mission.description,
-          attribute: mission.attribute,
-          xp: mission.xp,
-          success,
-          date: new Date().toISOString(),
-          segment: mission.segment,
-          segmentXP: mission.segmentXP,
-        },
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      saveToFirestore(missions.filter(m => m.id !== missionId), newHistory);
-      return newHistory;
-    });
-  }
-
-  /* =============================
-     📊 ESTATÍSTICAS
-  ============================= */
+  /* ============================= */
+  /* 📊 ESTATÍSTICAS               */
+  /* ============================= */
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -190,19 +193,19 @@ export function useMissions() {
     return { totalMissions: total, successRate, xpByAttribute, xpBySegment };
   }, [history]);
 
-  /* =============================
-     🔄 RESET
-  ============================= */
+  /* ============================= */
+  /* 🔄 RESETAR MISSÕES             */
+  /* ============================= */
 
-  function resetMissions() {
+  const resetMissions = () => {
     setMissions([]);
     setHistory([]);
     saveToFirestore([], []);
-  }
+  };
 
-  /* =============================
-     📦 EXPORT
-  ============================= */
+  /* ============================= */
+  /* 📦 EXPORT                     */
+  /* ============================= */
 
   return {
     missions,
