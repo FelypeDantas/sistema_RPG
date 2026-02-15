@@ -1,46 +1,19 @@
-import { useEffect, useState } from "react";
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInAnonymously,
-  User
-} from "firebase/auth";
+// services/auth.ts
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../services/firebase";
 
+interface CreateUserData {
+  email: string;
+  password: string;
+}
 
-import { initializeApp } from "firebase/app";
-
-/* ⚠️ IMPORTANTE
-   Se você já inicializa o Firebase em services/firebase.ts,
-   importe o app de lá em vez de inicializar aqui.
-*/
-
-import { app } from "@/services/firebase";
-
-const auth = getAuth(app);
-
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async currentUser => {
-      if (currentUser) {
-        setUser(currentUser);
-        setLoading(false);
-      } else {
-        try {
-          const result = await signInAnonymously(auth);
-          setUser(result.user);
-        } catch (error) {
-          console.error("Erro ao autenticar:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  return { user, loading };
+export async function createUser(data: CreateUserData) {
+  const createUserCallable = httpsCallable(functions, "createUser");
+  try {
+    const result = await createUserCallable(data);
+    return result.data; // { uid, email }
+  } catch (err: any) {
+    console.error("Erro ao criar usuário:", err);
+    throw err;
+  }
 }
