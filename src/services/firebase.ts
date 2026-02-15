@@ -1,7 +1,8 @@
-// firebase.ts
+// services/firebase.ts
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+// Configurações públicas do Firebase (seguras para front-end)
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -11,8 +12,5 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Inicializa Firebase
-const app = initializeApp(firebaseConfig);
-
-// Exporta o Firestore
+export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
