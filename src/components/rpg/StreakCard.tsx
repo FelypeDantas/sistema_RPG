@@ -8,22 +8,31 @@ interface StreakCardProps {
 
 const days = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
-export const StreakCard = ({ weeklyXP, currentStreak }: StreakCardProps) => {
-  const maxXP = Math.max(...weeklyXP, 1);
+export const StreakCard = ({
+  weeklyXP,
+  currentStreak
+}: StreakCardProps) => {
+  // Garante sempre 7 posições
+  const safeWeeklyXP =
+    weeklyXP.length === 7
+      ? weeklyXP
+      : Array.from({ length: 7 }, (_, i) => weeklyXP[i] ?? 0);
+
+  const maxXP = Math.max(...safeWeeklyXP, 1);
 
   const jsDay = new Date().getDay();
   const todayIndex = jsDay === 0 ? 6 : jsDay - 1;
 
-  // Próximo milestone dinâmico (5, 10, 15, 20...)
   const nextMilestone =
     Math.ceil((currentStreak + 1) / 5) * 5;
 
   return (
     <div className="bg-cyber-card border border-neon-orange/30 rounded-xl p-5 relative overflow-hidden">
       {/* Glow ambiente */}
-      <div className="absolute -top-10 -right-10 w-32 h-32 bg-neon-orange/10 rounded-full blur-3xl" />
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-neon-orange/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative">
+        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white font-semibold flex items-center gap-2">
             <Flame className="w-5 h-5 text-neon-orange" />
@@ -56,10 +65,12 @@ export const StreakCard = ({ weeklyXP, currentStreak }: StreakCardProps) => {
 
         {/* Weekly XP Chart */}
         <div className="flex items-end justify-between gap-2 h-24 mb-2">
-          {weeklyXP.map((xp, index) => {
-            const height = (xp / maxXP) * 100;
+          {safeWeeklyXP.map((xp, index) => {
+            const normalizedHeight =
+              xp > 0 ? (xp / maxXP) * 100 : 0;
+
             const isToday = index === todayIndex;
-            const hasSomeXP = xp > 0;
+            const hasXP = xp > 0;
 
             return (
               <div
@@ -68,20 +79,27 @@ export const StreakCard = ({ weeklyXP, currentStreak }: StreakCardProps) => {
               >
                 <motion.div
                   initial={{ height: 0 }}
-                  animate={{ height: `${Math.max(height, 8)}%` }}
-                  transition={{ duration: 0.8, delay: index * 0.05 }}
+                  animate={{
+                    height: hasXP
+                      ? `${Math.max(normalizedHeight, 8)}%`
+                      : "8%"
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    delay: index * 0.05
+                  }}
                   className={`
                     w-full rounded-t-lg relative
                     ${
                       isToday
                         ? "bg-gradient-to-t from-neon-orange to-neon-yellow shadow-[0_0_15px_rgba(255,140,0,0.4)]"
-                        : hasSomeXP
+                        : hasXP
                         ? "bg-gradient-to-t from-neon-cyan/50 to-neon-cyan"
-                        : "bg-gray-700/50"
+                        : "bg-gray-700/40"
                     }
                   `}
                 >
-                  {hasSomeXP && (
+                  {hasXP && (
                     <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs text-gray-400 font-mono">
                       {xp}
                     </span>
