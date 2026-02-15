@@ -1,7 +1,7 @@
 // src/components/rpg/AttributesCodex.tsx
 import { memo, useMemo, useState } from "react";
 import { ALL_ATTRIBUTES } from "@/data/attributes";
-import { usePlayer } from "@/context/PlayerContext";
+import { useUserData } from "@/hooks/useUserData";
 
 type Rank = {
   label: string;
@@ -49,7 +49,9 @@ function getRank(value: number): Rank {
 }
 
 export const AttributesCodex = memo(() => {
-  const { attributes } = usePlayer();
+  const { data, saveData } = useUserData();
+  const attributes = data?.attributes ?? {};
+
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -72,6 +74,16 @@ export const AttributesCodex = memo(() => {
         attr.description.toLowerCase().includes(term)
     );
   }, [search]);
+
+  // Função para evoluir um segmento
+  const evolveSegment = (attrId: string, segmentId: string) => {
+    const current = attributes?.[segmentId] ?? 0;
+    const updatedAttributes = {
+      ...attributes,
+      [segmentId]: Math.min(current + 5, 100) // evolui +5 por clique, max 100
+    };
+    saveData({ ...data, attributes: updatedAttributes });
+  };
 
   return (
     <div className="space-y-8">
@@ -138,7 +150,7 @@ export const AttributesCodex = memo(() => {
                 </div>
               </div>
 
-              {/* Progress Bar */}
+              {/* Barra de progresso */}
               <div className="mt-4">
                 <div className="relative h-2 rounded-full overflow-hidden bg-black/40 border border-white/10">
                   <div
@@ -149,7 +161,7 @@ export const AttributesCodex = memo(() => {
               </div>
             </button>
 
-            {/* SEGMENTS */}
+            {/* Segments */}
             <div
               className={`
                 overflow-hidden transition-all duration-500
@@ -157,26 +169,52 @@ export const AttributesCodex = memo(() => {
               `}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                {attr.segments.map((segment) => (
-                  <div
-                    key={segment.id}
-                    className="
-                      bg-black/40 p-3 rounded-lg
-                      border border-white/10
-                      transition-all duration-200
-                      hover:border-neon-cyan/40
-                      hover:bg-black/60
-                    "
-                  >
-                    <p className="text-white text-sm font-medium">
-                      {segment.name}
-                    </p>
+                {attr.segments.map((segment) => {
+                  const segValue = attributes?.[segment.id] ?? 0;
+                  const segSafe = Math.min(Math.max(segValue, 0), 100);
+                  const segRank = getRank(segSafe);
 
-                    <p className="text-xs text-gray-400 mt-1 leading-snug">
-                      {segment.description}
-                    </p>
-                  </div>
-                ))}
+                  return (
+                    <div
+                      key={segment.id}
+                      className="
+                        bg-black/40 p-3 rounded-lg
+                        border border-white/10
+                        transition-all duration-200
+                        hover:border-neon-cyan/40
+                        hover:bg-black/60
+                      "
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <p className="text-white text-sm font-medium">
+                          {segment.name}
+                        </p>
+                        <button
+                          onClick={() => evolveSegment(attr.id, segment.id)}
+                          className="px-2 py-0.5 text-xs text-black bg-neon-cyan rounded hover:brightness-110 transition"
+                        >
+                          Evoluir
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-gray-400 leading-snug">
+                        {segment.description}
+                      </p>
+
+                      {/* Barra de progresso do segmento */}
+                      <div className="mt-2 relative h-2 rounded-full overflow-hidden bg-black/40 border border-white/10">
+                        <div
+                          className={`absolute inset-y-0 left-0 bg-gradient-to-r ${segRank.color} rounded-full transition-all duration-500`}
+                          style={{ width: `${segSafe}%` }}
+                        />
+                      </div>
+
+                      <div className="text-xs text-gray-400 mt-1 text-right">
+                        {segSafe} - {segRank.label}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
