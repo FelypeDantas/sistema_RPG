@@ -29,7 +29,7 @@ export function Missions() {
   const { gainXP, loseXP, level, streak, resetStreak } = usePlayer();
 
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [dailyCount, setDailyCount] = useState(() => {
+  const [dailyCount, setDailyCount] = useState<number>(() => {
     const stored = localStorage.getItem(DAILY_DONE_KEY);
     return stored ? Number(stored) : 0;
   });
@@ -46,59 +46,65 @@ export function Missions() {
     const today = todayKey();
     const lastDaily = localStorage.getItem(DAILY_KEY);
 
-    // Se perdeu o dia, reset streak e aplica penalidade
+    // Se perdeu o dia
     if (lastDaily && lastDaily !== today) {
-      const unfinishedDaily = missions.find(m => m.tag === "Diária" && !m.completed);
-      if (unfinishedDaily) {
+      const hadUnfinishedDaily = missions.some(
+        m => m.tag === "Diária" && !m.completed
+      );
+
+      if (hadUnfinishedDaily) {
         resetStreak();
         const penalty = Math.round(20 + level * 10);
-        loseXP?.(penalty);
+        if (loseXP) loseXP(penalty);
       }
 
+      // Remove missão diária antiga
       setMissions(prev => prev.filter(m => m.tag !== "Diária"));
     }
 
-    // Se já criou a missão hoje, não faz nada
+    // Se já criou hoje, não cria novamente
     if (lastDaily === today) return;
 
-    // Cria missão diária aleatória
-    const random = DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
+    const random =
+      DAILY_QUESTS[Math.floor(Math.random() * DAILY_QUESTS.length)];
+
     const baseXP = Math.round(50 + level * 15);
     const finalXP = Math.round(baseXP * streakBonus(streak));
 
-    setMissions(prev => [
-      ...prev,
-      {
-        id: uuid(),
-        title: `Quest diária: ${random.title}`,
-        xp: finalXP,
-        tag: "Diária",
-        attribute: random.attribute,
-        completed: false,
-      },
-    ]);
+    const newMission: Mission = {
+      id: uuid(),
+      title: `Quest diária: ${random.title}`,
+      xp: finalXP,
+      tag: "Diária",
+      attribute: random.attribute,
+      completed: false,
+    };
+
+    setMissions(prev => [...prev, newMission]);
 
     localStorage.setItem(DAILY_KEY, today);
-  }, [level, streak]);
+  }, [level, streak, resetStreak, loseXP]);
 
   /* ===============================
      ✅ CONCLUIR MISSÃO
   =============================== */
   function completeMission(id: string) {
-    const mission = missions.find(m => m.id === id && !m.completed);
-    if (!mission) return;
+    setMissions(prev => {
+      const mission = prev.find(m => m.id === id && !m.completed);
+      if (!mission) return prev;
 
-    gainXP(mission.xp);
+      gainXP(mission.xp);
 
-    if (mission.tag === "Diária") {
-      const newCount = dailyCount + 1;
-      setDailyCount(newCount);
-      localStorage.setItem(DAILY_DONE_KEY, String(newCount));
-    }
+      if (mission.tag === "Diária") {
+        const newCount = dailyCount + 1;
+        setDailyCount(newCount);
+        localStorage.setItem(DAILY_DONE_KEY, String(newCount));
+      }
 
-    setMissions(prev =>
-      prev.map(m => (m.id === id ? { ...m, completed: true } : m))
-    );
+      return prev.map(m =>
+        m.id === id ? { ...m, completed: true } : m
+      );
+    });
   }
 
   /* ===============================
@@ -113,10 +119,14 @@ export function Missions() {
     };
 
     const achievement = unlocks[dailyCount];
+
     if (achievement && !achievements.includes(achievement)) {
       const updated = [...achievements, achievement];
       setAchievements(updated);
-      localStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(updated));
+      localStorage.setItem(
+        ACHIEVEMENTS_KEY,
+        JSON.stringify(updated)
+      );
     }
   }, [dailyCount, achievements]);
 
@@ -129,7 +139,9 @@ export function Missions() {
           <li
             key={m.id}
             className={`p-2 rounded border ${
-              m.completed ? "border-green-600 opacity-60" : "border-zinc-700"
+              m.completed
+                ? "border-green-600 opacity-60"
+                : "border-zinc-700"
             }`}
           >
             <div className="flex justify-between items-center">
@@ -137,14 +149,16 @@ export function Missions() {
                 {m.tag === "Diária" && "🌅 "}
                 {m.title}
                 {m.attribute && (
-                  <span className="text-xs ml-2 text-zinc-400">({m.attribute})</span>
+                  <span className="text-xs ml-2 text-zinc-400">
+                    ({m.attribute})
+                  </span>
                 )}
               </span>
 
               {!m.completed && (
                 <button
                   onClick={() => completeMission(m.id)}
-                  className="text-xs bg-green-600 px-2 py-1 rounded"
+                  className="text-xs bg-green-600 px-2 py-1 rounded hover:bg-green-500 transition"
                 >
                   Concluir +{m.xp} XP
                 </button>
