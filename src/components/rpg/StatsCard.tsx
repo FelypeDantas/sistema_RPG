@@ -1,6 +1,6 @@
 import { Activity, Target, Zap, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface Stats {
   questsToday: number;
@@ -15,27 +15,45 @@ interface StatsCardProps {
 
 export const StatsCard = ({ stats }: StatsCardProps) => {
   const completionRate =
-    stats.totalQuests === 0
+    stats.totalQuests <= 0
       ? 0
-      : Math.round((stats.questsToday / stats.totalQuests) * 100);
+      : Math.min(
+          100,
+          Math.round((stats.questsToday / stats.totalQuests) * 100)
+        );
 
   const [displayXp, setDisplayXp] = useState(0);
+  const previousXpRef = useRef(0);
 
-  // XP counter animation
+  // XP counter animation mais estável
   useEffect(() => {
-    let start = 0;
+    if (stats.xpToday <= 0) {
+      setDisplayXp(0);
+      previousXpRef.current = 0;
+      return;
+    }
+
+    // evita reiniciar se valor não mudou
+    if (previousXpRef.current === stats.xpToday) return;
+
+    previousXpRef.current = stats.xpToday;
+
+    let current = 0;
     const duration = 700;
-    const increment = stats.xpToday / (duration / 16);
+    const stepTime = 16;
+    const steps = duration / stepTime;
+    const increment = stats.xpToday / steps;
 
     const counter = setInterval(() => {
-      start += increment;
-      if (start >= stats.xpToday) {
+      current += increment;
+
+      if (current >= stats.xpToday) {
         setDisplayXp(stats.xpToday);
         clearInterval(counter);
       } else {
-        setDisplayXp(Math.floor(start));
+        setDisplayXp(Math.floor(current));
       }
-    }, 16);
+    }, stepTime);
 
     return () => clearInterval(counter);
   }, [stats.xpToday]);
@@ -47,13 +65,13 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
       transition={{ duration: 0.4 }}
       className="bg-cyber-card border border-white/10 rounded-xl p-5 relative overflow-hidden"
     >
-      {/* brilho sutil quando acima de 80% */}
+      {/* Glow quando acima de 80% */}
       {completionRate >= 80 && (
         <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-neon-pink/10 pointer-events-none" />
       )}
 
       <div className="grid grid-cols-2 gap-4 relative z-10">
-        {/* Quests Progress */}
+        {/* Missões */}
         <div className="bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-4 h-4 text-neon-purple" />
@@ -83,7 +101,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           </div>
         </div>
 
-        {/* XP Today */}
+        {/* XP Hoje */}
         <div className="bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-neon-cyan" />
@@ -99,7 +117,9 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           <div className="flex items-center gap-1 mt-2 text-neon-green text-xs">
             <TrendingUp className="w-3 h-3" />
             <span>
-              {stats.xpToday > 0 ? "Bom progresso!" : "Comece sua jornada"}
+              {stats.xpToday > 0
+                ? "Bom progresso!"
+                : "Comece sua jornada"}
             </span>
           </div>
         </div>
@@ -118,8 +138,8 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
 
             {stats.streak >= 7 && (
               <motion.span
-                initial={{ scale: 0.8 }}
-                animate={{ scale: [1, 1.1, 1] }}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: [1, 1.08, 1] }}
                 transition={{ repeat: Infinity, duration: 1.8 }}
                 className="text-xs bg-neon-orange/20 px-2 py-1 rounded-full text-neon-orange"
               >
