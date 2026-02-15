@@ -1,15 +1,13 @@
-import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserData } from "@/hooks/useUserData";
-import { RPGDashboardContent } from "@/components/rpg/RPGDashboardContent";
+import RPGDashboardContent from "@/components/rpg/RPGDashboardContent";
 import { AuthPage } from "./AuthPage";
 
-export default function RPGDashboard() {
+const RPGDashboard = () => {
   const { user, loading } = useAuth();
-  const { data, saveData } = useUserData();
 
-  if (loading) return <p>Carregando...</p>;
-  if (!user) return <AuthPage />;
+  if (loading) return <div>Carregando...</div>;
 
-  return <RPGDashboardContent playerData={data} saveData={saveData} />;
-}
+  return user ? <RPGDashboardContent /> : <AuthPage />;
+};
+
+export default RPGDashboard;
