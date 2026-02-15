@@ -25,7 +25,7 @@ const RPGDashboardContent = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const player = usePlayer();
-  const missions = useMissions(); // ✅ Hook atualizado com persistência e remoção
+  const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
   const { talents, suggestedTalents, points, unlockTalent } = useTalents(player.level);
@@ -45,7 +45,6 @@ const RPGDashboardContent = () => {
   const currentStreak = streak === 0 && player.hasTrait?.("persistente") ? 1 : streak;
 
   const handleMissionComplete = (mission: Mission, success: boolean) => {
-    // ✅ Remove do dashboard e adiciona no histórico usando o hook
     missions.completeMission(mission.id, success);
 
     if (!success) return;
