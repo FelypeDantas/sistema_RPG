@@ -38,6 +38,7 @@ export interface MissionHistory {
 
 const STORAGE_KEY = "rpg_missions";
 const HISTORY_KEY = "rpg_mission_history";
+const DAILY_KEY = "rpg_daily_date";
 
 /* =============================
    🧠 HOOK
@@ -61,6 +62,28 @@ export function useMissions() {
       return [];
     }
   });
+
+  /* ==============================
+     🌅 QUEST DIÁRIA
+  ============================== */
+  useEffect(() => {
+  const today = new Date().toISOString().split("T")[0];
+  const lastDaily = localStorage.getItem(DAILY_KEY);
+
+  if (lastDaily === today) return;
+
+  const dailyMission = {
+    id: `daily-${today}`,
+    title: "Missão Diária",
+    description: "Complete qualquer tarefa hoje.",
+    xp: 50,
+    attribute: "Mente",
+    completed: false,
+  };
+
+  setMissions(prev => [...prev, dailyMission]);
+  localStorage.setItem(DAILY_KEY, today);
+}, []);
 
   /* =============================
      📤 SAVE
