@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 
-// Config do Firebase com variáveis de ambiente
+// Configurações do Firebase via variáveis de ambiente
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,8 +14,12 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Inicializa Firebase
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const functions = getFunctions(app);
+// Inicializa o app
+const app = initializeApp(firebaseConfig);
+
+// Exporta de forma consistente para ESM
+const auth = getAuth(app);
+const db = getFirestore(app);
+const functions = getFunctions(app);
+
+export { app, auth, db, functions };

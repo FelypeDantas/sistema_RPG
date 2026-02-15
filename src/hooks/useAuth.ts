@@ -1,31 +1,18 @@
-// src/services/auth.ts
-import { httpsCallable } from "firebase/functions";
-import { functions, auth } from "@/services/firebase";
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { useEffect, useState } from "react";
+import { auth } from "@/services/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
 
-interface CreateUserData {
-  email: string;
-  password: string;
-}
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-// Chama Cloud Function para criar usuário
-export async function createUser(data: CreateUserData) {
-  const createUserCallable = httpsCallable(functions, "createUser");
-  try {
-    const result = await createUserCallable(data);
-    return result.data; // { uid, email }
-  } catch (err: any) {
-    console.error("Erro ao criar usuário:", err);
-    throw err;
-  }
-}
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
-// Login padrão com Firebase Auth
-export async function loginUser(email: string, password: string) {
-  return signInWithEmailAndPassword(auth, email, password);
-}
-
-// Logout
-export async function logoutUser() {
-  return signOut(auth);
+  return { user, loading };
 }
