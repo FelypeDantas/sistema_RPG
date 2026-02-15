@@ -44,7 +44,7 @@ export function useMissions() {
   const [loading, setLoading] = useState(true);
 
   /* =============================
-     ☁️ CARREGAR DADOS DO FIRESTORE
+     ☁️ CARREGAR DADOS
   ============================= */
 
   useEffect(() => {
@@ -73,79 +73,9 @@ export function useMissions() {
     loadData();
   }, [user]);
 
-  /* =============================
-     ➕ ADICIONAR MISSÃO
-     - qualquer missão (diária ou do form)
-     - salva no Firestore imediatamente
-  ============================= */
-
-  async function addMission(mission: Mission) {
-    setMissions(prev => {
-      const newMissions = [...prev, mission];
-      saveToFirestore(newMissions, history);
-      return newMissions;
-    });
-  }
-
-  /* =============================
-     ✅ CONCLUIR MISSÃO
-     - remove do dashboard
-     - adiciona no histórico
-     - salva no Firestore imediatamente
-  ============================= */
-
-  async function completeMission(missionId: string, success: boolean) {
-    setMissions(prev => prev.filter(m => m.id !== missionId));
-
-    const mission = missions.find(m => m.id === missionId);
-    if (!mission) return;
-
-    setHistory(prev => {
-      const newHistory = [
-        ...prev,
-        {
-          id: mission.id,
-          title: mission.title,
-          description: mission.description,
-          attribute: mission.attribute,
-          xp: mission.xp,
-          success,
-          date: new Date().toISOString(),
-          segment: mission.segment,
-          segmentXP: mission.segmentXP,
-        },
-      ].sort(
-        (a, b) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime()
-      );
-
-      saveToFirestore(
-        missions.filter(m => m.id !== missionId),
-        newHistory
-      );
-
-      return newHistory;
-    });
-  }
-
-  /* =============================
-     ☁️ SALVAR NO FIRESTORE
-  ============================= */
-
-  async function saveToFirestore(currentMissions: Mission[], currentHistory: MissionHistory[]) {
-    if (!user) return;
-    try {
-      const docRef = doc(db, "users", user.uid);
-      await setDoc(docRef, { missions: currentMissions, history: currentHistory }, { merge: true });
-    } catch (error) {
-      console.error("Erro ao salvar dados:", error);
-    }
-  }
-
-  /* =============================
-     🌅 ADICIONAR MISSÃO DIÁRIA AUTOMÁTICA
-     - só adiciona se ainda não existir
-  ============================= */
+  /* ==============================
+     🌅 MISSÃO DIÁRIA
+  ============================== */
 
   useEffect(() => {
     if (!user) return;
@@ -163,8 +93,72 @@ export function useMissions() {
       completed: false,
     };
 
-    addMission(dailyMission); // ✅ usa addMission para persistência
+    addMission(dailyMission); // ✅ chama a função que salva no Firebase
   }, [user, missions]);
+
+  /* =============================
+     ☁️ SALVAR AUTOMATICAMENTE
+  ============================= */
+
+  async function saveToFirestore(updatedMissions: Mission[], updatedHistory: MissionHistory[]) {
+    if (!user) return;
+    try {
+      const docRef = doc(db, "users", user.uid);
+      await setDoc(
+        docRef,
+        { missions: updatedMissions, history: updatedHistory },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("Erro ao salvar dados:", error);
+    }
+  }
+
+  /* =============================
+     ➕ ADD MISSÃO
+  ============================= */
+
+  function addMission(mission: Mission) {
+    setMissions(prev => {
+      const newMissions = [...prev, mission];
+      saveToFirestore(newMissions, history);
+      return newMissions;
+    });
+  }
+
+  /* =============================
+     ✅ CONCLUIR MISSÃO
+  ============================= */
+
+  function completeMission(missionId: string, success: boolean) {
+    const mission = missions.find(m => m.id === missionId);
+    if (!mission) return;
+
+    setMissions(prev => {
+      const newMissions = prev.filter(m => m.id !== missionId);
+      return newMissions;
+    });
+
+    setHistory(prev => {
+      const newHistory = [
+        ...prev,
+        {
+          id: mission.id,
+          title: mission.title,
+          description: mission.description,
+          attribute: mission.attribute,
+          xp: mission.xp,
+          success,
+          date: new Date().toISOString(),
+          segment: mission.segment,
+          segmentXP: mission.segmentXP,
+        },
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      saveToFirestore(missions.filter(m => m.id !== missionId), newHistory);
+      return newHistory;
+    });
+  }
 
   /* =============================
      📊 ESTATÍSTICAS
@@ -193,16 +187,11 @@ export function useMissions() {
       }
     });
 
-    return {
-      totalMissions: total,
-      successRate,
-      xpByAttribute,
-      xpBySegment,
-    };
+    return { totalMissions: total, successRate, xpByAttribute, xpBySegment };
   }, [history]);
 
   /* =============================
-     🔄 RESETAR MISSÕES
+     🔄 RESET
   ============================= */
 
   function resetMissions() {
