@@ -1,4 +1,3 @@
-{/* RPGDashboard.tsx */}
 import { useState } from "react";
 import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
@@ -26,7 +25,7 @@ const RPGDashboardContent = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const player = usePlayer();
-  const missions = useMissions();
+  const missions = useMissions(); // ✅ Hook atualizado com persistência e remoção
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
   const { talents, suggestedTalents, points, unlockTalent } = useTalents(player.level);
@@ -46,7 +45,7 @@ const RPGDashboardContent = () => {
   const currentStreak = streak === 0 && player.hasTrait?.("persistente") ? 1 : streak;
 
   const handleMissionComplete = (mission: Mission, success: boolean) => {
-    // ✅ Remove a missão e adiciona no histórico imediatamente
+    // ✅ Remove do dashboard e adiciona no histórico usando o hook
     missions.completeMission(mission.id, success);
 
     if (!success) return;
@@ -71,7 +70,7 @@ const RPGDashboardContent = () => {
     <>
       <div className="min-h-screen bg-cyber-dark p-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* LEFT */}
           <div className="space-y-6">
             <div onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
