@@ -14,6 +14,8 @@ interface PlayerContextType {
   resetPlayer: () => void;
   incrementStreak: () => void;
   resetStreak: () => void;
+  prestige: number;
+  addPrestige: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | null>(null);
