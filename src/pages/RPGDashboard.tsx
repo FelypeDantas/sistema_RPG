@@ -1,6 +1,6 @@
-{/* RPGDashboard.tsx */}
-import { useState } from "react";
-import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
+/* RPGDashboard.tsx */
+import { useState, useMemo } from "react";
+import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet, Sparkles } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 
 import { AvatarCard } from "@/components/rpg/AvatarCard";
@@ -34,6 +34,51 @@ const RPGDashboard = () => {
   const totalXP = missions.history.reduce((acc, h) => acc + (h.success ? h.xp : 0), 0);
 
   const now = new Date();
+
+  /* =============================
+     🧠 QUEST AI LOCAL
+  ============================== */
+  const aiSuggestions = useMemo(() => {
+    const attributes = {
+      Físico: player.attributes.Físico,
+      Mente: player.attributes.Mente,
+      Social: player.attributes.Social,
+      Finanças: player.attributes.Finanças,
+    };
+
+    const weakest = Object.entries(attributes).sort((a, b) => a[1] - b[1])[0][0];
+
+    const suggestions = {
+      Físico: [
+        "Treinar por 20 minutos",
+        "Caminhar 3km",
+        "Alongar por 15 minutos"
+      ],
+      Mente: [
+        "Estudar 30 minutos focado",
+        "Ler 10 páginas de um livro",
+        "Resolver 5 problemas desafiadores"
+      ],
+      Social: [
+        "Iniciar conversa com alguém novo",
+        "Responder mensagens pendentes",
+        "Agendar uma call estratégica"
+      ],
+      Finanças: [
+        "Registrar gastos do dia",
+        "Revisar orçamento semanal",
+        "Pesquisar um investimento"
+      ]
+    };
+
+    return {
+      weakest,
+      quests: suggestions[weakest as keyof typeof suggestions]
+    };
+  }, [player.attributes]);
+
+  /* ============================= */
+
   let streak = 0;
   for (let i = 0; i < 365; i++) {
     const day = new Date();
@@ -46,9 +91,7 @@ const RPGDashboard = () => {
   const currentStreak = streak === 0 && player.hasTrait?.("persistente") ? 1 : streak;
 
   const handleMissionComplete = (mission: Mission, success: boolean) => {
-    // ✅ Remove a missão e adiciona no histórico imediatamente
     missions.completeMission(mission.id, success);
-
     if (!success) return;
 
     let finalXP = mission.xp;
@@ -67,11 +110,22 @@ const RPGDashboard = () => {
       .reduce((acc, h) => acc + h.xp, 0);
   });
 
+  const createAIMission = (title: string) => {
+    missions.addMission({
+      id: `ai-${Date.now()}`,
+      title,
+      description: "Missão sugerida pela IA",
+      xp: 40 + player.level * 5,
+      attribute: aiSuggestions.weakest as any,
+      completed: false
+    });
+  };
+
   return (
     <>
       <div className="min-h-screen bg-cyber-dark p-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* LEFT */}
           <div className="space-y-6">
             <div onClick={() => setIsProfileOpen(true)} className="cursor-pointer">
@@ -118,6 +172,28 @@ const RPGDashboard = () => {
 
             <MissionForm onAdd={missions.addMission} />
 
+            {/* 🤖 IA QUESTS */}
+            <div className="bg-cyber-card p-5 rounded-xl">
+              <h3 className="text-white flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-neon-cyan" />
+                Sugestões Inteligentes ({aiSuggestions.weakest})
+              </h3>
+
+              <ul className="space-y-2 text-sm text-gray-300">
+                {aiSuggestions.quests.map((quest, i) => (
+                  <li key={i} className="flex justify-between items-center">
+                    <span>{quest}</span>
+                    <button
+                      onClick={() => createAIMission(quest)}
+                      className="text-neon-cyan hover:underline"
+                    >
+                      Criar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
                 <Swords className="w-5 h-5 text-neon-purple" /> Missões
@@ -142,20 +218,6 @@ const RPGDashboard = () => {
           <div className="space-y-6">
             <StreakCard weeklyXP={weeklyXP} currentStreak={currentStreak} />
 
-            {suggestedTalents.length > 0 && (
-              <div className="bg-cyber-card p-5 rounded-xl">
-                <h3 className="text-white mb-4">Sugestões de Talento</h3>
-                <ul className="space-y-2">
-                  {suggestedTalents.map(talent => (
-                    <li key={talent.id} className="flex justify-between items-center text-sm text-gray-300">
-                      <span>{talent.title}</span>
-                      <button onClick={() => unlockTalent(talent.id)} className="text-neon-cyan hover:underline">Desbloquear</button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
                 <Trophy className="w-5 h-5 text-neon-orange" /> Conquistas
@@ -167,43 +229,8 @@ const RPGDashboard = () => {
               </ul>
             </div>
           </div>
-
         </div>
       </div>
-
-      {/* MODAL DE CONFIRMAÇÃO */}
-      {showConfirm && pendingMission && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h2>Concluir Missão</h2>
-            <p>Tem certeza de que deseja concluir a missão <strong>"{pendingMission.title}"</strong>?</p>
-
-            <div className="actions">
-              <button
-                className="fail"
-                onClick={() => {
-                  handleMissionComplete(pendingMission, false);
-                  setShowConfirm(false);
-                  setPendingMission(null);
-                }}
-              >
-                ❌ Falha
-              </button>
-
-              <button
-                className="success"
-                onClick={() => {
-                  handleMissionComplete(pendingMission, true);
-                  setShowConfirm(false);
-                  setPendingMission(null);
-                }}
-              >
-                ✅ Sucesso
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <ProfileDrawer open={isProfileOpen} onClose={() => setIsProfileOpen(false)} history={missions.history} />
     </>
