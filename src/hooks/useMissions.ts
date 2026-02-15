@@ -74,10 +74,10 @@ export function useMissions() {
 
   const dailyMission = {
     id: `daily-${today}`,
-    title: "Missão Diária",
-    description: "Complete qualquer tarefa hoje.",
+    title: "Treino diário",
+    description: "100 agachamentos, 20 flexões e 10 minutos de meditação",
     xp: 50,
-    attribute: "Mente",
+    attribute: "Físico",
     completed: false,
   };
 
