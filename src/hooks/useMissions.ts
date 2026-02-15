@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { db } from "@/services/firebase";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthWithPlayer } from "@/hooks/useAuth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 /* =============================
@@ -37,7 +37,7 @@ export interface MissionHistory {
 ============================= */
 
 export function useMissions() {
-  const { user } = useAuth();
+  const { user } = useAuthWithPlayer();
 
   const [missions, setMissions] = useState<Mission[]>([]);
   const [history, setHistory] = useState<MissionHistory[]>([]);
