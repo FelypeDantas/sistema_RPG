@@ -1,116 +1,130 @@
-import { Lock } from "lucide-react";
+import { TALENT_GRAPH } from "@/data/talents.graph";
+import { useTalents } from "@/hooks/useTalents";
+import { usePlayer } from "@/hooks/usePlayer";
 import { motion } from "framer-motion";
-import { ReactNode } from "react";
 
-type Props = {
-  title: string;
-  x: number;
-  y: number;
-  progress: number;
-  icon?: ReactNode;
-  locked?: boolean;
-};
-
-export default function TalentNode({
-  title,
-  x,
-  y,
-  progress,
-  icon,
-  locked = false
-}: Props) {
-  const safeProgress = Math.min(Math.max(progress, 0), 100);
-  const isComplete = safeProgress >= 100;
-
-  const radius = 36;
-  const circumference = 2 * Math.PI * radius;
-  const offset =
-    circumference - (safeProgress / 100) * circumference;
+export default function TalentsTreeGraph() {
+  const { level, playerClass } = usePlayer();
+  const { unlocked, unlockTalent, canUnlock } =
+    useTalents(level, playerClass);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
-      className="absolute flex flex-col items-center"
-      style={{ left: x, top: y }}
-      whileHover={!locked ? { scale: 1.08 } : {}}
+    <svg
+      viewBox="0 0 800 600"
+      className="w-full h-[600px] bg-cyber-dark rounded-xl"
     >
-      <div className="relative w-24 h-24 flex items-center justify-center">
-        {/* Glow completo */}
-        {isComplete && (
-          <motion.div
-            className="absolute inset-0 rounded-full bg-neon-green/20 blur-xl"
-            animate={{ scale: [1, 1.2, 1] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-          />
-        )}
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
 
-        {/* Anel SVG */}
-        <svg width="100" height="100" className="absolute">
-          <circle
-            cx="50"
-            cy="50"
-            r={radius}
-            stroke="#1f2937"
-            strokeWidth="6"
-            fill="transparent"
-          />
+      {/* Conexões */}
+      {TALENT_GRAPH.map(t =>
+        t.requires?.map(req => {
+          const from = TALENT_GRAPH.find(n => n.id === req);
+          if (!from) return null;
 
-          <motion.circle
-            cx="50"
-            cy="50"
-            r={radius}
-            stroke={isComplete ? "#22c55e" : "#22d3ee"}
-            strokeWidth="6"
-            fill="transparent"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset: offset }}
-            transition={{ duration: 1 }}
-            style={{
-              filter: isComplete
-                ? "drop-shadow(0 0 8px #22c55e)"
-                : "drop-shadow(0 0 6px #22d3ee)"
-            }}
-          />
-        </svg>
+          const unlockedConnection =
+            unlocked.includes(req) && unlocked.includes(t.id);
 
-        {/* Núcleo */}
-        <div
-          className={`
-            w-16 h-16 rounded-full flex items-center justify-center
-            transition-all duration-300
-            ${
-              locked
-                ? "bg-gray-800 border border-gray-700"
-                : isComplete
-                ? "bg-neon-green/20 border border-neon-green"
-                : "bg-cyber-card border border-purple-500"
+          return (
+            <motion.line
+              key={`${req}-${t.id}`}
+              x1={from.position.x}
+              y1={from.position.y}
+              x2={t.position.x}
+              y2={t.position.y}
+              stroke={
+                unlockedConnection
+                  ? "#22c55e"
+                  : "#555"
+              }
+              strokeWidth="2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6 }}
+              style={
+                unlockedConnection
+                  ? { filter: "url(#glow)" }
+                  : {}
+              }
+            />
+          );
+        })
+      )}
+
+      {/* Nós */}
+      {TALENT_GRAPH.map(t => {
+        const isUnlocked = unlocked.includes(t.id);
+        const available = canUnlock(t);
+
+        return (
+          <motion.g
+            key={t.id}
+            whileHover={
+              available && !isUnlocked
+                ? { scale: 1.15 }
+                : {}
             }
-          `}
-        >
-          {locked ? (
-            <Lock size={18} className="text-gray-500" />
-          ) : (
-            icon
-          )}
-        </div>
-      </div>
+            onClick={() =>
+              available && unlockTalent(t.id)
+            }
+            className="cursor-pointer"
+          >
+            {/* Glow pulse */}
+            {isUnlocked && (
+              <motion.circle
+                cx={t.position.x}
+                cy={t.position.y}
+                r="30"
+                fill="#22c55e"
+                initial={{ opacity: 0.4, scale: 0.8 }}
+                animate={{
+                  opacity: [0.4, 0.1, 0.4],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{
+                  repeat: Infinity,
+                  duration: 2
+                }}
+              />
+            )}
 
-      <span
-        className={`mt-3 text-xs font-medium text-center ${
-          locked ? "text-gray-500" : "text-white"
-        }`}
-      >
-        {title}
-      </span>
+            <circle
+              cx={t.position.x}
+              cy={t.position.y}
+              r="22"
+              fill={
+                isUnlocked
+                  ? "#22c55e"
+                  : available
+                  ? "#a855f7"
+                  : "#444"
+              }
+              style={
+                isUnlocked
+                  ? { filter: "url(#glow)" }
+                  : {}
+              }
+            />
 
-      <span className="text-[10px] text-gray-400 mt-1">
-        {safeProgress}%
-      </span>
-    </motion.div>
+            <text
+              x={t.position.x}
+              y={t.position.y + 38}
+              textAnchor="middle"
+              fill="#ccc"
+              fontSize="10"
+            >
+              {t.title}
+            </text>
+          </motion.g>
+        );
+      })}
+    </svg>
   );
 }
