@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 /* =============================
    🧬 TIPOS
@@ -88,99 +88,74 @@ const initialTalents: Record<string, TalentNodeData> = {
 ============================= */
 
 export function useTalents(level: number) {
-  const [talents, setTalents] =
-    useState<Record<string, TalentNodeData>>(initialTalents);
-
-  const [collapsed, setCollapsed] =
-    useState<Record<string, boolean>>({});
-
+  const [talents, setTalents] = useState<Record<string, TalentNodeData>>(initialTalents);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [points, setPoints] = useState(0);
 
   /* =============================
-     🔢 CÁLCULO DE PONTOS
+     🔢 CALCULA PONTOS DISPONÍVEIS
   ============================= */
-
   useEffect(() => {
     const spentPoints = Object.values(talents)
       .filter(t => !t.locked)
       .reduce((acc, t) => acc + t.cost, 0);
 
     const totalEarnedPoints = Math.max(level - 1, 0);
-    const available = totalEarnedPoints - spentPoints;
-
-    setPoints(Math.max(available, 0));
+    setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
   }, [level, talents]);
 
   /* =============================
-     🔓 DESBLOQUEAR TALENTO
+     🔓 DESBLOQUEIA TALENTO
   ============================= */
-
-  function unlockTalent(id: string) {
+  const unlockTalent = useCallback((id: string) => {
     if (points <= 0) return;
 
     setTalents(prev => {
       const talent = prev[id];
       if (!talent || !talent.locked) return prev;
 
-      const updated = {
+      const updated: Record<string, TalentNodeData> = {
         ...prev,
-        [id]: {
-          ...talent,
-          locked: false,
-          progress: Math.max(talent.progress, 1)
-        }
+        [id]: { ...talent, locked: false, progress: Math.max(talent.progress, 1) }
       };
 
-      // libera filhos (aparecem na árvore, mas continuam bloqueados)
+      // desbloqueia filhos como visíveis, mas mantém bloqueados
       talent.children?.forEach(childId => {
         if (updated[childId]) {
-          updated[childId] = {
-            ...updated[childId],
-            locked: true
-          };
+          updated[childId] = { ...updated[childId], locked: true };
         }
       });
 
       return updated;
     });
-  }
+  }, [points]);
 
   /* =============================
-     ⭐ TALENTOS SUGERIDOS (DASHBOARD)
+     ⭐ TALENTOS SUGERIDOS PARA DASHBOARD
   ============================= */
-
   const suggestedTalents = useMemo(() => {
     return Object.values(talents).filter(talent => {
       if (!talent.locked) return false;
-
-      // verifica se algum pai está desbloqueado
-      const parents = Object.values(talents).filter(parent =>
-        parent.children?.includes(talent.id)
-      );
-
+      // verifica se algum dos pais está desbloqueado
+      const parents = Object.values(talents).filter(p => p.children?.includes(talent.id));
       return parents.some(parent => !parent.locked);
     });
   }, [talents]);
 
   /* =============================
-     📦 UI
+     📦 FUNÇÕES DE UI
   ============================= */
-
-  function toggleCollapse(id: string) {
-    setCollapsed(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  }
+  const toggleCollapse = useCallback((id: string) => {
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
 
   /* =============================
-     📤 API
+     📦 API DO HOOK
   ============================= */
-
   return {
-    talents: Object.values(talents),      // árvore completa
-    suggestedTalents,                     // dashboard
+    talents: Object.values(talents),
     byId: talents,
+    suggestedTalents,
     points,
     unlockTalent,
     collapsed,
