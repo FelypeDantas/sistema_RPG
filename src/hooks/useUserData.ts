@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { db } from "@/services/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { useAuth } from "./useAuth";
+import { useAuthWithPlayer } from "./useAuth";
 
 export function useUserData() {
-  const { user } = useAuth();
+  const { user } = useAuthWithPlayer();
   const [data, setData] = useState<any>({
     missions: [],
     level: 1,

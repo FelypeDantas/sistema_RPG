@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { saveUserData, loadUserData } from "@/services/database";
 
 const STORAGE_KEY = "life_rpg_player";
@@ -40,30 +40,30 @@ export function usePlayer(userId?: string) {
     Físico: 10,
     Mente: 10,
     Social: 10,
-    Finanças: 10
+    Finanças: 10,
   });
 
   const [segments, setSegments] = useState<Record<string, number>>({
     forca: 10,
-    foco: 20
+    foco: 20,
   });
 
   const [talents, setTalents] = useState<Talent[]>([
     { id: "focus", unlocked: true, effect: { segmentBonus: { foco: 1.2 } } },
-    { id: "physical_mastery", unlocked: false, effect: { segmentBonus: { forca: 1.15, resistencia: 1.1 } } }
+    { id: "physical_mastery", unlocked: false, effect: { segmentBonus: { forca: 1.15, resistencia: 1.1 } } },
   ]);
 
   const [traits, setTraits] = useState<Trait[]>([
-    { id: "disciplinado", name: "Disciplinado", description: "Ganha mais XP ao manter streaks" }
+    { id: "disciplinado", name: "Disciplinado", description: "Ganha mais XP ao manter streaks" },
   ]);
 
-  const nextLevelXP = Math.floor(100 + xp * 0.9);
+  const nextLevelXP = useCallback(() => Math.floor(100 + xp * 0.9), [xp]);
 
   /* =============================
      📥 LOAD PLAYER LOCAL + FIREBASE
   ============================= */
   useEffect(() => {
-    // Load from localStorage
+    // 1️⃣ Carrega do localStorage
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
@@ -75,21 +75,24 @@ export function usePlayer(userId?: string) {
       setTalents(data.talents ?? talents);
     }
 
-    // Load from Firebase if userId existe
+    // 2️⃣ Carrega do Firebase se userId existir
     if (userId) {
-      async function load() {
-        const data = await loadUserData(userId);
-        if (data?.player) {
-          const player = data.player;
-          setLevel(player.level ?? 1);
-          setXP(player.xp ?? 0);
-          setAttributes(player.attributes ?? attributes);
-          setTraits(player.traits ?? traits);
-          setSegments(player.segments ?? segments);
-          setTalents(player.talents ?? talents);
+      (async () => {
+        try {
+          const data = await loadUserData(userId);
+          if (data?.player) {
+            const player = data.player;
+            setLevel(player.level ?? level);
+            setXP(player.xp ?? xp);
+            setAttributes(player.attributes ?? attributes);
+            setTraits(player.traits ?? traits);
+            setSegments(player.segments ?? segments);
+            setTalents(player.talents ?? talents);
+          }
+        } catch (err) {
+          console.error("Erro ao carregar player do Firebase:", err);
         }
-      }
-      load();
+      })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -102,53 +105,70 @@ export function usePlayer(userId?: string) {
       STORAGE_KEY,
       JSON.stringify({ level, xp, attributes, traits, segments, talents })
     );
-  }, [level, xp, attributes, traits, segments, talents]);
+
+    // Salvar no Firebase também se houver userId
+    if (userId) {
+      saveUserData(userId, { player: { level, xp, attributes, traits, segments, talents } }).catch(err =>
+        console.error("Erro ao salvar player no Firebase:", err)
+      );
+    }
+  }, [level, xp, attributes, traits, segments, talents, userId]);
 
   /* =============================
      🔍 HELPERS
   ============================= */
-  const hasTrait = (id: TraitId) => traits.some(t => t.id === id);
-  const hasTalent = (id: TalentId) => talents.some(t => t.id === id && t.unlocked);
+  const hasTrait = useCallback((id: TraitId) => traits.some(t => t.id === id), [traits]);
+  const hasTalent = useCallback((id: TalentId) => talents.some(t => t.id === id && t.unlocked), [talents]);
 
   /* =============================
      ⭐ XP GLOBAL
   ============================= */
-  const gainXP = (amount: number, attribute?: keyof typeof attributes) => {
-    setXP(prev => {
-      const total = prev + amount;
-      if (total >= nextLevelXP) {
-        setLevel(l => l + 1);
-        return total - nextLevelXP;
-      }
-      return total;
-    });
+  const gainXP = useCallback(
+    (amount: number, attribute?: keyof typeof attributes) => {
+      setXP(prevXP => {
+        let total = prevXP + amount;
+        let newLevel = level;
 
-    if (attribute) {
-      setAttributes(prev => ({ ...prev, [attribute]: prev[attribute] + 1 }));
-    }
-  };
+        while (total >= nextLevelXP()) {
+          total -= nextLevelXP();
+          newLevel += 1;
+        }
+
+        if (newLevel !== level) setLevel(newLevel);
+        return total;
+      });
+
+      if (attribute) {
+        setAttributes(prev => ({ ...prev, [attribute]: prev[attribute] + 1 }));
+      }
+    },
+    [level, nextLevelXP]
+  );
 
   /* =============================
      🧬 XP DE SEGMENTO (COM TALENTOS)
   ============================= */
-  const gainSegmentXP = (segmentId: string, baseAmount: number) => {
-    let finalAmount = baseAmount;
-    talents.forEach(talent => {
-      if (talent.unlocked && talent.effect?.segmentBonus?.[segmentId]) {
-        finalAmount *= talent.effect.segmentBonus[segmentId];
-      }
-    });
+  const gainSegmentXP = useCallback(
+    (segmentId: string, baseAmount: number) => {
+      let finalAmount = baseAmount;
+      talents.forEach(talent => {
+        if (talent.unlocked && talent.effect?.segmentBonus?.[segmentId]) {
+          finalAmount *= talent.effect.segmentBonus[segmentId];
+        }
+      });
 
-    setSegments(prev => ({
-      ...prev,
-      [segmentId]: Math.min(100, Math.round((prev[segmentId] ?? 0) + finalAmount))
-    }));
-  };
+      setSegments(prev => ({
+        ...prev,
+        [segmentId]: Math.min(100, Math.round((prev[segmentId] ?? 0) + finalAmount)),
+      }));
+    },
+    [talents]
+  );
 
   return {
     level,
     xp,
-    nextLevelXP,
+    nextLevelXP: nextLevelXP(),
     attributes,
     segments,
     talents,
@@ -156,6 +176,6 @@ export function usePlayer(userId?: string) {
     hasTrait,
     hasTalent,
     gainXP,
-    gainSegmentXP
+    gainSegmentXP,
   };
 }
