@@ -1,38 +1,44 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
-export function useIsMobile() {
-  const getIsMobile = () => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth < MOBILE_BREAKPOINT;
-  };
+export function useIsMobile(): boolean {
+  const isBrowser = typeof window !== "undefined";
 
-  const [isMobile, setIsMobile] = useState<boolean>(getIsMobile);
+  // Função estável para checar mobile
+  const checkIsMobile = useCallback(() => {
+    return isBrowser ? window.innerWidth < MOBILE_BREAKPOINT : false;
+  }, [isBrowser]);
+
+  const [isMobile, setIsMobile] = useState<boolean>(checkIsMobile);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isBrowser) return;
 
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
-    const handleChange = () => setIsMobile(mediaQuery.matches);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsMobile(event.matches);
+    };
 
-    // fallback para navegadores antigos
-    if (mediaQuery.addEventListener) {
+    // Listener moderno ou fallback
+    if ("addEventListener" in mediaQuery) {
       mediaQuery.addEventListener("change", handleChange);
     } else {
       mediaQuery.addListener(handleChange);
     }
 
-    // remove listener no cleanup
+    // Garante que o estado inicial está correto
+    setIsMobile(mediaQuery.matches);
+
     return () => {
-      if (mediaQuery.removeEventListener) {
+      if ("removeEventListener" in mediaQuery) {
         mediaQuery.removeEventListener("change", handleChange);
       } else {
         mediaQuery.removeListener(handleChange);
       }
     };
-  }, []);
+  }, [isBrowser]);
 
   return isMobile;
 }
