@@ -1,12 +1,14 @@
-// services/auth.ts
+// src/services/auth.ts
 import { httpsCallable } from "firebase/functions";
-import { functions } from "../services/firebase";
+import { functions, auth } from "./firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 
 interface CreateUserData {
   email: string;
   password: string;
 }
 
+// Chama Cloud Function para criar usuário
 export async function createUser(data: CreateUserData) {
   const createUserCallable = httpsCallable(functions, "createUser");
   try {
@@ -16,4 +18,14 @@ export async function createUser(data: CreateUserData) {
     console.error("Erro ao criar usuário:", err);
     throw err;
   }
+}
+
+// Login padrão com Firebase Auth
+export async function loginUser(email: string, password: string) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+// Logout
+export async function logoutUser() {
+  return signOut(auth);
 }
