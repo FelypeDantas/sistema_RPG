@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthWithPlayer } from "@/hooks/useAuth";
 
 export function AuthPage() {
-  const { user, login, register, error, loading } = useAuth();
+  const { user, login, register, error, loading } = useAuthWithPlayer();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
