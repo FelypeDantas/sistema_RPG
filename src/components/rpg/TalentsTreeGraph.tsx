@@ -8,6 +8,19 @@ export default function TalentsTreeGraph() {
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
 
+  const getCurvePath = (
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number
+  ) => {
+    const dx = (x2 - x1) * 0.4;
+    return `M ${x1} ${y1} 
+            C ${x1 + dx} ${y1}, 
+              ${x2 - dx} ${y2}, 
+              ${x2} ${y2}`;
+  };
+
   return (
     <svg
       viewBox="0 0 800 600"
@@ -15,44 +28,41 @@ export default function TalentsTreeGraph() {
     >
       <defs>
         <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feGaussianBlur stdDeviation="4" result="blur" />
           <feMerge>
-            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
       </defs>
 
-      {/* Conexões */}
+      {/* Conexões curvas */}
       {TALENT_GRAPH.map(t =>
         t.requires?.map(req => {
           const from = TALENT_GRAPH.find(n => n.id === req);
           if (!from) return null;
 
-          const unlockedConnection =
+          const active =
             unlocked.includes(req) && unlocked.includes(t.id);
 
+          const path = getCurvePath(
+            from.position.x,
+            from.position.y,
+            t.position.x,
+            t.position.y
+          );
+
           return (
-            <motion.line
+            <motion.path
               key={`${req}-${t.id}`}
-              x1={from.position.x}
-              y1={from.position.y}
-              x2={t.position.x}
-              y2={t.position.y}
-              stroke={
-                unlockedConnection
-                  ? "#22c55e"
-                  : "#555"
-              }
-              strokeWidth="2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              d={path}
+              stroke={active ? "#22c55e" : "#444"}
+              strokeWidth="3"
+              fill="transparent"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
               transition={{ duration: 0.6 }}
-              style={
-                unlockedConnection
-                  ? { filter: "url(#glow)" }
-                  : {}
-              }
+              style={active ? { filter: "url(#glow)" } : {}}
             />
           );
         })
@@ -76,25 +86,36 @@ export default function TalentsTreeGraph() {
             }
             className="cursor-pointer"
           >
-            {/* Glow pulse */}
-            {isUnlocked && (
+            {/* Nó disponível pulsando */}
+            {available && !isUnlocked && (
               <motion.circle
                 cx={t.position.x}
                 cy={t.position.y}
                 r="30"
-                fill="#22c55e"
-                initial={{ opacity: 0.4, scale: 0.8 }}
-                animate={{
-                  opacity: [0.4, 0.1, 0.4],
-                  scale: [1, 1.2, 1]
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2
-                }}
+                fill="#a855f7"
+                initial={{ opacity: 0.15 }}
+                animate={{ opacity: [0.15, 0.35, 0.15] }}
+                transition={{ repeat: Infinity, duration: 2 }}
               />
             )}
 
+            {/* Glow desbloqueado */}
+            {isUnlocked && (
+              <motion.circle
+                cx={t.position.x}
+                cy={t.position.y}
+                r="34"
+                fill="#22c55e"
+                initial={{ opacity: 0.3 }}
+                animate={{
+                  opacity: [0.3, 0.1, 0.3],
+                  scale: [1, 1.15, 1]
+                }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              />
+            )}
+
+            {/* Círculo principal */}
             <circle
               cx={t.position.x}
               cy={t.position.y}
@@ -104,7 +125,7 @@ export default function TalentsTreeGraph() {
                   ? "#22c55e"
                   : available
                   ? "#a855f7"
-                  : "#444"
+                  : "#333"
               }
               style={
                 isUnlocked
@@ -113,12 +134,24 @@ export default function TalentsTreeGraph() {
               }
             />
 
+            {/* Anel externo */}
+            <circle
+              cx={t.position.x}
+              cy={t.position.y}
+              r="26"
+              fill="none"
+              stroke={available ? "#22d3ee" : "#444"}
+              strokeWidth="1"
+              opacity="0.4"
+            />
+
+            {/* Texto */}
             <text
               x={t.position.x}
-              y={t.position.y + 38}
+              y={t.position.y + 40}
               textAnchor="middle"
               fill="#ccc"
-              fontSize="10"
+              fontSize="11"
             >
               {t.title}
             </text>
