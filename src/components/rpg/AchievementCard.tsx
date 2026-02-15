@@ -3,7 +3,8 @@ import { memo, ReactNode } from "react";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
 
-interface Achievement {
+export interface Achievement {
+  id: string;
   name: string;
   description: string;
   icon: ReactNode;
@@ -49,8 +50,7 @@ const rarityStyles: Record<
 
 export const AchievementCard = memo(
   ({ achievement }: AchievementCardProps) => {
-    const style =
-      rarityStyles[achievement.rarity] ?? rarityStyles.common;
+    const style = rarityStyles[achievement.rarity] ?? rarityStyles.common;
 
     const hasProgress =
       achievement.progress !== undefined &&
@@ -58,19 +58,12 @@ export const AchievementCard = memo(
       achievement.maxProgress > 0;
 
     const progress = hasProgress
-      ? Math.min(
-          (achievement.progress! / achievement.maxProgress!) * 100,
-          100
-        )
+      ? Math.min((achievement.progress! / achievement.maxProgress!) * 100, 100)
       : 0;
 
     const containerClasses = `
       relative p-4 rounded-xl border transition-all duration-300
-      ${
-        achievement.unlocked
-          ? `${style.border} ${style.bg} ${style.glow}`
-          : "border-white/5 bg-cyber-darker opacity-60"
-      }
+      ${achievement.unlocked ? `${style.border} ${style.bg} ${style.glow}` : "border-white/5 bg-cyber-darker opacity-60"}
     `;
 
     const iconClasses = `
@@ -80,11 +73,7 @@ export const AchievementCard = memo(
 
     const badgeClasses = `
       text-xs px-1.5 py-0.5 rounded uppercase font-bold
-      ${
-        achievement.unlocked
-          ? `${style.text} ${style.bg}`
-          : "text-gray-500 bg-gray-800"
-      }
+      ${achievement.unlocked ? `${style.text} ${style.bg}` : "text-gray-500 bg-gray-800"}
     `;
 
     const progressBarColor = achievement.unlocked
@@ -100,9 +89,7 @@ export const AchievementCard = memo(
               achievement.icon
             ) : (
               <>
-                <span className="opacity-30">
-                  {achievement.icon}
-                </span>
+                <span className="opacity-30">{achievement.icon}</span>
                 <Lock className="absolute w-4 h-4 text-gray-500" />
               </>
             )}
@@ -112,22 +99,14 @@ export const AchievementCard = memo(
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h4
-                className={`font-semibold truncate ${
-                  achievement.unlocked
-                    ? "text-white"
-                    : "text-gray-500"
-                }`}
+                className={`font-semibold truncate ${achievement.unlocked ? "text-white" : "text-gray-500"}`}
               >
                 {achievement.name}
               </h4>
-              <span className={badgeClasses}>
-                {achievement.rarity}
-              </span>
+              <span className={badgeClasses}>{achievement.rarity}</span>
             </div>
 
-            <p className="text-gray-500 text-sm truncate">
-              {achievement.description}
-            </p>
+            <p className="text-gray-500 text-sm truncate">{achievement.description}</p>
 
             {/* Progress bar */}
             {!achievement.unlocked && hasProgress && (
@@ -139,8 +118,7 @@ export const AchievementCard = memo(
                   />
                 </div>
                 <span className="text-gray-500 text-xs mt-1 block">
-                  {achievement.progress!.toLocaleString()} /{" "}
-                  {achievement.maxProgress!.toLocaleString()}
+                  {achievement.progress!.toLocaleString()} / {achievement.maxProgress!.toLocaleString()}
                 </span>
               </div>
             )}
