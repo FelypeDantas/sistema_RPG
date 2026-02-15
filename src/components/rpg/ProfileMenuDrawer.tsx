@@ -7,6 +7,7 @@ import {
   X
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 interface ProfileMenuDrawerProps {
   open: boolean;
@@ -18,11 +19,30 @@ export const ProfileMenuDrawer = ({
   onClose
 }: ProfileMenuDrawerProps) => {
   const navigate = useNavigate();
+  const drawerRef = useRef<HTMLDivElement>(null);
 
   function goTo(path: string) {
     onClose();
     setTimeout(() => navigate(path), 150);
   }
+
+  // Fecha com ESC + trava scroll + foco
+  useEffect(() => {
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+
+    if (open) {
+      window.addEventListener("keydown", handleEsc);
+      document.body.style.overflow = "hidden";
+      drawerRef.current?.focus();
+    }
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+      document.body.style.overflow = "";
+    };
+  }, [open, onClose]);
 
   return (
     <AnimatePresence>
@@ -39,10 +59,14 @@ export const ProfileMenuDrawer = ({
 
           {/* Drawer */}
           <motion.aside
+            ref={drawerRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
             className="
               fixed right-0 top-0 h-full w-full sm:w-[360px]
               bg-cyber-dark z-50 p-6
-              border-l border-white/10
+              border-l border-white/10 outline-none
             "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -57,6 +81,7 @@ export const ProfileMenuDrawer = ({
 
               <button
                 onClick={onClose}
+                aria-label="Fechar menu"
                 className="text-gray-400 hover:text-white transition"
               >
                 <X />
@@ -65,69 +90,37 @@ export const ProfileMenuDrawer = ({
 
             {/* Menu */}
             <nav className="space-y-4">
-              {/* Dashboard */}
-              <button
+              <MenuButton
+                icon={LayoutDashboard}
+                label="Dashboard"
+                color="text-neon-green"
+                hover="hover:border-neon-green/50 hover:bg-neon-green/10"
                 onClick={() => goTo("/")}
-                className="
-                  w-full flex items-center gap-3 p-4 rounded-xl
-                  bg-cyber-card border border-white/10
-                  hover:border-neon-green/50 hover:bg-neon-green/10
-                  transition
-                "
-              >
-                <LayoutDashboard className="text-neon-green" />
-                <span className="text-white font-medium">
-                  Dashboard
-                </span>
-              </button>
+              />
 
-              {/* Histórico */}
-              <button
+              <MenuButton
+                icon={ScrollText}
+                label="Histórico de Quests"
+                color="text-neon-purple"
+                hover="hover:border-neon-purple/50 hover:bg-neon-purple/10"
                 onClick={() => goTo("/quests/history")}
-                className="
-                  w-full flex items-center gap-3 p-4 rounded-xl
-                  bg-cyber-card border border-white/10
-                  hover:border-neon-purple/50 hover:bg-neon-purple/10
-                  transition
-                "
-              >
-                <ScrollText className="text-neon-purple" />
-                <span className="text-white font-medium">
-                  Histórico de Quests
-                </span>
-              </button>
+              />
 
-              {/* Árvore de Habilidades */}
-              <button
+              <MenuButton
+                icon={GitBranch}
+                label="Árvore de Habilidades"
+                color="text-neon-cyan"
+                hover="hover:border-neon-cyan/50 hover:bg-neon-cyan/10"
                 onClick={() => goTo("/skills")}
-                className="
-                  w-full flex items-center gap-3 p-4 rounded-xl
-                  bg-cyber-card border border-white/10
-                  hover:border-neon-cyan/50 hover:bg-neon-cyan/10
-                  transition
-                "
-              >
-                <GitBranch className="text-neon-cyan" />
-                <span className="text-white font-medium">
-                  Árvore de Habilidades
-                </span>
-              </button>
+              />
 
-              {/* Codex de Atributos */}
-              <button
+              <MenuButton
+                icon={BookOpen}
+                label="Codex de Atributos"
+                color="text-neon-orange"
+                hover="hover:border-neon-orange/50 hover:bg-neon-orange/10"
                 onClick={() => goTo("/attributes")}
-                className="
-                  w-full flex items-center gap-3 p-4 rounded-xl
-                  bg-cyber-card border border-white/10
-                  hover:border-neon-orange/50 hover:bg-neon-orange/10
-                  transition
-                "
-              >
-                <BookOpen className="text-neon-orange" />
-                <span className="text-white font-medium">
-                  Codex de Atributos
-                </span>
-              </button>
+              />
             </nav>
           </motion.aside>
         </>
@@ -135,3 +128,36 @@ export const ProfileMenuDrawer = ({
     </AnimatePresence>
   );
 };
+
+interface MenuButtonProps {
+  icon: any;
+  label: string;
+  color: string;
+  hover: string;
+  onClick: () => void;
+}
+
+function MenuButton({
+  icon: Icon,
+  label,
+  color,
+  hover,
+  onClick
+}: MenuButtonProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        w-full flex items-center gap-3 p-4 rounded-xl
+        bg-cyber-card border border-white/10
+        transition duration-200
+        ${hover}
+      `}
+    >
+      <Icon className={color} />
+      <span className="text-white font-medium">
+        {label}
+      </span>
+    </button>
+  );
+}
