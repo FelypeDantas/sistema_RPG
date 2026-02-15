@@ -1,9 +1,9 @@
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthWithPlayer } from "@/hooks/useAuth";
 import RPGDashboardContent from "@/components/rpg/RPGDashboardContent";
 import { AuthPage } from "./AuthPage";
 
 const RPGDashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAuthWithPlayer();
 
   if (loading) return <div>Carregando...</div>;
 
