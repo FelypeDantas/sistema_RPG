@@ -4,14 +4,9 @@ import { saveUserData, loadUserData } from "@/services/database";
 const STORAGE_KEY = "life_rpg_player";
 
 /* =============================
-   🧬 TRAITS
+// 🧬 TRAITS
 ============================= */
-
-export type TraitId =
-  | "disciplinado"
-  | "impulsivo"
-  | "persistente"
-  | "econômico";
+export type TraitId = "disciplinado" | "impulsivo" | "persistente" | "econômico";
 
 export interface Trait {
   id: TraitId;
@@ -20,12 +15,9 @@ export interface Trait {
 }
 
 /* =============================
-   🌳 TALENTOS
+// 🌳 TALENTOS
 ============================= */
-
-export type TalentId =
-  | "focus"
-  | "physical_mastery";
+export type TalentId = "focus" | "physical_mastery";
 
 interface TalentEffect {
   segmentBonus?: Record<string, number>;
@@ -38,10 +30,9 @@ export interface Talent {
 }
 
 /* =============================
-   🎮 PLAYER HOOK
+// 🎮 PLAYER HOOK
 ============================= */
-
-export function usePlayer() {
+export function usePlayer(userId?: string) {
   const [level, setLevel] = useState(1);
   const [xp, setXP] = useState(0);
 
@@ -52,164 +43,107 @@ export function usePlayer() {
     Finanças: 10
   });
 
-  /* 🧬 SEGMENTOS */
   const [segments, setSegments] = useState<Record<string, number>>({
     forca: 10,
     foco: 20
   });
 
-  /* 🌳 TALENTOS */
   const [talents, setTalents] = useState<Talent[]>([
-    {
-      id: "focus",
-      unlocked: true,
-      effect: {
-        segmentBonus: {
-          foco: 1.2
-        }
-      }
-    },
-    {
-      id: "physical_mastery",
-      unlocked: false,
-      effect: {
-        segmentBonus: {
-          forca: 1.15,
-          resistencia: 1.1
-        }
-      }
-    }
+    { id: "focus", unlocked: true, effect: { segmentBonus: { foco: 1.2 } } },
+    { id: "physical_mastery", unlocked: false, effect: { segmentBonus: { forca: 1.15, resistencia: 1.1 } } }
   ]);
 
   const [traits, setTraits] = useState<Trait[]>([
-    {
-      id: "disciplinado",
-      name: "Disciplinado",
-      description: "Ganha mais XP ao manter streaks"
-    }
+    { id: "disciplinado", name: "Disciplinado", description: "Ganha mais XP ao manter streaks" }
   ]);
 
   const nextLevelXP = Math.floor(100 + xp * 0.9);
 
   /* =============================
-     📥 LOAD
+     📥 LOAD PLAYER LOCAL + FIREBASE
   ============================= */
-
   useEffect(() => {
+    // Load from localStorage
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
+    if (saved) {
+      const data = JSON.parse(saved);
+      setLevel(data.level ?? 1);
+      setXP(data.xp ?? 0);
+      setAttributes(data.attributes ?? attributes);
+      setTraits(data.traits ?? traits);
+      setSegments(data.segments ?? segments);
+      setTalents(data.talents ?? talents);
+    }
 
-    const data = JSON.parse(saved);
-
-    setLevel(data.level ?? 1);
-    setXP(data.xp ?? 0);
-    setAttributes(data.attributes ?? attributes);
-    setTraits(data.traits ?? traits);
-    setSegments(data.segments ?? segments);
-    setTalents(data.talents ?? talents);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-
-    // 🔹 CARREGAR ao iniciar
-    useEffect(() => {
+    // Load from Firebase if userId existe
+    if (userId) {
       async function load() {
         const data = await loadUserData(userId);
         if (data?.player) {
-          setPlayer(data.player);
+          const player = data.player;
+          setLevel(player.level ?? 1);
+          setXP(player.xp ?? 0);
+          setAttributes(player.attributes ?? attributes);
+          setTraits(player.traits ?? traits);
+          setSegments(player.segments ?? segments);
+          setTalents(player.talents ?? talents);
         }
       }
       load();
-    }, []);
-  }, []);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   /* =============================
-     📤 SAVE
+     📤 SAVE PLAYER LOCAL
   ============================= */
-
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({
-        level,
-        xp,
-        attributes,
-        traits,
-        segments,
-        talents
-      })
+      JSON.stringify({ level, xp, attributes, traits, segments, talents })
     );
   }, [level, xp, attributes, traits, segments, talents]);
 
   /* =============================
      🔍 HELPERS
   ============================= */
-
-  const hasTrait = (id: TraitId) =>
-    traits.some(t => t.id === id);
-
-  const hasTalent = (id: TalentId) =>
-    talents.some(t => t.id === id && t.unlocked);
+  const hasTrait = (id: TraitId) => traits.some(t => t.id === id);
+  const hasTalent = (id: TalentId) => talents.some(t => t.id === id && t.unlocked);
 
   /* =============================
      ⭐ XP GLOBAL
   ============================= */
-
-  const gainXP = (
-    amount: number,
-    attribute?: keyof typeof attributes
-  ) => {
+  const gainXP = (amount: number, attribute?: keyof typeof attributes) => {
     setXP(prev => {
       const total = prev + amount;
-
       if (total >= nextLevelXP) {
         setLevel(l => l + 1);
         return total - nextLevelXP;
       }
-
       return total;
     });
 
     if (attribute) {
-      setAttributes(prev => ({
-        ...prev,
-        [attribute]: prev[attribute] + 1
-      }));
+      setAttributes(prev => ({ ...prev, [attribute]: prev[attribute] + 1 }));
     }
   };
 
   /* =============================
      🧬 XP DE SEGMENTO (COM TALENTOS)
   ============================= */
-
-  const gainSegmentXP = (
-    segmentId: string,
-    baseAmount: number
-  ) => {
+  const gainSegmentXP = (segmentId: string, baseAmount: number) => {
     let finalAmount = baseAmount;
-
     talents.forEach(talent => {
-      if (
-        talent.unlocked &&
-        talent.effect?.segmentBonus?.[segmentId]
-      ) {
-        finalAmount *=
-          talent.effect.segmentBonus[segmentId];
+      if (talent.unlocked && talent.effect?.segmentBonus?.[segmentId]) {
+        finalAmount *= talent.effect.segmentBonus[segmentId];
       }
     });
 
     setSegments(prev => ({
       ...prev,
-      [segmentId]: Math.min(
-        100,
-        Math.round(
-          (prev[segmentId] ?? 0) + finalAmount
-        )
-      )
+      [segmentId]: Math.min(100, Math.round((prev[segmentId] ?? 0) + finalAmount))
     }));
   };
-
-  /* =============================
-     📦 EXPORT
-  ============================= */
 
   return {
     level,
