@@ -6,18 +6,19 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 export type MissionAttribute = "Mente" | "Físico" | "Social" | "Finanças";
 
 export interface Mission {
-  id: string; // garante string
+  id: string;
   title: string;
   description: string;
   xp: number;
   attribute: MissionAttribute;
   completed: boolean;
+  done?: boolean;        // boolean
   segment?: string;
   segmentXP?: number;
 }
 
 export interface MissionHistory extends Omit<Mission, "completed"> {
-  success: boolean;
+  success: boolean;       // boolean
   date: string;
 }
 
@@ -46,8 +47,28 @@ export function useMissions() {
 
         if (snapshot.exists()) {
           const data = snapshot.data() as { missions?: Mission[]; history?: MissionHistory[] };
-          setMissions(Array.isArray(data.missions) ? data.missions.map(m => ({ ...m, id: String(m.id), segment: m.segment ? String(m.segment) : undefined })) : []);
-          setHistory(Array.isArray(data.history) ? data.history.map(h => ({ ...h, id: String(h.id), segment: h.segment ? String(h.segment) : undefined })) : []);
+
+          setMissions(Array.isArray(data.missions)
+            ? data.missions.map(m => ({
+                ...m,
+                id: String(m.id),
+                segment: m.segment ? String(m.segment) : undefined,
+                done: Boolean(m.done),
+                completed: Boolean(m.completed)
+              }))
+            : []
+          );
+
+          setHistory(Array.isArray(data.history)
+            ? data.history.map(h => ({
+                ...h,
+                id: String(h.id),
+                segment: h.segment ? String(h.segment) : undefined,
+                success: Boolean(h.success),
+                done: Boolean(h.done)
+              }))
+            : []
+          );
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -74,8 +95,20 @@ export function useMissions() {
         try {
           const docRef = doc(db, "users", user.uid);
           await setDoc(docRef, {
-            missions: updatedMissions.map(m => ({ ...m, id: String(m.id), segment: m.segment ? String(m.segment) : undefined })),
-            history: updatedHistory.map(h => ({ ...h, id: String(h.id), segment: h.segment ? String(h.segment) : undefined })),
+            missions: updatedMissions.map(m => ({
+              ...m,
+              id: String(m.id),
+              segment: m.segment ? String(m.segment) : undefined,
+              done: Boolean(m.done),
+              completed: Boolean(m.completed)
+            })),
+            history: updatedHistory.map(h => ({
+              ...h,
+              id: String(h.id),
+              segment: h.segment ? String(h.segment) : undefined,
+              success: Boolean(h.success),
+              done: Boolean(h.done)
+            })),
           }, { merge: true });
         } catch (err) {
           console.error("Erro ao salvar no Firestore:", err);
@@ -90,7 +123,13 @@ export function useMissions() {
   const addMission = useCallback(
     (mission: Mission) => {
       setMissions(prev => {
-        const newMissions = [...prev, { ...mission, id: String(mission.id), segment: mission.segment ? String(mission.segment) : undefined }];
+        const newMissions = [...prev, {
+          ...mission,
+          id: String(mission.id),
+          segment: mission.segment ? String(mission.segment) : undefined,
+          done: Boolean(mission.done),
+          completed: Boolean(mission.completed)
+        }];
         saveToFirestore(newMissions, history);
         return newMissions;
       });
@@ -116,7 +155,8 @@ export function useMissions() {
               ...mission,
               id: String(mission.id),
               segment: mission.segment ? String(mission.segment) : undefined,
-              success,
+              success: Boolean(success),
+              done: true,
               date: new Date().toISOString()
             }
           ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
