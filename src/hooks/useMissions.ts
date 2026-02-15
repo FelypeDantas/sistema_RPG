@@ -1,4 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { db } from "@/services/firebase";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
 /* =============================
    🎯 TIPOS
@@ -13,7 +20,6 @@ export interface Mission {
   xp: number;
   attribute: MissionAttribute;
   completed: boolean;
-
   segment?: string;
   segmentXP?: number;
 }
@@ -23,96 +29,114 @@ export interface MissionHistory {
   title: string;
   description: string;
   attribute: MissionAttribute;
-
   xp: number;
   success: boolean;
   date: string;
-
   segment?: string;
   segmentXP?: number;
 }
-
-/* =============================
-   💾 STORAGE
-============================= */
-
-const STORAGE_KEY = "rpg_missions";
-const HISTORY_KEY = "rpg_mission_history";
-const DAILY_KEY = "rpg_daily_date";
 
 /* =============================
    🧠 HOOK
 ============================= */
 
 export function useMissions() {
-  const [missions, setMissions] = useState<Mission[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { user } = useAuth();
 
-  const [history, setHistory] = useState<MissionHistory[]>(() => {
-    try {
-      const stored = localStorage.getItem(HISTORY_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [history, setHistory] = useState<MissionHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  /* =============================
+     ☁️ CARREGAR DADOS
+  ============================= */
+
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
     }
-  });
+
+    async function loadData() {
+      try {
+        const docRef = doc(db, "users", user.uid);
+        const snapshot = await getDoc(docRef);
+
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setMissions(data.missions || []);
+          setHistory(data.history || []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [user]);
 
   /* ==============================
      🌅 QUEST DIÁRIA
   ============================== */
+
   useEffect(() => {
-  const today = new Date().toISOString().split("T")[0];
-  const lastDaily = localStorage.getItem(DAILY_KEY);
+    if (!user) return;
 
-  if (lastDaily === today) return;
+    const today = new Date().toISOString().split("T")[0];
 
-  const dailyMission = {
-    id: `daily-${today}`,
-    title: "Treino diário",
-    description: "100 agachamentos, 20 flexões e 10 minutos de meditação",
-    xp: 50,
-    attribute: "Físico",
-    completed: false,
-  };
+    const alreadyExists = missions.some(m =>
+      m.id === `daily-${today}`
+    );
 
-  setMissions(prev => [...prev, dailyMission]);
-  localStorage.setItem(DAILY_KEY, today);
-}, []);
+    if (alreadyExists) return;
+
+    const dailyMission: Mission = {
+      id: `daily-${today}`,
+      title: "Treino diário",
+      description:
+        "100 agachamentos, 20 flexões e 10 minutos de meditação",
+      xp: 50,
+      attribute: "Físico",
+      completed: false,
+    };
+
+    setMissions(prev => [...prev, dailyMission]);
+  }, [user, missions]);
 
   /* =============================
-     📤 SAVE
+     ☁️ SALVAR AUTOMATICAMENTE
   ============================= */
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(missions));
-  }, [missions]);
+    if (!user) return;
 
-  useEffect(() => {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-  }, [history]);
+    async function saveData() {
+      try {
+        const docRef = doc(db, "users", user.uid);
+
+        await setDoc(
+          docRef,
+          {
+            missions,
+            history,
+          },
+          { merge: true }
+        );
+      } catch (error) {
+        console.error("Erro ao salvar dados:", error);
+      }
+    }
+
+    saveData();
+  }, [missions, history, user]);
 
   /* =============================
      ➕ ADD
   ============================= */
 
   function addMission(mission: Mission) {
-    // evita duplicadas pelo mesmo título no mesmo dia
-    const today = new Date().toISOString().split("T")[0];
-
-    const alreadyExists = missions.some(
-      m =>
-        m.title === mission.title &&
-        m.id.includes(today)
-    );
-
-    if (alreadyExists) return;
-
     setMissions(prev => [...prev, mission]);
   }
 
@@ -124,7 +148,9 @@ export function useMissions() {
     const mission = missions.find(m => m.id === missionId);
     if (!mission) return;
 
-    setMissions(prev => prev.filter(m => m.id !== missionId));
+    setMissions(prev =>
+      prev.filter(m => m.id !== missionId)
+    );
 
     setHistory(prev =>
       [
@@ -140,7 +166,11 @@ export function useMissions() {
           segment: mission.segment,
           segmentXP: mission.segmentXP,
         },
-      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      ].sort(
+        (a, b) =>
+          new Date(b.date).getTime() -
+          new Date(a.date).getTime()
+      )
     );
   }
 
@@ -151,7 +181,9 @@ export function useMissions() {
   const stats = useMemo(() => {
     const total = history.length;
     const successes = history.filter(h => h.success).length;
-    const successRate = total ? Math.round((successes / total) * 100) : 0;
+    const successRate = total
+      ? Math.round((successes / total) * 100)
+      : 0;
 
     const xpByAttribute: Record<MissionAttribute, number> = {
       Mente: 0,
@@ -168,7 +200,8 @@ export function useMissions() {
 
         if (h.segment) {
           xpBySegment[h.segment] =
-            (xpBySegment[h.segment] || 0) + (h.segmentXP || 0);
+            (xpBySegment[h.segment] || 0) +
+            (h.segmentXP || 0);
         }
       }
     });
@@ -188,8 +221,6 @@ export function useMissions() {
   function resetMissions() {
     setMissions([]);
     setHistory([]);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(HISTORY_KEY);
   }
 
   /* =============================
@@ -200,6 +231,7 @@ export function useMissions() {
     missions,
     history,
     stats,
+    loading,
     addMission,
     completeMission,
     resetMissions,

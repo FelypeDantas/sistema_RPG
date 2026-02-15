@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { saveUserData, loadUserData } from "@/services/database";
 
 const STORAGE_KEY = "life_rpg_player";
 
@@ -107,6 +108,17 @@ export function usePlayer() {
     setSegments(data.segments ?? segments);
     setTalents(data.talents ?? talents);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    // 🔹 CARREGAR ao iniciar
+    useEffect(() => {
+      async function load() {
+        const data = await loadUserData(userId);
+        if (data?.player) {
+          setPlayer(data.player);
+        }
+      }
+      load();
+    }, []);
   }, []);
 
   /* =============================

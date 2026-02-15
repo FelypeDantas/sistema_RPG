@@ -1,35 +1,34 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState<boolean>(() => {
+  const getIsMobile = () => {
     if (typeof window === "undefined") return false;
     return window.innerWidth < MOBILE_BREAKPOINT;
-  });
+  };
+
+  const [isMobile, setIsMobile] = useState<boolean>(getIsMobile);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const listener = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    const mediaQuery = window.matchMedia(
+      `(max-width: ${MOBILE_BREAKPOINT - 1}px)`
+    );
 
-    // Compatibilidade com navegadores antigos
-    if (mql.addEventListener) {
-      mql.addEventListener("change", listener);
-    } else {
-      mql.addListener(listener);
-    }
+    const handleChange = () => {
+      setIsMobile(mediaQuery.matches);
+    };
 
-    // Inicializa o estado
-    setIsMobile(mql.matches);
+    handleChange(); // sincroniza no mount
+
+    mediaQuery.addEventListener?.("change", handleChange);
+    mediaQuery.addListener?.(handleChange); // fallback
 
     return () => {
-      if (mql.removeEventListener) {
-        mql.removeEventListener("change", listener);
-      } else {
-        mql.removeListener(listener);
-      }
+      mediaQuery.removeEventListener?.("change", handleChange);
+      mediaQuery.removeListener?.(handleChange);
     };
   }, []);
 
