@@ -1,12 +1,12 @@
 import { Lock } from "lucide-react";
-import { memo } from "react";
+import { memo, ReactNode } from "react";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
 
 interface Achievement {
   name: string;
   description: string;
-  icon: string;
+  icon: ReactNode;
   unlocked: boolean;
   rarity: Rarity;
   progress?: number;
@@ -52,15 +52,17 @@ export const AchievementCard = memo(
     const style =
       rarityStyles[achievement.rarity] ?? rarityStyles.common;
 
-    const progress =
+    const hasProgress =
       achievement.progress !== undefined &&
       achievement.maxProgress !== undefined &&
-      achievement.maxProgress > 0
-        ? Math.min(
-            (achievement.progress / achievement.maxProgress) * 100,
-            100
-          )
-        : 0;
+      achievement.maxProgress > 0;
+
+    const progress = hasProgress
+      ? Math.min(
+          (achievement.progress! / achievement.maxProgress!) * 100,
+          100
+        )
+      : 0;
 
     const containerClasses = `
       relative p-4 rounded-xl border transition-all duration-300
@@ -84,6 +86,10 @@ export const AchievementCard = memo(
           : "text-gray-500 bg-gray-800"
       }
     `;
+
+    const progressBarColor = achievement.unlocked
+      ? style.bg
+      : style.text.replace("text-", "bg-");
 
     return (
       <div className={containerClasses}>
@@ -123,23 +129,21 @@ export const AchievementCard = memo(
               {achievement.description}
             </p>
 
-            {/* Progress bar for locked achievements */}
-            {!achievement.unlocked &&
-              achievement.progress !== undefined &&
-              achievement.maxProgress !== undefined && (
-                <div className="mt-2">
-                  <div className="h-1.5 bg-cyber-dark rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-gray-600 to-gray-400 rounded-full transition-all duration-500"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                  <span className="text-gray-500 text-xs mt-1">
-                    {achievement.progress.toLocaleString()} /{" "}
-                    {achievement.maxProgress.toLocaleString()}
-                  </span>
+            {/* Progress bar */}
+            {!achievement.unlocked && hasProgress && (
+              <div className="mt-2">
+                <div className="h-1.5 bg-cyber-dark rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${progressBarColor}`}
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
-              )}
+                <span className="text-gray-500 text-xs mt-1 block">
+                  {achievement.progress!.toLocaleString()} /{" "}
+                  {achievement.maxProgress!.toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
