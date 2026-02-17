@@ -1,5 +1,6 @@
 import { Lock, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 type Props = {
   title: string;
@@ -22,8 +23,13 @@ export default function TalentNode({
   collapsed = false,
   onToggle
 }: Props) {
-  const safeProgress = Math.min(Math.max(progress, 0), 100);
+  const safeProgress = useMemo(
+    () => Math.min(Math.max(progress, 0), 100),
+    [progress]
+  );
+
   const isComplete = safeProgress >= 100;
+  const isActive = !locked && !isComplete;
 
   return (
     <motion.div
@@ -43,7 +49,7 @@ export default function TalentNode({
               ? "opacity-50 border-gray-700 pointer-events-none"
               : isComplete
               ? "border-neon-green shadow-[0_0_20px_rgba(34,197,94,0.35)]"
-              : "border-purple-500 hover:border-neon-cyan"
+              : "border-purple-500 hover:border-neon-cyan hover:shadow-[0_0_18px_rgba(34,211,238,0.25)]"
           }
         `}
       >
@@ -56,24 +62,29 @@ export default function TalentNode({
           />
         )}
 
+        {/* Glow leve quando ativo */}
+        {isActive && (
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-neon-cyan/5 pointer-events-none" />
+        )}
+
         {locked && (
           <Lock className="mx-auto mb-2 text-gray-400" size={18} />
         )}
 
         <h3
-          className={`font-semibold text-sm ${
+          className={`font-semibold text-sm relative z-10 ${
             locked ? "text-gray-400" : "text-white"
           }`}
         >
           {title}
         </h3>
 
-        <div className="mt-2 text-xs text-gray-400">
+        <div className="mt-2 text-xs text-gray-400 relative z-10">
           Treinado {safeProgress}%
         </div>
 
         {/* Barra animada */}
-        <div className="mt-2 h-1.5 w-full bg-gray-700 rounded overflow-hidden">
+        <div className="mt-2 h-1.5 w-full bg-gray-700 rounded overflow-hidden relative z-10">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${safeProgress}%` }}
@@ -91,8 +102,8 @@ export default function TalentNode({
 
         {hasChildren && !locked && (
           <button
-            onClick={onToggle}
-            className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition"
+            onClick={() => onToggle?.()}
+            className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition relative z-10"
           >
             <ChevronDown
               className={`transition-transform duration-300 ${
