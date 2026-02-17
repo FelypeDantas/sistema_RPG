@@ -16,6 +16,7 @@ import { useMissions, Mission } from "@/hooks/useMissions";
 import { useAchievements } from "@/hooks/useAchievements";
 import { usePlayerClass } from "@/hooks/usePlayerClass";
 import { useTalents } from "@/hooks/useTalents";
+import { useAuthWithPlayer } from "@/hooks/useAuth"
 
 import "@/components/rpg/MissionModal.css";
 
@@ -29,7 +30,8 @@ const RPGDashboardContent = () => {
     return localStorage.getItem("rpg_avatar_name") || "Player One";
   });
 
-  const player = usePlayerRealtime();
+  const { user } = useAuthWithPlayer();
+  const player = usePlayerRealtime(user?.uid);
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
