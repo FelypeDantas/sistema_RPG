@@ -6,12 +6,21 @@ interface Player {
 }
 
 interface Missions {
-  history: { id: string; completed: boolean }[];
+  history: { id: string; completed?: boolean; success?: boolean }[];
 }
+
+export type AchievementRarity =
+  | "Comum"
+  | "Rara"
+  | "Épica"
+  | "Lendária"
+  | "Mítica";
 
 interface Achievement {
   id: string;
   title: string;
+  rarity: AchievementRarity;
+  description: string;
   condition: (player: Player, missions: Missions) => boolean;
 }
 
@@ -19,34 +28,38 @@ const ACHIEVEMENT_RULES: Achievement[] = [
   {
     id: "lv5",
     title: "Iniciado",
-    condition: (p, _) => p.level >= 5,
+    rarity: "Comum",
+    description: "Alcance o nível 5.",
+    condition: (p) => p.level >= 5,
   },
   {
     id: "lv10",
     title: "Veterano",
-    condition: (p, _) => p.level >= 10,
+    rarity: "Rara",
+    description: "Alcance o nível 10.",
+    condition: (p) => p.level >= 10,
   },
   {
     id: "mind20",
     title: "Mente Afiada",
-    condition: (p, _) => (p.attributes.Mente ?? 0) >= 20,
+    rarity: "Épica",
+    description: "Alcance 20 pontos em Mente.",
+    condition: (p) => (p.attributes.Mente ?? 0) >= 20,
   },
   {
-    id: "body20",
-    title: "Corpo em Forma",
-    condition: (p, _) => (p.attributes.Fisico ?? 0) >= 20,
+    id: "body30",
+    title: "Titã",
+    rarity: "Lendária",
+    description: "Alcance 30 pontos em Físico.",
+    condition: (p) => (p.attributes.Físico ?? 0) >= 30,
   },
   {
-    id: "quests10",
-    title: "Persistente",
+    id: "quests100",
+    title: "Imparável",
+    rarity: "Mítica",
+    description: "Complete 100 missões com sucesso.",
     condition: (_, m) =>
-      m.history.filter((h) => h.completed).length >= 10,
-  },
-  {
-    id: "quests50",
-    title: "Determinação",
-    condition: (_, m) =>
-      m.history.filter((h) => h.completed).length >= 50,
+      m.history.filter((h) => h.success).length >= 100,
   },
 ];
 
