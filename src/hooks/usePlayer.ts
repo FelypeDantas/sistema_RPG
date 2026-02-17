@@ -195,6 +195,12 @@ export function usePlayerRealtime(userId?: string) {
     isLoaded
   ]);
 
+  console.log("SALVANDO PLAYER", {
+  level,
+  xp,
+  attributes
+});
+
 
   /* ==============================
      HELPERS
