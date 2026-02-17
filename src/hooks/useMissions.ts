@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { db } from "@/services/firebase";
 import { useAuthWithPlayer } from "@/hooks/useAuth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 export type MissionAttribute = "Mente" | "Físico" | "Social" | "Finanças";
 
@@ -12,24 +12,28 @@ export interface Mission {
   xp: number;
   attribute: MissionAttribute;
   completed: boolean;
-  done?: boolean;        // boolean
+  done?: boolean;
   segment?: string;
   segmentXP?: number;
 }
 
 export interface MissionHistory extends Omit<Mission, "completed"> {
-  success: boolean;       // boolean
+  success: boolean;
   date: string;
 }
 
 export function useMissions() {
   const { user } = useAuthWithPlayer();
+
   const [missions, setMissions] = useState<Mission[]>([]);
   const [history, setHistory] = useState<MissionHistory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ==============================
-     FETCH FIRESTORE
+     REALTIME LOAD
   ============================== */
   useEffect(() => {
     if (!user?.uid) {
@@ -37,167 +41,103 @@ export function useMissions() {
       return;
     }
 
-    let isMounted = true;
+    const docRef = doc(db, "users", user.uid);
 
-    async function loadData() {
-      try {
-        const docRef = doc(db, "users", user.uid);
-        const snapshot = await getDoc(docRef);
-        if (!isMounted) return;
+    const unsubscribe = onSnapshot(docRef, (snapshot) => {
+      const data = snapshot.data()?.missions;
 
-        if (snapshot.exists()) {
-          const data = snapshot.data() as { missions?: Mission[]; history?: MissionHistory[] };
-
-          setMissions(Array.isArray(data.missions)
-            ? data.missions.map(m => ({
-                ...m,
-                id: String(m.id),
-                segment: m.segment ? String(m.segment) : undefined,
-                done: Boolean(m.done),
-                completed: Boolean(m.completed)
-              }))
-            : []
-          );
-
-          setHistory(Array.isArray(data.history)
-            ? data.history.map(h => ({
-                ...h,
-                id: String(h.id),
-                segment: h.segment ? String(h.segment) : undefined,
-                success: Boolean(h.success),
-                done: Boolean(h.done)
-              }))
-            : []
-          );
-        }
-      } catch (error) {
-        console.error("Erro ao carregar dados:", error);
-      } finally {
-        if (isMounted) setLoading(false);
+      if (!data) {
+        setMissions([]);
+        setHistory([]);
+        setIsLoaded(true);
+        setLoading(false);
+        return;
       }
-    }
 
-    loadData();
-    return () => { isMounted = false; };
+      setMissions(Array.isArray(data.active) ? data.active : []);
+      setHistory(Array.isArray(data.history) ? data.history : []);
+
+      setIsLoaded(true);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, [user?.uid]);
 
   /* ==============================
-     SAVE FIRESTORE (DEBOUNCE)
+     SAVE (SAFE + MERGE)
   ============================== */
   const saveToFirestore = useCallback(
-  (() => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
+    (updatedMissions: Mission[], updatedHistory: MissionHistory[]) => {
+      if (!user?.uid || !isLoaded) return;
 
-    return (updatedMissions: Mission[], updatedHistory: MissionHistory[]) => {
-      if (!user?.uid) return;
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
 
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(async () => {
+      saveTimeout.current = setTimeout(async () => {
         try {
           const docRef = doc(db, "users", user.uid);
+
           await setDoc(
             docRef,
             {
-              missions: updatedMissions.map((m) => ({
-                ...m,
-                id: String(m.id),
-                segment: m.segment ? String(m.segment) : undefined,
-                done: Boolean(m.done),
-                completed: Boolean(m.completed),
-              })),
-              history: updatedHistory.map((h) => ({
-                ...h,
-                id: String(h.id),
-                segment: h.segment ? String(h.segment) : undefined,
-                success: Boolean(h.success),
-                done: Boolean(h.done),
-              })),
+              missions: {
+                active: updatedMissions,
+                history: updatedHistory,
+              },
             },
             { merge: true }
           );
         } catch (err) {
-          console.error("Erro ao salvar no Firestore:", err);
+          console.error("Erro ao salvar missões:", err);
         }
-      }, 500);
-    };
-  })(),
-  [user?.uid]
-);
+      }, 400);
+    },
+    [user?.uid, isLoaded]
+  );
 
   /* ==============================
-     ADD MISSION
+     ADD
   ============================== */
   const addMission = useCallback(
     (mission: Mission) => {
-      setMissions(prev => {
-        const newMissions = [...prev, {
-          ...mission,
-          id: String(mission.id),
-          segment: mission.segment ? String(mission.segment) : undefined,
-          done: Boolean(mission.done),
-          completed: Boolean(mission.completed)
-        }];
-        saveToFirestore(newMissions, history);
-        return newMissions;
+      setMissions((prev) => {
+        const updated = [...prev, { ...mission, id: String(mission.id) }];
+        saveToFirestore(updated, history);
+        return updated;
       });
     },
     [history, saveToFirestore]
   );
 
   /* ==============================
-     COMPLETE MISSION
+     COMPLETE
   ============================== */
   const completeMission = useCallback(
     (missionId: string, success: boolean) => {
-      setMissions(prevMissions => {
-        const mission = prevMissions.find(m => m.id === missionId);
-        if (!mission) return prevMissions;
+      setMissions((prev) => {
+        const mission = prev.find((m) => m.id === missionId);
+        if (!mission) return prev;
 
-        const newMissions = prevMissions.filter(m => m.id !== missionId);
+        const updatedMissions = prev.filter((m) => m.id !== missionId);
 
-        setHistory(prevHistory => {
-          const newHistory: MissionHistory[] = [
-            ...prevHistory,
-            {
-              ...mission,
-              id: String(mission.id),
-              segment: mission.segment ? String(mission.segment) : undefined,
-              success: Boolean(success),
-              done: true,
-              date: new Date().toISOString()
-            }
-          ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const newHistory: MissionHistory[] = [
+          ...history,
+          {
+            ...mission,
+            success,
+            done: true,
+            date: new Date().toISOString(),
+          },
+        ];
 
-          saveToFirestore(newMissions, newHistory);
-          return newHistory;
-        });
+        setHistory(newHistory);
+        saveToFirestore(updatedMissions, newHistory);
 
-        return newMissions;
+        return updatedMissions;
       });
     },
-    [saveToFirestore]
+    [history, saveToFirestore]
   );
-
-  /* ==============================
-     STATS
-  ============================== */
-  const stats = useMemo(() => {
-    const total = history.length;
-    const successes = history.filter(h => h.success).length;
-    const successRate = total ? Math.round((successes / total) * 100) : 0;
-
-    const xpByAttribute: Record<MissionAttribute, number> = { Mente: 0, Físico: 0, Social: 0, Finanças: 0 };
-    const xpBySegment: Record<string, number> = {};
-
-    history.forEach(h => {
-      if (h.success) {
-        xpByAttribute[h.attribute] += h.xp;
-        if (h.segment) xpBySegment[String(h.segment)] = (xpBySegment[String(h.segment)] || 0) + (h.segmentXP || 0);
-      }
-    });
-
-    return { totalMissions: total, successRate, xpByAttribute, xpBySegment };
-  }, [history]);
 
   /* ==============================
      RESET
@@ -207,6 +147,20 @@ export function useMissions() {
     setHistory([]);
     saveToFirestore([], []);
   }, [saveToFirestore]);
+
+  /* ==============================
+     STATS
+  ============================== */
+  const stats = useMemo(() => {
+    const total = history.length;
+    const successes = history.filter((h) => h.success).length;
+    const successRate = total ? Math.round((successes / total) * 100) : 0;
+
+    return {
+      totalMissions: total,
+      successRate,
+    };
+  }, [history]);
 
   return {
     missions,
