@@ -11,6 +11,7 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement;
   open?: boolean;
   status?: "open" | "closing" | "removed";
+  onOpenChange?: (open: boolean) => void;
 };
 
 type Action =
@@ -48,9 +49,10 @@ function reducer(state: State, action: Action): State {
     }
     case "DISMISS_TOAST": {
       const { toastId } = action;
-      const updatedToasts = state.toasts.map((t) =>
+      const updatedToasts: ToasterToast[] = state.toasts.map((t) =>
         toastId === undefined || t.id === toastId ? { ...t, open: false, status: "closing" } : t
       );
+
       if (toastId) toastAddToRemoveQueue(toastId);
       else state.toasts.forEach((t) => toastAddToRemoveQueue(t.id));
       return { ...state, toasts: updatedToasts };
