@@ -24,6 +24,11 @@ const RPGDashboardContent = () => {
   const [pendingMission, setPendingMission] = useState<Mission | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // 👇 NOVO: nome definitivo do avatar
+  const [avatarName, setAvatarName] = useState<string>(() => {
+    return localStorage.getItem("rpg_avatar_name") || "Player One";
+  });
+
   const player = usePlayerRealtime();
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
@@ -34,7 +39,19 @@ const RPGDashboardContent = () => {
   const now = new Date();
   const todayKey = now.toISOString().split("T")[0];
 
-  // Total XP real acumulado
+  // 👇 Quando subir para nível > 1 e ainda for nome padrão, pede nome definitivo
+  useEffect(() => {
+    if (player.level > 1 && avatarName === "Player One") {
+      const newName = window.prompt("Você evoluiu! Escolha o nome definitivo do seu avatar:");
+      if (newName && newName.trim().length > 0) {
+        const trimmed = newName.trim();
+        setAvatarName(trimmed);
+        localStorage.setItem("rpg_avatar_name", trimmed);
+      }
+    }
+  }, [player.level]);
+
+  // Total XP acumulado
   const totalXP = useMemo(() => {
     return missions.history.reduce(
       (acc, h) => acc + (h.success ? h.xp : 0),
@@ -141,7 +158,7 @@ const RPGDashboardContent = () => {
             >
               <AvatarCard
                 player={{
-                  name: "Player One",
+                  name: avatarName,
                   title: playerClass.title,
                   level: player.level,
                   currentXP: player.xp,
