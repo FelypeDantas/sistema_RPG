@@ -1,6 +1,6 @@
 import { Activity, Target, Zap, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 interface Stats {
   questsToday: number;
@@ -14,49 +14,55 @@ interface StatsCardProps {
 }
 
 export const StatsCard = ({ stats }: StatsCardProps) => {
-  const completionRate =
-    stats.totalQuests <= 0
-      ? 0
-      : Math.min(
-          100,
-          Math.round((stats.questsToday / stats.totalQuests) * 100)
-        );
+  const safeTotal = Math.max(0, stats.totalQuests);
+  const safeToday = Math.max(0, stats.questsToday);
+  const safeXpToday = Math.max(0, stats.xpToday);
+  const safeStreak = Math.max(0, stats.streak);
+
+  const completionRate = useMemo(() => {
+    if (safeTotal === 0) return 0;
+    return Math.min(100, Math.round((safeToday / safeTotal) * 100));
+  }, [safeToday, safeTotal]);
 
   const [displayXp, setDisplayXp] = useState(0);
+  const animationRef = useRef<number | null>(null);
   const previousXpRef = useRef(0);
 
-  // XP counter animation mais estável
   useEffect(() => {
-    if (stats.xpToday <= 0) {
+    if (safeXpToday === previousXpRef.current) return;
+
+    previousXpRef.current = safeXpToday;
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    if (safeXpToday <= 0) {
       setDisplayXp(0);
-      previousXpRef.current = 0;
       return;
     }
 
-    // evita reiniciar se valor não mudou
-    if (previousXpRef.current === stats.xpToday) return;
-
-    previousXpRef.current = stats.xpToday;
-
-    let current = 0;
     const duration = 700;
-    const stepTime = 16;
-    const steps = duration / stepTime;
-    const increment = stats.xpToday / steps;
+    const start = performance.now();
 
-    const counter = setInterval(() => {
-      current += increment;
+    const animate = (time: number) => {
+      const progress = Math.min((time - start) / duration, 1);
+      const value = Math.floor(progress * safeXpToday);
+      setDisplayXp(value);
 
-      if (current >= stats.xpToday) {
-        setDisplayXp(stats.xpToday);
-        clearInterval(counter);
-      } else {
-        setDisplayXp(Math.floor(current));
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
       }
-    }, stepTime);
+    };
 
-    return () => clearInterval(counter);
-  }, [stats.xpToday]);
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [safeXpToday]);
 
   return (
     <motion.div
@@ -65,12 +71,12 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
       transition={{ duration: 0.4 }}
       className="bg-cyber-card border border-white/10 rounded-xl p-5 relative overflow-hidden"
     >
-      {/* Glow quando acima de 80% */}
       {completionRate >= 80 && (
         <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/10 to-neon-pink/10 pointer-events-none" />
       )}
 
       <div className="grid grid-cols-2 gap-4 relative z-10">
+        
         {/* Missões */}
         <div className="bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-2">
@@ -80,10 +86,10 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
 
           <div className="flex items-end gap-1">
             <span className="text-3xl font-bold text-white">
-              {stats.questsToday}
+              {safeToday}
             </span>
             <span className="text-gray-500 text-lg mb-1">
-              /{stats.totalQuests}
+              /{safeTotal}
             </span>
           </div>
 
@@ -117,9 +123,9 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           <div className="flex items-center gap-1 mt-2 text-neon-green text-xs">
             <TrendingUp className="w-3 h-3" />
             <span>
-              {stats.xpToday > 0
-                ? "Bom progresso!"
-                : "Comece sua jornada"}
+              {safeXpToday > 0
+                ? "Progresso sólido hoje"
+                : "Hora de iniciar a jornada"}
             </span>
           </div>
         </div>
@@ -133,13 +139,13 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
 
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-neon-orange">
-              {stats.streak} dias
+              {safeStreak} dias
             </span>
 
-            {stats.streak >= 7 && (
+            {safeStreak >= 7 && (
               <motion.span
-                initial={{ scale: 0.9 }}
-                animate={{ scale: [1, 1.08, 1] }}
+                initial={{ scale: 0.95 }}
+                animate={{ scale: [1, 1.1, 1] }}
                 transition={{ repeat: Infinity, duration: 1.8 }}
                 className="text-xs bg-neon-orange/20 px-2 py-1 rounded-full text-neon-orange"
               >
@@ -148,6 +154,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
             )}
           </div>
         </div>
+
       </div>
     </motion.div>
   );
