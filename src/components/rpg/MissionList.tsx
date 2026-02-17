@@ -10,16 +10,11 @@ export function MissionList() {
 
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const modalRef = useRef<HTMLDivElement | null>(null);
+  const successButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const closeModal = useCallback(() => {
     setShowConfirm(false);
     setSelectedMission(null);
-  }, []);
-
-  const openModal = useCallback((mission: Mission) => {
-    setSelectedMission(mission);
-    setShowConfirm(true);
   }, []);
 
   const handleComplete = useCallback(
@@ -31,41 +26,36 @@ export function MissionList() {
     [selectedMission, completeMission, closeModal]
   );
 
-  // ESC + bloquear scroll
+  // Fecha com ESC
   useEffect(() => {
-    if (!showConfirm) return;
-
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeModal();
       }
     };
 
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleEsc);
+    if (showConfirm) {
+      window.addEventListener("keydown", handleEsc);
+    }
 
     return () => {
-      document.body.style.overflow = "";
       window.removeEventListener("keydown", handleEsc);
     };
   }, [showConfirm, closeModal]);
 
-  // Foco automático ao abrir
+  // Impede scroll do fundo
   useEffect(() => {
-    if (showConfirm && modalRef.current) {
-      modalRef.current.focus();
+    if (showConfirm) {
+      document.body.style.overflow = "hidden";
+      successButtonRef.current?.focus();
+    } else {
+      document.body.style.overflow = "auto";
     }
-  }, [showConfirm]);
 
-  // Clique fora fecha
-  const handleOverlayClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.target === e.currentTarget) {
-        closeModal();
-      }
-    },
-    [closeModal]
-  );
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [showConfirm]);
 
   return (
     <>
@@ -76,7 +66,12 @@ export function MissionList() {
             <p>{mission.description}</p>
             <p>XP: {mission.xp}</p>
 
-            <button onClick={() => openModal(mission)}>
+            <button
+              onClick={() => {
+                setSelectedMission(mission);
+                setShowConfirm(true);
+              }}
+            >
               Finalizar missão
             </button>
           </li>
@@ -88,17 +83,14 @@ export function MissionList() {
           className="modal-overlay"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="mission-dialog-title"
-          onClick={handleOverlayClick}
+          aria-labelledby="modal-title"
+          onClick={closeModal}
         >
           <div
             className="modal"
-            ref={modalRef}
-            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="mission-dialog-title">
-              Concluir Missão
-            </h2>
+            <h2 id="modal-title">Concluir Missão</h2>
 
             <p>
               Tem certeza de que deseja concluir a missão
@@ -114,6 +106,7 @@ export function MissionList() {
               </button>
 
               <button
+                ref={successButtonRef}
                 className="success"
                 onClick={() => handleComplete(true)}
               >
