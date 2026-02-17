@@ -100,6 +100,20 @@ export const useToast = () => {
   return context;
 };
 
+export type ToastActionElement = {
+  label: string;
+  onClick: () => void;
+};
+
+export type ToastProps = {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  variant?: "default" | "destructive";
+  duration?: number;
+  action?: ToastActionElement;
+};
+
+
 export const ToastProviderGlobal: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { theme = "system" } = useTheme();
   const [toasts, setToasts] = React.useState<ToastOptions[]>([]);
