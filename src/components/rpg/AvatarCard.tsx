@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { ChevronUp, Star, Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -27,33 +27,50 @@ const safeNumber = (value?: number) =>
 const clampPercentage = (value: number) =>
   Math.min(Math.max(value, 0), 100);
 
+// 🔢 Formatação padronizada
+const formatNumber = (value: number) =>
+  value.toLocaleString("pt-BR");
+
 export const AvatarCard = memo(
   ({ player, xpProgress, onOpenProfile }: AvatarCardProps) => {
     const currentXP = safeNumber(player.currentXP);
     const nextLevelXP = safeNumber(player.nextLevelXP);
     const totalXP = safeNumber(player.totalXP);
+
     const safeProgress = clampPercentage(xpProgress);
 
-    const containerClasses = `
-      bg-cyber-card border border-white/10 rounded-xl p-5
-      relative overflow-hidden cursor-pointer
-      hover:scale-[1.01] transition-transform duration-200
-    `;
+    const containerClasses = useMemo(
+      () => `
+        bg-cyber-card border border-white/10 rounded-xl p-5
+        relative overflow-hidden cursor-pointer
+        hover:scale-[1.01]
+        active:scale-[0.99]
+        focus:outline-none focus:ring-2 focus:ring-neon-cyan/40
+        transition-transform duration-200
+      `,
+      []
+    );
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenProfile();
+        }
+      },
+      [onOpenProfile]
+    );
 
     return (
       <div
         onClick={onOpenProfile}
+        onKeyDown={handleKeyDown}
         className={containerClasses}
         role="button"
         tabIndex={0}
         aria-label={`Abrir perfil de ${player.name}`}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            onOpenProfile();
-          }
-        }}
       >
-        {/* Glow */}
+        {/* Glow sutil */}
         <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/5 to-neon-purple/5 pointer-events-none" />
 
         {/* Header */}
@@ -90,13 +107,13 @@ export const AvatarCard = memo(
         <div className="space-y-2 relative z-10">
           <div className="flex justify-between text-xs text-gray-400">
             <span>
-              XP: {currentXP.toLocaleString()} /{" "}
-              {nextLevelXP.toLocaleString()}
+              XP: {formatNumber(currentXP)} /{" "}
+              {formatNumber(nextLevelXP)}
             </span>
 
             <span className="flex items-center gap-1">
               <Zap className="w-3 h-3 text-neon-yellow" />
-              Total: {totalXP.toLocaleString()}
+              Total: {formatNumber(totalXP)}
             </span>
           </div>
 
