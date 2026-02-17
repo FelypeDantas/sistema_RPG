@@ -1,5 +1,6 @@
 import { Flame } from "lucide-react";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 interface StreakCardProps {
   weeklyXP: number[];
@@ -12,26 +13,42 @@ export const StreakCard = ({
   weeklyXP,
   currentStreak
 }: StreakCardProps) => {
-  // Garante sempre 7 posições
-  const safeWeeklyXP =
-    weeklyXP.length === 7
-      ? weeklyXP
-      : Array.from({ length: 7 }, (_, i) => weeklyXP[i] ?? 0);
 
-  const maxXP = Math.max(...safeWeeklyXP, 1);
+  const safeStreak = Math.max(0, currentStreak);
 
-  const jsDay = new Date().getDay();
-  const todayIndex = jsDay === 0 ? 6 : jsDay - 1;
+  // Sempre 7 posições e nunca negativas
+  const safeWeeklyXP = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) =>
+      Math.max(0, weeklyXP[i] ?? 0)
+    );
+  }, [weeklyXP]);
 
-  const nextMilestone =
-    Math.ceil((currentStreak + 1) / 5) * 5;
+  const maxXP = useMemo(() => {
+    return Math.max(...safeWeeklyXP, 1);
+  }, [safeWeeklyXP]);
+
+  // Ajuste correto de índice (Seg = 0)
+  const todayIndex = useMemo(() => {
+    const jsDay = new Date().getDay(); // 0 = Dom
+    return jsDay === 0 ? 6 : jsDay - 1;
+  }, []);
+
+  // Próximo marco múltiplo de 5
+  const nextMilestone = useMemo(() => {
+    if (safeStreak === 0) return 5;
+    return Math.ceil((safeStreak + 1) / 5) * 5;
+  }, [safeStreak]);
+
+  const remainingDays = Math.max(0, nextMilestone - safeStreak);
 
   return (
     <div className="bg-cyber-card border border-neon-orange/30 rounded-xl p-5 relative overflow-hidden">
+      
       {/* Glow ambiente */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-neon-orange/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative">
+
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white font-semibold flex items-center gap-2">
@@ -48,10 +65,10 @@ export const StreakCard = ({
             </motion.div>
 
             <span className="text-neon-orange font-bold">
-              {currentStreak} dias
+              {safeStreak} dias
             </span>
 
-            {currentStreak >= 7 && (
+            {safeStreak >= 7 && (
               <motion.span
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -132,16 +149,27 @@ export const StreakCard = ({
         {/* Milestone */}
         <div className="mt-4 pt-4 border-t border-white/10 text-center">
           <p className="text-gray-400 text-sm">
-            Continue firme. Faltam{" "}
-            <span className="text-neon-orange font-bold">
-              {Math.max(0, nextMilestone - currentStreak)} dias
-            </span>{" "}
-            para alcançar{" "}
-            <span className="text-white font-semibold">
-              {nextMilestone} dias
-            </span>.
+            {remainingDays === 0 ? (
+              <>
+                Você atingiu <span className="text-white font-semibold">
+                  {nextMilestone} dias
+                </span> 🎉
+              </>
+            ) : (
+              <>
+                Faltam{" "}
+                <span className="text-neon-orange font-bold">
+                  {remainingDays} dias
+                </span>{" "}
+                para alcançar{" "}
+                <span className="text-white font-semibold">
+                  {nextMilestone} dias
+                </span>.
+              </>
+            )}
           </p>
         </div>
+
       </div>
     </div>
   );
