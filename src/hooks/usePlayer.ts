@@ -134,7 +134,7 @@ export function usePlayerRealtime(userId?: string) {
      SAVE FUNCTION (DEBOUNCED)
   ============================== */
   const savePlayer = useCallback(() => {
-    if (!userId) return;
+    if (!userId || typeof userId !== "string") return;
 
     const data = {
       level,
