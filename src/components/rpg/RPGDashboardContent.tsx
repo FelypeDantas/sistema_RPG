@@ -31,7 +31,7 @@ const RPGDashboardContent = () => {
   });
 
   const { user } = useAuthWithPlayer();
-  const player = usePlayerRealtime(user?.uid);
+  const player = usePlayerRealtime(typeof user?.uid === "string" ? user.uid : undefined);
   const missions = useMissions();
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
