@@ -84,8 +84,9 @@ export function useMissions() {
   /* ==============================
      SAVE FIRESTORE (DEBOUNCE)
   ============================== */
-  const saveToFirestore = useCallback(() => {
-    let timeout: NodeJS.Timeout | null = null;
+  const saveToFirestore = useCallback(
+  (() => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
     return (updatedMissions: Mission[], updatedHistory: MissionHistory[]) => {
       if (!user?.uid) return;
@@ -94,28 +95,34 @@ export function useMissions() {
       timeout = setTimeout(async () => {
         try {
           const docRef = doc(db, "users", user.uid);
-          await setDoc(docRef, {
-            missions: updatedMissions.map(m => ({
-              ...m,
-              id: String(m.id),
-              segment: m.segment ? String(m.segment) : undefined,
-              done: Boolean(m.done),
-              completed: Boolean(m.completed)
-            })),
-            history: updatedHistory.map(h => ({
-              ...h,
-              id: String(h.id),
-              segment: h.segment ? String(h.segment) : undefined,
-              success: Boolean(h.success),
-              done: Boolean(h.done)
-            })),
-          }, { merge: true });
+          await setDoc(
+            docRef,
+            {
+              missions: updatedMissions.map((m) => ({
+                ...m,
+                id: String(m.id),
+                segment: m.segment ? String(m.segment) : undefined,
+                done: Boolean(m.done),
+                completed: Boolean(m.completed),
+              })),
+              history: updatedHistory.map((h) => ({
+                ...h,
+                id: String(h.id),
+                segment: h.segment ? String(h.segment) : undefined,
+                success: Boolean(h.success),
+                done: Boolean(h.done),
+              })),
+            },
+            { merge: true }
+          );
         } catch (err) {
           console.error("Erro ao salvar no Firestore:", err);
         }
       }, 500);
     };
-  }, [user?.uid])();
+  })(),
+  [user?.uid]
+);
 
   /* ==============================
      ADD MISSION
