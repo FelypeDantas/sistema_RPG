@@ -24,6 +24,13 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
   const [burst, setBurst] = useState(false);
 
   const hasPlayedRef = useRef(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Reset quando a quest muda
+  useEffect(() => {
+    setDisplayXp(quest.completed ? quest.xp : 0);
+    hasPlayedRef.current = false;
+  }, [quest.id]);
 
   // Tooltip
   useEffect(() => {
@@ -33,8 +40,6 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
   // XP counter animation
   useEffect(() => {
     if (!quest.completed) return;
-
-    // evita reiniciar se já está completo
     if (displayXp === quest.xp) return;
 
     let current = 0;
@@ -43,30 +48,38 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
     const steps = duration / stepTime;
     const increment = quest.xp / steps;
 
-    const counter = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       current += increment;
 
       if (current >= quest.xp) {
         setDisplayXp(quest.xp);
-        clearInterval(counter);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
       } else {
         setDisplayXp(Math.floor(current));
       }
     }, stepTime);
 
-    return () => clearInterval(counter);
-  }, [quest.completed, quest.xp]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [quest.completed, quest.xp, displayXp]);
 
-  // Sound + burst effect (apenas uma vez)
+  // Sound + burst (uma única vez)
   useEffect(() => {
     if (!quest.completed) return;
     if (hasPlayedRef.current) return;
 
     hasPlayedRef.current = true;
-
     setBurst(true);
 
     const audio = new Audio("/complete.mp3");
+    audio.preload = "auto";
     audio.volume = 0.4;
     audio.play().catch(() => {});
 
