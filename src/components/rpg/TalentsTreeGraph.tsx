@@ -1,11 +1,11 @@
 import { TALENT_GRAPH } from "@/data/talents.graph";
 import { useTalents } from "@/hooks/useTalents";
-import { usePlayer } from "@/hooks/usePlayer";
+import { usePlayerRealtime } from "@/hooks/usePlayer";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
 export default function TalentsTreeGraph() {
-  const { level, playerClass } = usePlayer();
+  const { level, playerClass } = usePlayerRealtime();
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
 
