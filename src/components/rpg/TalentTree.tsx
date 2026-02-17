@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 
-type Talent = {
+export type Talent = {
   id: string;
   title: string;
   description?: string;
@@ -21,14 +21,16 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
   points,
   onUnlock
 }) => {
-  const totalLockedCost = talents
-    .filter(t => t.locked)
-    .reduce((acc, t) => acc + t.cost, 0);
+  const totalLockedCost = useMemo(() => {
+    return talents
+      .filter(t => t.locked)
+      .reduce((acc, t) => acc + t.cost, 0);
+  }, [talents]);
 
-  const progress =
-    totalLockedCost === 0
-      ? 100
-      : Math.min((points / totalLockedCost) * 100, 100);
+  const progress = useMemo(() => {
+    if (totalLockedCost === 0) return 100;
+    return Math.min((points / totalLockedCost) * 100, 100);
+  }, [points, totalLockedCost]);
 
   return (
     <div className="bg-cyber-card p-6 rounded-xl space-y-5 border border-white/10">
@@ -59,7 +61,7 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
         <AnimatePresence>
           {talents.map(talent => {
             const unlocked = !talent.locked;
-            const canUnlock = points >= talent.cost;
+            const canUnlock = !unlocked && points >= talent.cost;
 
             return (
               <motion.div
@@ -79,7 +81,7 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
                 }`}
               >
                 {/* Glow quando pode desbloquear */}
-                {canUnlock && !unlocked && (
+                {canUnlock && (
                   <motion.div
                     className="absolute inset-0 bg-purple-500/10"
                     animate={{ opacity: [0.1, 0.3, 0.1] }}
