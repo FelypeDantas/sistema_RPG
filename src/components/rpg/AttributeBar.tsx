@@ -1,5 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import { memo } from "react";
+import clsx from "clsx";
 
 interface Attribute {
   name: string;
@@ -17,27 +18,27 @@ interface AttributeBarProps {
 export const AttributeBar = memo(({ attribute }: AttributeBarProps) => {
   const Icon = attribute.icon;
 
-  // Garante que o valor fique entre 0 e 100
   const safeValue = Math.min(Math.max(attribute.value, 0), 100);
 
-  const containerClasses = "group";
-
-  const barClasses = `
-    absolute inset-y-0 left-0
-    bg-gradient-to-r ${attribute.color}
-    rounded-full transition-all duration-700 ease-out
-  `;
+  const barClasses = clsx(
+    "absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out",
+    "bg-gradient-to-r",
+    attribute.color
+  );
 
   return (
-    <div className={containerClasses}>
+    <div className="group">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded-lg ${attribute.bgColor}`}>
+          <div className={clsx("p-1.5 rounded-lg", attribute.bgColor)}>
             <Icon className="w-4 h-4 text-white" />
           </div>
 
           <div>
-            <span className="text-white font-medium text-sm">
+            <span
+              id={`attribute-${attribute.name}`}
+              className="text-white font-medium text-sm"
+            >
               {attribute.name}
             </span>
 
@@ -48,24 +49,23 @@ export const AttributeBar = memo(({ attribute }: AttributeBarProps) => {
         </div>
 
         <span className="text-white font-bold font-mono text-lg">
-          {safeValue}
+          {safeValue}%
         </span>
       </div>
 
       <div
         className="relative h-2.5 bg-cyber-darker rounded-full overflow-hidden border border-white/5"
         role="progressbar"
+        aria-labelledby={`attribute-${attribute.name}`}
         aria-valuenow={safeValue}
         aria-valuemin={0}
         aria-valuemax={100}
       >
-        {/* Barra principal */}
         <div
           className={barClasses}
           style={{ width: `${safeValue}%` }}
         />
 
-        {/* Shimmer effect */}
         <div
           className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
           style={{ width: `${safeValue}%` }}
