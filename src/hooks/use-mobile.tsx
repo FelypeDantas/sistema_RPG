@@ -1,16 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 const MOBILE_BREAKPOINT = 768;
 
 export function useIsMobile(): boolean {
   const isBrowser = typeof window !== "undefined";
-
-  // Função estável para checar mobile
-  const checkIsMobile = useCallback(() => {
-    return isBrowser ? window.innerWidth < MOBILE_BREAKPOINT : false;
-  }, [isBrowser]);
-
-  const [isMobile, setIsMobile] = useState<boolean>(checkIsMobile);
+  const [isMobile, setIsMobile] = useState<boolean>(
+    isBrowser ? window.innerWidth < MOBILE_BREAKPOINT : false
+  );
 
   useEffect(() => {
     if (!isBrowser) return;
@@ -21,22 +17,14 @@ export function useIsMobile(): boolean {
       setIsMobile(event.matches);
     };
 
-    // Listener moderno ou fallback
-    if ("addEventListener" in mediaQuery) {
-      mediaQuery.addEventListener("change", handleChange);
-    } else {
-      mediaQuery.addListener(handleChange);
-    }
+    // Adiciona listener moderno
+    mediaQuery.addEventListener("change", handleChange);
 
     // Garante que o estado inicial está correto
     setIsMobile(mediaQuery.matches);
 
     return () => {
-      if ("removeEventListener" in mediaQuery) {
-        mediaQuery.removeEventListener("change", handleChange);
-      } else {
-        mediaQuery.removeListener(handleChange);
-      }
+      mediaQuery.removeEventListener("change", handleChange);
     };
   }, [isBrowser]);
 
