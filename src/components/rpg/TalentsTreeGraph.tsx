@@ -2,11 +2,19 @@ import { TALENT_GRAPH } from "@/data/talents.graph";
 import { useTalents } from "@/hooks/useTalents";
 import { usePlayer } from "@/hooks/usePlayer";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 
 export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayer();
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
+
+  // Mapa otimizado para lookup
+  const talentMap = useMemo(() => {
+    const map = new Map();
+    TALENT_GRAPH.forEach(t => map.set(t.id, t));
+    return map;
+  }, []);
 
   const getCurvePath = (
     x1: number,
@@ -15,9 +23,9 @@ export default function TalentsTreeGraph() {
     y2: number
   ) => {
     const dx = (x2 - x1) * 0.4;
-    return `M ${x1} ${y1} 
-            C ${x1 + dx} ${y1}, 
-              ${x2 - dx} ${y2}, 
+    return `M ${x1} ${y1}
+            C ${x1 + dx} ${y1},
+              ${x2 - dx} ${y2},
               ${x2} ${y2}`;
   };
 
@@ -34,12 +42,18 @@ export default function TalentsTreeGraph() {
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+
+        <linearGradient id="activeEdge" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#22c55e" />
+          <stop offset="50%" stopColor="#22d3ee" />
+          <stop offset="100%" stopColor="#22c55e" />
+        </linearGradient>
       </defs>
 
-      {/* Conexões curvas */}
-      {TALENT_GRAPH.map(t =>
+      {/* Conexões */}
+      {TALENT_GRAPH.flatMap(t =>
         t.requires?.map(req => {
-          const from = TALENT_GRAPH.find(n => n.id === req);
+          const from = talentMap.get(req);
           if (!from) return null;
 
           const active =
@@ -56,7 +70,7 @@ export default function TalentsTreeGraph() {
             <motion.path
               key={`${req}-${t.id}`}
               d={path}
-              stroke={active ? "#22c55e" : "#444"}
+              stroke={active ? "url(#activeEdge)" : "#444"}
               strokeWidth="3"
               fill="transparent"
               initial={{ pathLength: 0 }}
@@ -65,29 +79,28 @@ export default function TalentsTreeGraph() {
               style={active ? { filter: "url(#glow)" } : {}}
             />
           );
-        })
+        }) ?? []
       )}
 
       {/* Nós */}
       {TALENT_GRAPH.map(t => {
         const isUnlocked = unlocked.includes(t.id);
         const available = canUnlock(t);
+        const clickable = available && !isUnlocked;
 
         return (
           <motion.g
             key={t.id}
             whileHover={
-              available && !isUnlocked
-                ? { scale: 1.15 }
-                : {}
+              clickable ? { scale: 1.15 } : {}
             }
             onClick={() =>
-              available && unlockTalent(t.id)
+              clickable && unlockTalent(t.id)
             }
-            className="cursor-pointer"
+            className={clickable ? "cursor-pointer" : ""}
           >
             {/* Nó disponível pulsando */}
-            {available && !isUnlocked && (
+            {clickable && (
               <motion.circle
                 cx={t.position.x}
                 cy={t.position.y}
