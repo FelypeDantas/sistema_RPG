@@ -29,6 +29,7 @@ export interface Talent {
 export function usePlayerRealtime(userId?: string) {
   const [level, setLevel] = useState(1);
   const [xp, setXP] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [avatarName, setAvatarNameState] = useState<string | null>(null);
 
   const [attributes, setAttributes] = useState({
@@ -87,7 +88,10 @@ export function usePlayerRealtime(userId?: string) {
 
     const unsubscribe = onSnapshot(docRef, snapshot => {
       const data = snapshot.data()?.player;
-      if (!data) return;
+      if (!data) {
+        setIsLoaded(true);
+        return;
+      }
 
       setLevel(
         typeof data.level === "number" ? data.level : 1
@@ -105,11 +109,11 @@ export function usePlayerRealtime(userId?: string) {
         typeof data.attributes === "object"
           ? data.attributes
           : {
-              Físico: 10,
-              Mente: 10,
-              Social: 10,
-              Finanças: 10,
-            }
+            Físico: 10,
+            Mente: 10,
+            Social: 10,
+            Finanças: 10,
+          }
       );
 
       setSegments(
@@ -125,6 +129,8 @@ export function usePlayerRealtime(userId?: string) {
       setTraits(
         Array.isArray(data.traits) ? data.traits : []
       );
+
+      setIsLoaded(true);
     });
 
     return () => unsubscribe();
@@ -171,6 +177,8 @@ export function usePlayerRealtime(userId?: string) {
   ]);
 
   useEffect(() => {
+    if (!isLoaded) return; // 🚫 NÃO salva antes de carregar
+
     if (saveTimeout.current)
       clearTimeout(saveTimeout.current);
 
@@ -184,7 +192,9 @@ export function usePlayerRealtime(userId?: string) {
     talents,
     traits,
     savePlayer,
+    isLoaded
   ]);
+
 
   /* ==============================
      HELPERS
