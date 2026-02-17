@@ -38,13 +38,12 @@ export const ProfileDrawer = ({
       } else {
         navigate(path);
       }
-
       onClose();
     },
     [navigate, onClose]
   );
 
-  // Fecha com ESC + trava scroll
+  // ESC + trava scroll + foco
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -107,11 +106,12 @@ export const ProfileDrawer = ({
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/60 z-40"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           />
 
           {/* Drawer */}
@@ -120,25 +120,31 @@ export const ProfileDrawer = ({
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="drawer-title"
             className="
               fixed right-0 top-0 h-full w-full max-w-md
               bg-cyber-dark border-l border-white/10
               z-50 p-6 outline-none
+              shadow-2xl shadow-black/50
             "
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <header className="flex items-center justify-between mb-8">
-              <h2 className="text-white text-lg font-semibold">
+              <h2
+                id="drawer-title"
+                className="text-white text-lg font-semibold tracking-wide"
+              >
                 Menu do Personagem
               </h2>
 
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-white transition"
+                className="text-gray-400 hover:text-white transition-colors duration-200"
                 aria-label="Fechar menu"
               >
                 <X />
@@ -157,11 +163,12 @@ export const ProfileDrawer = ({
                     className={`
                       w-full flex items-center gap-3 p-4 rounded-xl
                       bg-cyber-card border border-white/10
-                      transition duration-200
+                      transition-all duration-200
+                      hover:-translate-y-0.5 hover:shadow-lg
                       ${item.hover}
                     `}
                   >
-                    <Icon className={item.color} />
+                    <Icon className={`${item.color} shrink-0`} />
                     <span className="text-white font-medium">
                       {item.label}
                     </span>
