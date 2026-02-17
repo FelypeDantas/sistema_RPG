@@ -126,7 +126,7 @@ export const ToastProviderGlobal: React.FC<{ children: React.ReactNode }> = ({ c
   }, []);
 
   return (
-    <ToastContext.Provider value={{ toast: addToast }}>
+   <ToastContext.Provider value={{ toast: addToast } as { toast: (options: ToastOptions) => void }}>
       <ToastProvider swipeDirection="right">
         {children}
         <ToastViewport theme={theme}>
