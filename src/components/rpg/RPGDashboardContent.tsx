@@ -261,10 +261,15 @@ const RPGDashboardContent = () => {
                 {achievements.unlocked.map((a) => (
                   <li
                     key={a.id}
-                    className={`flex items-center gap-2 ${getRarityColor(a.rarity)}`}
+                    className="flex items-center justify-between bg-zinc-800 p-2 rounded-lg"
                   >
-                    🏆 {a.title}
-                    <span className="text-xs opacity-60">({a.rarity})</span>
+                    <span className={`font-semibold ${getRarityColor(a.rarity)}`}>
+                      🏆 {a.title}
+                    </span>
+
+                    <span className="text-xs opacity-70">
+                      {a.rarity}
+                    </span>
                   </li>
                 ))}
               </ul>
