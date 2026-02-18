@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { AvatarCard } from "@/components/rpg/AvatarCard";
 import { AttributeBar } from "@/components/rpg/AttributeBar";
@@ -211,16 +211,23 @@ const RPGDashboardContent = () => {
 
               <AnimatePresence>
                 {missions.missions.map((mission) => (
-                  <QuestCard
+                  <motion.div
                     key={mission.id}
-                    quest={mission}
-                    onComplete={() => {
-                      setPendingMission(mission);
-                      setShowConfirm(true);
-                    }}
-                  />
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <QuestCard
+                      quest={mission}
+                      onComplete={() => {
+                        setPendingMission(mission);
+                        setShowConfirm(true);
+                      }}
+                    />
+                  </motion.div>
                 ))}
               </AnimatePresence>
+
             </div>
           </div>
 
