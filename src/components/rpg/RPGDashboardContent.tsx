@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, ReactNode } from "react";
 import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -21,7 +21,7 @@ import { useAuthWithPlayer } from "@/hooks/useAuth"
 import "@/components/rpg/MissionModal.css";
 import { getRarityClasses } from "@/utils/achievementHelpers";
 
-const RPGDashboardContent = () => {
+const RPGDashboardContent = (): ReactNode => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [pendingMission, setPendingMission] = useState<Mission | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
