@@ -36,7 +36,7 @@ const RPGDashboardContent = () => {
   const missions = useMissions();
 
   if (!player) {
-    return <div className="text-white p-6">Carregando jogador...</div>;
+   return null;
   }
 
   const achievements = useAchievements(player, missions);
