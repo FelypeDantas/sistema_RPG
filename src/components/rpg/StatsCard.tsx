@@ -7,6 +7,7 @@ interface Stats {
   totalQuests: number;
   xpToday: number;
   streak: number;
+  weeklyXP: number[];
 }
 
 interface StatsCardProps {
