@@ -34,15 +34,16 @@ const RPGDashboardContent = () => {
   const { user } = useAuthWithPlayer();
   const player = usePlayerRealtime(typeof user?.uid === "string" ? user.uid : undefined);
   const missions = useMissions();
+
+  if (!player) {
+    return <div className="text-white p-6">Carregando jogador...</div>;
+  }
+
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
   const { talents, suggestedTalents, points, unlockTalent } =
     useTalents(player.level);
 
-  if (!player) {
-    return <div className="text-white p-6">Carregando jogador...</div>;
-  }
-  
   const now = new Date();
   const todayKey = now.toISOString().split("T")[0];
 
