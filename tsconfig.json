@@ -9,6 +9,7 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "jsx": "react-jsx",
+    "lib": ["DOM","ESNext"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
