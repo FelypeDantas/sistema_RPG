@@ -39,6 +39,10 @@ const RPGDashboardContent = () => {
   const { talents, suggestedTalents, points, unlockTalent } =
     useTalents(player.level);
 
+  if (!player) {
+    return <div className="text-white p-6">Carregando jogador...</div>;
+  }
+  
   const now = new Date();
   const todayKey = now.toISOString().split("T")[0];
 
