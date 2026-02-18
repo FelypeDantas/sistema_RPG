@@ -19,6 +19,7 @@ import { useTalents } from "@/hooks/useTalents";
 import { useAuthWithPlayer } from "@/hooks/useAuth"
 
 import "@/components/rpg/MissionModal.css";
+import { getRarityColor } from "@/utils/achievementHelpers";
 
 const RPGDashboardContent = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -151,7 +152,7 @@ const RPGDashboardContent = () => {
     <>
       <div className="min-h-screen bg-cyber-dark p-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           {/* LEFT */}
           <div className="space-y-6">
             <div
@@ -256,9 +257,15 @@ const RPGDashboardContent = () => {
                 <Trophy className="w-5 h-5 text-neon-orange" />
                 Conquistas
               </h3>
-              <ul className="space-y-2 text-sm text-gray-300">
+              <ul className="space-y-2 text-sm">
                 {achievements.unlocked.map((a) => (
-                  <li key={a.id}>🏆 {a.title}</li>
+                  <li
+                    key={a.id}
+                    className={`flex items-center gap-2 ${getRarityColor(a.rarity)}`}
+                  >
+                    🏆 {a.title}
+                    <span className="text-xs opacity-60">({a.rarity})</span>
+                  </li>
                 ))}
               </ul>
             </div>
