@@ -16,7 +16,9 @@ export default function TalentsTree() {
     byId,
     collapsed,
     toggleCollapse,
-    addCustomTalent
+    addCustomTalent,
+    points,
+    unlockTalent
   } = useTalents(level);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -55,14 +57,26 @@ export default function TalentsTree() {
           Voltar
         </button>
 
-        <div className="text-center">
+        <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold flex items-center gap-2 justify-center">
             <GitBranch className="text-purple-400" />
             Árvore de Habilidades
           </h1>
-          <p className="text-sm text-gray-400">
-            Evolução estratégica do personagem
-          </p>
+
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-sm text-gray-400">
+              Pontos Disponíveis:
+            </span>
+
+            <span
+              className={`text-sm font-bold px-2 py-0.5 rounded ${points > 0
+                  ? "bg-neon-cyan/20 text-neon-cyan"
+                  : "bg-red-500/20 text-red-400"
+                }`}
+            >
+              {points}
+            </span>
+          </div>
         </div>
 
         <button
