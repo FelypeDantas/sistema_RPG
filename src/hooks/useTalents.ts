@@ -84,17 +84,76 @@ const initialTalents: Record<string, TalentNodeData> = {
 };
 
 /* =============================
+   💾 STORAGE KEY
+============================= */
+
+const STORAGE_KEY = "lifeRpg_talents_state";
+
+/* =============================
    🧠 HOOK
 ============================= */
 
 export function useTalents(level: number) {
-  const [talents, setTalents] = useState<Record<string, TalentNodeData>>(initialTalents);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  /* =============================
+     🔄 CARREGA ESTADO PERSISTIDO
+  ============================= */
+
+  const [talents, setTalents] = useState<Record<string, TalentNodeData>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return initialTalents;
+
+    try {
+      const parsed = JSON.parse(saved);
+
+      // Mescla estado salvo com estrutura atual
+      const merged: Record<string, TalentNodeData> = {};
+
+      Object.keys(initialTalents).forEach(id => {
+        merged[id] = {
+          ...initialTalents[id],
+          ...parsed.talents?.[id]
+        };
+      });
+
+      return merged;
+    } catch {
+      return initialTalents;
+    }
+  });
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return {};
+
+    try {
+      const parsed = JSON.parse(saved);
+      return parsed.collapsed ?? {};
+    } catch {
+      return {};
+    }
+  });
+
   const [points, setPoints] = useState(0);
+
+  /* =============================
+     💾 SALVA AUTOMATICAMENTE
+  ============================= */
+
+  useEffect(() => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        talents,
+        collapsed
+      })
+    );
+  }, [talents, collapsed]);
 
   /* =============================
      🔢 CALCULA PONTOS DISPONÍVEIS
   ============================= */
+
   useEffect(() => {
     const spentPoints = Object.values(talents)
       .filter(t => !t.locked)
@@ -107,6 +166,7 @@ export function useTalents(level: number) {
   /* =============================
      🔓 DESBLOQUEIA TALENTO
   ============================= */
+
   const unlockTalent = useCallback((id: string) => {
     if (points <= 0) return;
 
@@ -116,13 +176,19 @@ export function useTalents(level: number) {
 
       const updated: Record<string, TalentNodeData> = {
         ...prev,
-        [id]: { ...talent, locked: false, progress: Math.max(talent.progress, 1) }
+        [id]: {
+          ...talent,
+          locked: false,
+          progress: Math.max(talent.progress, 1)
+        }
       };
 
-      // desbloqueia filhos como visíveis, mas mantém bloqueados
       talent.children?.forEach(childId => {
         if (updated[childId]) {
-          updated[childId] = { ...updated[childId], locked: true };
+          updated[childId] = {
+            ...updated[childId],
+            locked: true
+          };
         }
       });
 
@@ -131,27 +197,32 @@ export function useTalents(level: number) {
   }, [points]);
 
   /* =============================
-     ⭐ TALENTOS SUGERIDOS PARA DASHBOARD
+     ⭐ TALENTOS SUGERIDOS
   ============================= */
+
   const suggestedTalents = useMemo(() => {
     return Object.values(talents).filter(talent => {
       if (!talent.locked) return false;
-      // verifica se algum dos pais está desbloqueado
-      const parents = Object.values(talents).filter(p => p.children?.includes(talent.id));
+
+      const parents = Object.values(talents)
+        .filter(p => p.children?.includes(talent.id));
+
       return parents.some(parent => !parent.locked);
     });
   }, [talents]);
 
   /* =============================
-     📦 FUNÇÕES DE UI
+     📦 UI
   ============================= */
+
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
 
   /* =============================
-     📦 API DO HOOK
+     📦 API
   ============================= */
+
   return {
     talents: Object.values(talents),
     byId: talents,

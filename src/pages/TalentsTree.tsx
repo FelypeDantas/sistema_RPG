@@ -18,7 +18,7 @@ export default function TalentsTree() {
           <ArrowLeft />
           Voltar
         </button>
-        
+
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <GitBranch className="text-purple-400" />
@@ -35,6 +35,7 @@ export default function TalentsTree() {
           {talents.map(talent =>
             talent.children?.map(childId => {
               if (collapsed[talent.id]) return null;
+
               const child = byId[childId];
               if (!child) return null;
 
