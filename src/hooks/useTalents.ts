@@ -11,7 +11,6 @@ export function useTalents(level: number): UseTalentsReturn {
 
   const [points, setPoints] = useState(0);
   const isInitialLoad = useRef(true);
-  const [loading, setLoading] = useState<boolean>(true);
 
   /* =============================
      🌐 CARREGAR ÁRVORE BASE
@@ -32,14 +31,18 @@ export function useTalents(level: number): UseTalentsReturn {
       };
 
       setTalentsMap(data.nodes);
-      setLoading(false);
     };
 
     loadTree();
   }, []);
 
-    useEffect(() => {
-    if (loading) return;
+  /* =============================
+     🔄 SINCRONIZAR PROGRESSO DO USUÁRIO
+  ============================= */
+
+  useEffect(() => {
+    // 👇 se a árvore ainda não carregou, não faz nada
+    if (Object.keys(talentsMap).length === 0) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -76,60 +79,15 @@ export function useTalents(level: number): UseTalentsReturn {
 
     return unsubscribe;
 
-  }, [loading]);
-
-  /* =============================
-     🎯 LISTA TIPADA DERIVADA
-  ============================= */
-
-  const talentList = useMemo<TalentNodeData[]>(
-    () => Object.values(talentsMap),
-    [talentsMap]
-  );
-
-  /* =============================
-     🔄 REALTIME SYNC
-  ============================= */
-
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const ref = doc(db, "users", user.uid, "talents", "state");
-
-    const unsubscribe = onSnapshot(ref, snapshot => {
-      if (!snapshot.exists()) return;
-
-      const data = snapshot.data() as {
-        talents?: Partial<Record<string, Partial<TalentNodeData>>>;
-        collapsed?: Record<string, boolean>;
-      };
-
-      setTalentsMap(prev => {
-        const merged: Record<string, TalentNodeData> = {};
-
-        for (const id in prev) {
-          merged[id] = {
-            ...prev[id],
-            ...data.talents?.[id]
-          };
-        }
-
-        return merged;
-      });
-
-      setCollapsed(data.collapsed ?? {});
-      isInitialLoad.current = false;
-    });
-
-    return unsubscribe;
-  }, []);
+  }, [talentsMap]);
 
   /* =============================
      💾 AUTO SAVE
   ============================= */
 
   useEffect(() => {
+    if (Object.keys(talentsMap).length === 0) return;
+
     const user = auth.currentUser;
     if (!user || isInitialLoad.current) return;
 
@@ -141,6 +99,15 @@ export function useTalents(level: number): UseTalentsReturn {
     }, { merge: true });
 
   }, [talentsMap, collapsed]);
+
+  /* =============================
+     🎯 LISTA TIPADA DERIVADA
+  ============================= */
+
+  const talentList = useMemo<TalentNodeData[]>(
+    () => Object.values(talentsMap),
+    [talentsMap]
+  );
 
   /* =============================
      🔢 CÁLCULO DE PONTOS
@@ -184,6 +151,8 @@ export function useTalents(level: number): UseTalentsReturn {
   ============================= */
 
   useEffect(() => {
+    if (Object.keys(talentsMap).length === 0) return;
+
     const user = auth.currentUser;
     if (!user) return;
 
@@ -208,6 +177,8 @@ export function useTalents(level: number): UseTalentsReturn {
   ============================= */
 
   useEffect(() => {
+    if (Object.keys(talentsMap).length === 0) return;
+
     const user = auth.currentUser;
     if (!user) return;
 
