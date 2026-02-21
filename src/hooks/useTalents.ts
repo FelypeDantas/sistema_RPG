@@ -134,13 +134,38 @@ export function useTalents(level: number): UseTalentsReturn {
       };
     }
 
-    // 3️⃣ Reconstruir filhos
-    for (const id in merged) {
-      const parentId = merged[id].parentId;
-      if (parentId && merged[parentId]) {
-        merged[parentId].children!.push(id);
-      }
+    // =============================
+    // 📐 GERAR POSIÇÕES AUTOMÁTICAS
+    // =============================
+
+    const roots = Object.values(merged).filter(t => !t.parentId);
+
+    const levelMap: Record<number, TalentNodeData[]> = {};
+
+    function traverse(node: TalentNodeData, depth = 0) {
+      if (!levelMap[depth]) levelMap[depth] = [];
+      levelMap[depth].push(node);
+
+      node.children?.forEach(childId => {
+        const child = merged[childId];
+        if (child) traverse(child, depth + 1);
+      });
     }
+
+    roots.forEach(root => traverse(root));
+
+    const verticalSpacing = 140;
+    const horizontalSpacing = 200;
+
+    Object.entries(levelMap).forEach(([depthStr, nodes]) => {
+      const depth = Number(depthStr);
+      const totalWidth = (nodes.length - 1) * horizontalSpacing;
+
+      nodes.forEach((node, index) => {
+        node.x = index * horizontalSpacing - totalWidth / 2 + 400;
+        node.y = depth * verticalSpacing + 100;
+      });
+    });
 
     return merged;
 
