@@ -155,13 +155,13 @@ export function useTalents(level: number) {
   ============================= */
 
   useEffect(() => {
-    const spentPoints = Object.values(talents)
-      .filter(t => !t.locked)
-      .reduce((acc, t) => acc + t.cost, 0);
+  const spentPoints = Object.values(talents as Record<string, TalentNodeData>)
+    .filter((t: TalentNodeData) => !t.locked)
+    .reduce((acc: number, t: TalentNodeData) => acc + t.cost, 0);
 
-    const totalEarnedPoints = Math.max(level - 1, 0);
-    setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
-  }, [level, talents]);
+  const totalEarnedPoints = Math.max(level - 1, 0);
+  setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
+}, [level, talents]);
 
   /* =============================
      🔓 DESBLOQUEIA TALENTO
@@ -200,16 +200,19 @@ export function useTalents(level: number) {
      ⭐ TALENTOS SUGERIDOS
   ============================= */
 
-  const suggestedTalents = useMemo(() => {
-    return Object.values(talents).filter(talent => {
-      if (!talent.locked) return false;
+const suggestedTalents = useMemo(() => {
+  const talentList = Object.values(talents) as TalentNodeData[];
 
-      const parents = Object.values(talents)
-        .filter(p => p.children?.includes(talent.id));
+  return talentList.filter(talent => {
+    if (!talent.locked) return false;
 
-      return parents.some(parent => !parent.locked);
-    });
-  }, [talents]);
+    const parents = talentList.filter(p =>
+      p.children?.includes(talent.id)
+    );
+
+    return parents.some(parent => !parent.locked);
+  });
+}, [talents]);
 
   /* =============================
      📦 UI
