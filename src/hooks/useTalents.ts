@@ -3,21 +3,44 @@ import { doc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
 import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
 
-export function useTalents(level: number): UseTalentsReturn {
+export interface TalentNodeData {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+  progress: number;
+  locked: boolean;
+  parentId?: string;
+  children?: string[];
+  unlocksMission?: boolean;
+}
 
-  /* =============================
-     🌳 ÁRVORE BASE (CÓDIGO)
-  ============================= */
+interface UseTalentsReturn {
+  talents: TalentNodeData[];
+  byId: Record<string, TalentNodeData>;
+  suggestedTalents: TalentNodeData[];
+  points: number;
+  unlockTalent: (id: string) => void;
+  addCustomTalent: (
+    parentId: string,
+    title: string,
+    description: string,
+    cost: number
+  ) => void;
+  collapsed: Record<string, boolean>;
+  toggleCollapse: (id: string) => void;
+}
+
+export function useTalents(level: number): UseTalentsReturn {
 
   const baseTree = BASE_TALENTS;
   const treeVersion = BASE_TREE_VERSION;
 
-  /* =============================
-     👤 ESTADO DO JOGADOR
-  ============================= */
+  const [playerTalents, setPlayerTalents] =
+    useState<Record<string, Partial<TalentNodeData>>>({});
 
-  const [talentsMap, setTalentsMap] =
-    useState<Record<string, TalentNodeData>>(baseTree);
+  const [customTalents, setCustomTalents] =
+    useState<Record<string, TalentNodeData>>({});
 
   const [collapsed, setCollapsed] =
     useState<Record<string, boolean>>({});
@@ -27,7 +50,7 @@ export function useTalents(level: number): UseTalentsReturn {
   const isInitialSync = useRef(true);
 
   /* =============================
-     🔄 SINCRONIZAR PROGRESSO
+     🔄 CARREGAR DO FIREBASE
   ============================= */
 
   useEffect(() => {
@@ -39,24 +62,16 @@ export function useTalents(level: number): UseTalentsReturn {
     const unsubscribe = onSnapshot(ref, snapshot => {
 
       const data = snapshot.data() as {
-        talents?: Partial<Record<string, Partial<TalentNodeData>>>;
+        talents?: Record<string, Partial<TalentNodeData>>;
+        customTalents?: Record<string, TalentNodeData>;
         collapsed?: Record<string, boolean>;
         treeVersion?: number;
       };
 
-      const merged: Record<string, TalentNodeData> = {};
-
-      for (const id in baseTree) {
-        merged[id] = {
-          ...baseTree[id],
-          ...data?.talents?.[id]
-        };
-      }
-
-      setTalentsMap(merged);
+      setPlayerTalents(data?.talents ?? {});
+      setCustomTalents(data?.customTalents ?? {});
       setCollapsed(data?.collapsed ?? {});
 
-      // 🔥 Atualiza versão caso mude no código futuramente
       if (data?.treeVersion !== treeVersion) {
         setDoc(ref, { treeVersion }, { merge: true });
       }
@@ -65,8 +80,49 @@ export function useTalents(level: number): UseTalentsReturn {
     });
 
     return unsubscribe;
-
   }, []);
+
+  /* =============================
+     🧬 MERGE BASE + CUSTOM
+  ============================= */
+
+  const talentsMap = useMemo(() => {
+
+    const merged: Record<string, TalentNodeData> = {};
+
+    // base
+    for (const id in baseTree) {
+      merged[id] = {
+        ...baseTree[id],
+        ...playerTalents[id],
+        children: []
+      };
+    }
+
+    // custom
+    for (const id in customTalents) {
+      merged[id] = {
+        ...customTalents[id],
+        children: []
+      };
+    }
+
+    // reconstruir filhos dinamicamente
+    for (const id in merged) {
+      const talent = merged[id];
+      if (talent.parentId && merged[talent.parentId]) {
+        merged[talent.parentId].children!.push(id);
+      }
+    }
+
+    return merged;
+
+  }, [baseTree, playerTalents, customTalents]);
+
+  const talentList = useMemo(
+    () => Object.values(talentsMap),
+    [talentsMap]
+  );
 
   /* =============================
      💾 AUTO SAVE
@@ -79,21 +135,13 @@ export function useTalents(level: number): UseTalentsReturn {
     const ref = doc(db, "users", user.uid, "talents", "state");
 
     setDoc(ref, {
-      talents: talentsMap,
+      talents: playerTalents,
+      customTalents,
       collapsed,
       treeVersion
     }, { merge: true });
 
-  }, [talentsMap, collapsed]);
-
-  /* =============================
-     📋 LISTA TIPADA
-  ============================= */
-
-  const talentList = useMemo<TalentNodeData[]>(
-    () => Object.values(talentsMap),
-    [talentsMap]
-  );
+  }, [playerTalents, customTalents, collapsed]);
 
   /* =============================
      🔢 CÁLCULO DE PONTOS
@@ -117,33 +165,57 @@ export function useTalents(level: number): UseTalentsReturn {
   const unlockTalent = useCallback((id: string) => {
     if (points <= 0) return;
 
-    setTalentsMap(prev => {
-      const talent = prev[id];
-      if (!talent || !talent.locked) return prev;
+    setPlayerTalents(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        locked: false,
+        progress: Math.max(prev[id]?.progress ?? 0, 1)
+      }
+    }));
 
-      return {
-        ...prev,
-        [id]: {
-          ...talent,
-          locked: false,
-          progress: Math.max(talent.progress, 1)
-        }
-      };
-    });
   }, [points]);
 
   /* =============================
-     🎯 MISSÕES AUTOMÁTICAS
+     🌿 ADD CUSTOM TALENT
+  ============================= */
+
+  const addCustomTalent = useCallback((
+    parentId: string,
+    title: string,
+    description: string,
+    cost: number
+  ) => {
+
+    const id = `custom_${Date.now()}`;
+
+    setCustomTalents(prev => ({
+      ...prev,
+      [id]: {
+        id,
+        title,
+        description,
+        cost,
+        progress: 0,
+        locked: true,
+        parentId
+      }
+    }));
+
+  }, []);
+
+  /* =============================
+     🎯 MISSÕES
   ============================= */
 
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const unlockedMissions = talentList
+    const unlocked = talentList
       .filter(t => t.unlocksMission && t.progress >= 100);
 
-    unlockedMissions.forEach(async talent => {
+    unlocked.forEach(async talent => {
       const missionRef =
         doc(db, "missions", `${user.uid}_${talent.id}`);
 
@@ -185,13 +257,12 @@ export function useTalents(level: number): UseTalentsReturn {
     return talentList.filter(talent => {
       if (!talent.locked) return false;
 
-      const parents = talentList.filter(parent =>
-        parent.children?.includes(talent.id)
-      );
+      if (!talent.parentId) return false;
 
-      return parents.some(parent => !parent.locked);
+      const parent = talentsMap[talent.parentId];
+      return parent && !parent.locked;
     });
-  }, [talentList]);
+  }, [talentList, talentsMap]);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => ({
@@ -206,6 +277,7 @@ export function useTalents(level: number): UseTalentsReturn {
     suggestedTalents,
     points,
     unlockTalent,
+    addCustomTalent,
     collapsed,
     toggleCollapse
   };
