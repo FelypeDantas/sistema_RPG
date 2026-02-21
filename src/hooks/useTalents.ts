@@ -13,6 +13,9 @@ export interface TalentNodeData {
   parentId?: string;
   children?: string[];
   unlocksMission?: boolean;
+
+  x: number; // 🔥 adiciona
+  y: number; // 🔥 adiciona
 }
 
 interface PersistedState {
