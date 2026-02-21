@@ -59,11 +59,10 @@ export default function TalentsTree() {
             <TalentNode
               key={talent.id}
               title={talent.title}
-              x={talent.x}
-              y={talent.y}
+              position={{ x: talent.x, y: talent.y }}
               progress={talent.progress}
               locked={talent.locked}
-              hasChildren={!!talent.children}
+              hasChildren={!!talent.children?.length}
               collapsed={collapsed[talent.id]}
               onToggle={() => toggleCollapse(talent.id)}
             />
