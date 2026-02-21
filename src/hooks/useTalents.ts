@@ -1,216 +1,174 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
-
-/* =============================
-   🧬 TIPOS
-============================= */
-
-export type TalentNodeData = {
-  id: string;
-  title: string;
-  description: string;
-  cost: number;
-  category: "soft" | "hard" | "combat" | "mental";
-  x: number;
-  y: number;
-  progress: number;
-  locked?: boolean;
-  children?: string[];
-  unlocksMission?: boolean;
-};
-
-type UseTalentsReturn = {
-  talents: TalentNodeData[];
-  byId: Record<string, TalentNodeData>;
-  suggestedTalents: TalentNodeData[];
-  points: number;
-  unlockTalent: (id: string) => void;
-  collapsed: Record<string, boolean>;
-  toggleCollapse: (id: string) => void;
-};
-
-/* =============================
-   🌱 TALENTOS INICIAIS
-============================= */
-
-const initialTalents: Record<string, TalentNodeData> = {
-  foco: {
-    id: "foco",
-    title: "Foco",
-    description: "Aumenta a chance de sucesso em missões.",
-    cost: 1,
-    category: "mental",
-    x: 100,
-    y: 100,
-    progress: 30,
-    locked: false,
-    children: ["disciplina"]
-  },
-  disciplina: {
-    id: "disciplina",
-    title: "Disciplina",
-    description: "Bônus de XP quando mantém sequência de dias.",
-    cost: 1,
-    category: "mental",
-    x: 300,
-    y: 220,
-    progress: 0,
-    locked: true
-  },
-  capoeira: {
-    id: "capoeira",
-    title: "Capoeira",
-    description: "Desbloqueia missões físicas avançadas.",
-    cost: 1,
-    category: "combat",
-    x: 600,
-    y: 120,
-    progress: 10,
-    locked: false,
-    children: ["ginga", "armada"],
-    unlocksMission: true
-  },
-  ginga: {
-    id: "ginga",
-    title: "Ginga",
-    description: "Aumenta agilidade em missões físicas.",
-    cost: 1,
-    category: "combat",
-    x: 500,
-    y: 260,
-    progress: 0,
-    locked: true
-  },
-  armada: {
-    id: "armada",
-    title: "Armada",
-    description: "Aumenta poder em desafios físicos.",
-    cost: 1,
-    category: "combat",
-    x: 700,
-    y: 260,
-    progress: 0,
-    locked: true
-  }
-};
-
-const STORAGE_KEY = "lifeRpg_talents_state";
-
-/* =============================
-   🧠 HOOK
-============================= */
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { doc, setDoc, onSnapshot, updateDoc, getDoc } from "firebase/firestore";
+import { db, auth } from "@/services/firebase";
 
 export function useTalents(level: number): UseTalentsReturn {
-  const [talents, setTalents] = useState<Record<string, TalentNodeData>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return initialTalents;
+  const [talentsMap, setTalentsMap] =
+    useState<Record<string, TalentNodeData>>({});
 
-    try {
-      const parsed = JSON.parse(saved);
-
-      const merged: Record<string, TalentNodeData> = {};
-
-      Object.keys(initialTalents).forEach(id => {
-        merged[id] = {
-          ...initialTalents[id],
-          ...parsed.talents?.[id]
-        };
-      });
-
-      return merged;
-    } catch {
-      return initialTalents;
-    }
-  });
-
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return {};
-
-    try {
-      const parsed = JSON.parse(saved);
-      return parsed.collapsed ?? {};
-    } catch {
-      return {};
-    }
-  });
+  const [collapsed, setCollapsed] =
+    useState<Record<string, boolean>>({});
 
   const [points, setPoints] = useState(0);
+  const isInitialLoad = useRef(true);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  /* =============================
+     🌐 CARREGAR ÁRVORE BASE
+  ============================= */
 
   useEffect(() => {
-  async function loadFromServer() {
-    const response = await fetch("/api/player/talents");
-    const data = await response.json();
+    const loadTree = async () => {
+      const treeRef = doc(db, "talentTrees", "default");
+      const snapshot = await getDoc(treeRef);
 
-    setTalents(prev => {
-      const merged: Record<string, TalentNodeData> = {};
+      if (!snapshot.exists()) {
+        console.error("Árvore não encontrada no servidor");
+        return;
+      }
 
-      Object.keys(prev).forEach(id => {
-        merged[id] = {
-          ...prev[id],
-          ...data.talents?.[id]
-        };
+      const data = snapshot.data() as {
+        nodes: Record<string, TalentNodeData>;
+      };
+
+      setTalentsMap(data.nodes);
+      setLoading(false);
+    };
+
+    loadTree();
+  }, []);
+
+    useEffect(() => {
+    if (loading) return;
+
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const ref = doc(db, "users", user.uid, "talents", "state");
+
+    const unsubscribe = onSnapshot(ref, snapshot => {
+      if (!snapshot.exists()) {
+        isInitialLoad.current = false;
+        return;
+      }
+
+      const data = snapshot.data() as {
+        talents?: Partial<Record<string, Partial<TalentNodeData>>>;
+        collapsed?: Record<string, boolean>;
+      };
+
+      setTalentsMap(prev => {
+        const merged: Record<string, TalentNodeData> = {};
+
+        for (const id in prev) {
+          merged[id] = {
+            ...prev[id],
+            ...data.talents?.[id]
+          };
+        }
+
+        return merged;
       });
 
-      return merged;
+      setCollapsed(data.collapsed ?? {});
+      isInitialLoad.current = false;
     });
 
-    setCollapsed(data.collapsed ?? {});
-  }
+    return unsubscribe;
 
-  loadFromServer();
-}, []);
-
-useEffect(() => {
-  async function sync() {
-    await fetch("/api/player/talents", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ talents, collapsed })
-    });
-  }
-
-  sync();
-}, [talents, collapsed]);
-
+  }, [loading]);
 
   /* =============================
-     💾 Persistência
+     🎯 LISTA TIPADA DERIVADA
+  ============================= */
+
+  const talentList = useMemo<TalentNodeData[]>(
+    () => Object.values(talentsMap),
+    [talentsMap]
+  );
+
+  /* =============================
+     🔄 REALTIME SYNC
   ============================= */
 
   useEffect(() => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ talents, collapsed })
-    );
-  }, [talents, collapsed]);
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const ref = doc(db, "users", user.uid, "talents", "state");
+
+    const unsubscribe = onSnapshot(ref, snapshot => {
+      if (!snapshot.exists()) return;
+
+      const data = snapshot.data() as {
+        talents?: Partial<Record<string, Partial<TalentNodeData>>>;
+        collapsed?: Record<string, boolean>;
+      };
+
+      setTalentsMap(prev => {
+        const merged: Record<string, TalentNodeData> = {};
+
+        for (const id in prev) {
+          merged[id] = {
+            ...prev[id],
+            ...data.talents?.[id]
+          };
+        }
+
+        return merged;
+      });
+
+      setCollapsed(data.collapsed ?? {});
+      isInitialLoad.current = false;
+    });
+
+    return unsubscribe;
+  }, []);
 
   /* =============================
-     🔢 Cálculo de pontos
+     💾 AUTO SAVE
   ============================= */
 
   useEffect(() => {
-    const talentList: TalentNodeData[] = Object.values(talents);
+    const user = auth.currentUser;
+    if (!user || isInitialLoad.current) return;
 
+    const ref = doc(db, "users", user.uid, "talents", "state");
+
+    setDoc(ref, {
+      talents: talentsMap,
+      collapsed
+    }, { merge: true });
+
+  }, [talentsMap, collapsed]);
+
+  /* =============================
+     🔢 CÁLCULO DE PONTOS
+  ============================= */
+
+  useEffect(() => {
     const spentPoints = talentList
       .filter(t => !t.locked)
       .reduce((acc, t) => acc + t.cost, 0);
 
     const totalEarnedPoints = Math.max(level - 1, 0);
+
     setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
-  }, [level, talents]);
+
+  }, [level, talentList]);
 
   /* =============================
-     🔓 Unlock
+     🔓 UNLOCK
   ============================= */
 
   const unlockTalent = useCallback((id: string) => {
     if (points <= 0) return;
 
-    setTalents(prev => {
+    setTalentsMap(prev => {
       const talent = prev[id];
       if (!talent || !talent.locked) return prev;
 
-      const updated: Record<string, TalentNodeData> = {
+      return {
         ...prev,
         [id]: {
           ...talent,
@@ -218,36 +176,80 @@ useEffect(() => {
           progress: Math.max(talent.progress, 1)
         }
       };
-
-      return updated;
     });
   }, [points]);
 
   /* =============================
-     ⭐ Suggested
+     🎯 MISSÕES AUTOMÁTICAS
+  ============================= */
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const unlockedMissions = talentList
+      .filter(t => t.unlocksMission && t.progress >= 100);
+
+    unlockedMissions.forEach(async talent => {
+      const missionRef =
+        doc(db, "missions", `${user.uid}_${talent.id}`);
+
+      await setDoc(missionRef, {
+        title: `Missão desbloqueada: ${talent.title}`,
+        unlockedAt: new Date(),
+        completed: false
+      }, { merge: true });
+    });
+
+  }, [talentList]);
+
+  /* =============================
+     🏆 LEADERBOARD
+  ============================= */
+
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const totalPower =
+      talentList.reduce((acc, t) => acc + t.progress, 0);
+
+    const leaderboardRef =
+      doc(db, "leaderboard", user.uid);
+
+    updateDoc(leaderboardRef, { totalPower })
+      .catch(() =>
+        setDoc(leaderboardRef, { totalPower })
+      );
+
+  }, [talentList]);
+
+  /* =============================
+     ⭐ SUGERIDOS
   ============================= */
 
   const suggestedTalents = useMemo(() => {
-    const talentList: TalentNodeData[] = Object.values(talents);
-
     return talentList.filter(talent => {
       if (!talent.locked) return false;
 
-      const parents = talentList.filter(p =>
-        p.children?.includes(talent.id)
+      const parents = talentList.filter(parent =>
+        parent.children?.includes(talent.id)
       );
 
       return parents.some(parent => !parent.locked);
     });
-  }, [talents]);
+  }, [talentList]);
 
   const toggleCollapse = useCallback((id: string) => {
-    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+    setCollapsed(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
   }, []);
 
   return {
-    talents: Object.values(talents),
-    byId: talents,
+    talents: talentList,
+    byId: talentsMap,
     suggestedTalents,
     points,
     unlockTalent,
