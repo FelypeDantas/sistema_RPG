@@ -12,10 +12,20 @@ export type TalentNodeData = {
   category: "soft" | "hard" | "combat" | "mental";
   x: number;
   y: number;
-  progress: number; // 0–100
+  progress: number;
   locked?: boolean;
   children?: string[];
   unlocksMission?: boolean;
+};
+
+type UseTalentsReturn = {
+  talents: TalentNodeData[];
+  byId: Record<string, TalentNodeData>;
+  suggestedTalents: TalentNodeData[];
+  points: number;
+  unlockTalent: (id: string) => void;
+  collapsed: Record<string, boolean>;
+  toggleCollapse: (id: string) => void;
 };
 
 /* =============================
@@ -83,22 +93,13 @@ const initialTalents: Record<string, TalentNodeData> = {
   }
 };
 
-/* =============================
-   💾 STORAGE KEY
-============================= */
-
 const STORAGE_KEY = "lifeRpg_talents_state";
 
 /* =============================
    🧠 HOOK
 ============================= */
 
-export function useTalents(level: number) {
-
-  /* =============================
-     🔄 CARREGA ESTADO PERSISTIDO
-  ============================= */
-
+export function useTalents(level: number): UseTalentsReturn {
   const [talents, setTalents] = useState<Record<string, TalentNodeData>>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return initialTalents;
@@ -106,7 +107,6 @@ export function useTalents(level: number) {
     try {
       const parsed = JSON.parse(saved);
 
-      // Mescla estado salvo com estrutura atual
       const merged: Record<string, TalentNodeData> = {};
 
       Object.keys(initialTalents).forEach(id => {
@@ -137,34 +137,33 @@ export function useTalents(level: number) {
   const [points, setPoints] = useState(0);
 
   /* =============================
-     💾 SALVA AUTOMATICAMENTE
+     💾 Persistência
   ============================= */
 
   useEffect(() => {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({
-        talents,
-        collapsed
-      })
+      JSON.stringify({ talents, collapsed })
     );
   }, [talents, collapsed]);
 
   /* =============================
-     🔢 CALCULA PONTOS DISPONÍVEIS
+     🔢 Cálculo de pontos
   ============================= */
 
   useEffect(() => {
-  const spentPoints = Object.values(talents as Record<string, TalentNodeData>)
-    .filter((t: TalentNodeData) => !t.locked)
-    .reduce((acc: number, t: TalentNodeData) => acc + t.cost, 0);
+    const talentList: TalentNodeData[] = Object.values(talents);
 
-  const totalEarnedPoints = Math.max(level - 1, 0);
-  setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
-}, [level, talents]);
+    const spentPoints = talentList
+      .filter(t => !t.locked)
+      .reduce((acc, t) => acc + t.cost, 0);
+
+    const totalEarnedPoints = Math.max(level - 1, 0);
+    setPoints(Math.max(totalEarnedPoints - spentPoints, 0));
+  }, [level, talents]);
 
   /* =============================
-     🔓 DESBLOQUEIA TALENTO
+     🔓 Unlock
   ============================= */
 
   const unlockTalent = useCallback((id: string) => {
@@ -183,48 +182,31 @@ export function useTalents(level: number) {
         }
       };
 
-      talent.children?.forEach(childId => {
-        if (updated[childId]) {
-          updated[childId] = {
-            ...updated[childId],
-            locked: true
-          };
-        }
-      });
-
       return updated;
     });
   }, [points]);
 
   /* =============================
-     ⭐ TALENTOS SUGERIDOS
+     ⭐ Suggested
   ============================= */
 
-const suggestedTalents = useMemo(() => {
-  const talentList = Object.values(talents) as TalentNodeData[];
+  const suggestedTalents = useMemo(() => {
+    const talentList: TalentNodeData[] = Object.values(talents);
 
-  return talentList.filter(talent => {
-    if (!talent.locked) return false;
+    return talentList.filter(talent => {
+      if (!talent.locked) return false;
 
-    const parents = talentList.filter(p =>
-      p.children?.includes(talent.id)
-    );
+      const parents = talentList.filter(p =>
+        p.children?.includes(talent.id)
+      );
 
-    return parents.some(parent => !parent.locked);
-  });
-}, [talents]);
-
-  /* =============================
-     📦 UI
-  ============================= */
+      return parents.some(parent => !parent.locked);
+    });
+  }, [talents]);
 
   const toggleCollapse = useCallback((id: string) => {
     setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
-
-  /* =============================
-     📦 API
-  ============================= */
 
   return {
     talents: Object.values(talents),

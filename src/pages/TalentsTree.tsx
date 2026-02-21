@@ -1,12 +1,14 @@
 import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useTalents } from "../hooks/useTalents";
+import { useTalents, TalentNodeData } from "../hooks/useTalents";
 import TalentNode from "../components/rpg/TalentNode";
 import TalentEdge from "../components/rpg/TalentEdge";
+import { usePlayerRealtime } from "../hooks/usePlayer";
 
 export default function TalentsTree() {
   const navigate = useNavigate();
-  const { talents, byId, collapsed, toggleCollapse } = useTalents();
+  const { level } = usePlayerRealtime();
+  const { talents, byId, collapsed, toggleCollapse } = useTalents(level);
 
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white overflow-hidden">
