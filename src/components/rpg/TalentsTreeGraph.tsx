@@ -4,12 +4,8 @@ import { usePlayerRealtime } from "@/hooks/usePlayer";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-const VIEWBOX_WIDTH = 800;
-const VIEWBOX_HEIGHT = 600;
-const NODE_RADIUS = 22;
-const OUTER_RADIUS = 26;
-const HOVER_RADIUS = 30;
-const UNLOCK_GLOW_RADIUS = 34;
+const WIDTH = 800;
+const HEIGHT = 600;
 
 export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayerRealtime();
@@ -17,19 +13,25 @@ export default function TalentsTreeGraph() {
     useTalents(level, playerClass);
 
   /* =============================
-     🗺️ MAPA OTIMIZADO
+     🗺️ MAPA VALIDADO
   ============================= */
 
+  const validTalents = useMemo(() => {
+    return TALENT_GRAPH.filter(
+      t => t?.id && t?.position?.x != null && t?.position?.y != null
+    );
+  }, []);
+
   const talentMap = useMemo(() => {
-    const map = new Map<string, typeof TALENT_GRAPH[number]>();
-    for (const t of TALENT_GRAPH) {
+    const map = new Map();
+    for (const t of validTalents) {
       map.set(t.id, t);
     }
     return map;
-  }, []);
+  }, [validTalents]);
 
   /* =============================
-     🔗 EDGES PRÉ-CALCULADAS
+     🔗 EDGES SEGURAS
   ============================= */
 
   const edges = useMemo(() => {
@@ -40,34 +42,30 @@ export default function TalentsTreeGraph() {
       active: boolean;
     }[] = [];
 
-    for (const t of TALENT_GRAPH) {
+    for (const t of validTalents) {
       if (!t.requires) continue;
 
       for (const req of t.requires) {
         const from = talentMap.get(req);
-        if (!from) continue;
+        if (!from?.position) continue;
 
-        const active =
-          unlocked.includes(req) &&
-          unlocked.includes(t.id);
+        if (!t.position) continue;
 
         result.push({
           key: `${req}-${t.id}`,
           from: from.position,
           to: t.position,
-          active
+          active:
+            unlocked.includes(req) &&
+            unlocked.includes(t.id)
         });
       }
     }
 
     return result;
-  }, [talentMap, unlocked]);
+  }, [validTalents, talentMap, unlocked]);
 
-  /* =============================
-     🧠 CURVA SUAVE
-  ============================= */
-
-  const getCurvePath = (
+  const getCurve = (
     x1: number,
     y1: number,
     x2: number,
@@ -83,13 +81,9 @@ export default function TalentsTreeGraph() {
     `;
   };
 
-  /* =============================
-     🎨 RENDER
-  ============================= */
-
   return (
     <svg
-      viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       className="w-full h-[600px] bg-cyber-dark rounded-xl"
     >
       <defs>
@@ -101,63 +95,59 @@ export default function TalentsTreeGraph() {
           </feMerge>
         </filter>
 
-        <linearGradient
-          id="activeEdge"
-          gradientUnits="userSpaceOnUse"
-        >
+        <linearGradient id="activeEdge">
           <stop offset="0%" stopColor="#22c55e" />
           <stop offset="50%" stopColor="#22d3ee" />
           <stop offset="100%" stopColor="#22c55e" />
         </linearGradient>
       </defs>
 
-      {/* =============================
-           🔗 CONEXÕES
-         ============================= */}
+      {/* CONEXÕES */}
+      {edges.map(edge => {
+        if (
+          edge.from?.x == null ||
+          edge.from?.y == null ||
+          edge.to?.x == null ||
+          edge.to?.y == null
+        ) {
+          return null;
+        }
 
-      {edges.map(edge => (
-        <motion.path
-          key={edge.key}
-          d={getCurvePath(
-            edge.from.x,
-            edge.from.y,
-            edge.to.x,
-            edge.to.y
-          )}
-          stroke={
-            edge.active
-              ? "url(#activeEdge)"
-              : "#444"
-          }
-          strokeWidth="3"
-          fill="transparent"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 0.6 }}
-          style={
-            edge.active
-              ? { filter: "url(#glow)" }
-              : undefined
-          }
-        />
-      ))}
+        return (
+          <motion.path
+            key={edge.key}
+            d={getCurve(
+              edge.from.x,
+              edge.from.y,
+              edge.to.x,
+              edge.to.y
+            )}
+            stroke={
+              edge.active
+                ? "url(#activeEdge)"
+                : "#444"
+            }
+            strokeWidth="3"
+            fill="transparent"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.6 }}
+            style={
+              edge.active
+                ? { filter: "url(#glow)" }
+                : undefined
+            }
+          />
+        );
+      })}
 
-      {/* =============================
-           🔘 NÓS
-         ============================= */}
-
-      {TALENT_GRAPH.map(t => {
-        if (!t.position) return null; // blindagem
+      {/* NÓS */}
+      {validTalents.map(t => {
+        if (!t.position) return null;
 
         const isUnlocked = unlocked.includes(t.id);
         const available = canUnlock(t);
         const clickable = available && !isUnlocked;
-
-        const fillColor = isUnlocked
-          ? "#22c55e"
-          : available
-          ? "#a855f7"
-          : "#333";
 
         return (
           <motion.g
@@ -172,49 +162,17 @@ export default function TalentsTreeGraph() {
               clickable ? "cursor-pointer" : ""
             }
           >
-            {/* Nó disponível pulsando */}
-            {clickable && (
-              <motion.circle
-                cx={t.position.x}
-                cy={t.position.y}
-                r={HOVER_RADIUS}
-                fill="#a855f7"
-                initial={{ opacity: 0.15 }}
-                animate={{
-                  opacity: [0.15, 0.35, 0.15]
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2
-                }}
-              />
-            )}
-
-            {/* Glow desbloqueado */}
-            {isUnlocked && (
-              <motion.circle
-                cx={t.position.x}
-                cy={t.position.y}
-                r={UNLOCK_GLOW_RADIUS}
-                fill="#22c55e"
-                initial={{ opacity: 0.3 }}
-                animate={{
-                  opacity: [0.3, 0.1, 0.3],
-                  scale: [1, 1.15, 1]
-                }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 2
-                }}
-              />
-            )}
-
-            {/* Círculo principal */}
             <circle
               cx={t.position.x}
               cy={t.position.y}
-              r={NODE_RADIUS}
-              fill={fillColor}
+              r="22"
+              fill={
+                isUnlocked
+                  ? "#22c55e"
+                  : available
+                  ? "#a855f7"
+                  : "#333"
+              }
               style={
                 isUnlocked
                   ? { filter: "url(#glow)" }
@@ -222,20 +180,6 @@ export default function TalentsTreeGraph() {
               }
             />
 
-            {/* Anel externo */}
-            <circle
-              cx={t.position.x}
-              cy={t.position.y}
-              r={OUTER_RADIUS}
-              fill="none"
-              stroke={
-                available ? "#22d3ee" : "#444"
-              }
-              strokeWidth="1"
-              opacity="0.4"
-            />
-
-            {/* Texto */}
             <text
               x={t.position.x}
               y={t.position.y + 40}
