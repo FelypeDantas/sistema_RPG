@@ -136,6 +136,43 @@ export function useTalents(level: number): UseTalentsReturn {
 
   const [points, setPoints] = useState(0);
 
+  useEffect(() => {
+  async function loadFromServer() {
+    const response = await fetch("/api/player/talents");
+    const data = await response.json();
+
+    setTalents(prev => {
+      const merged: Record<string, TalentNodeData> = {};
+
+      Object.keys(prev).forEach(id => {
+        merged[id] = {
+          ...prev[id],
+          ...data.talents?.[id]
+        };
+      });
+
+      return merged;
+    });
+
+    setCollapsed(data.collapsed ?? {});
+  }
+
+  loadFromServer();
+}, []);
+
+useEffect(() => {
+  async function sync() {
+    await fetch("/api/player/talents", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ talents, collapsed })
+    });
+  }
+
+  sync();
+}, [talents, collapsed]);
+
+
   /* =============================
      💾 Persistência
   ============================= */
