@@ -1,25 +1,23 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { doc, setDoc, onSnapshot, updateDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
+import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
 
 export function useTalents(level: number): UseTalentsReturn {
 
   /* =============================
-     🌳 ÁRVORE BASE (SERVIDOR)
+     🌳 ÁRVORE BASE (CÓDIGO)
   ============================= */
 
-  const [baseTree, setBaseTree] =
-    useState<Record<string, TalentNodeData>>({});
-
-  const [treeVersion, setTreeVersion] =
-    useState<number>(1);
+  const baseTree = BASE_TALENTS;
+  const treeVersion = BASE_TREE_VERSION;
 
   /* =============================
      👤 ESTADO DO JOGADOR
   ============================= */
 
   const [talentsMap, setTalentsMap] =
-    useState<Record<string, TalentNodeData>>({});
+    useState<Record<string, TalentNodeData>>(baseTree);
 
   const [collapsed, setCollapsed] =
     useState<Record<string, boolean>>({});
@@ -29,44 +27,17 @@ export function useTalents(level: number): UseTalentsReturn {
   const isInitialSync = useRef(true);
 
   /* =============================
-     🌐 CARREGAR ÁRVORE BASE
-  ============================= */
-
-  useEffect(() => {
-    const loadTree = async () => {
-      const treeRef = doc(db, "talentTrees", "default");
-      const snapshot = await getDoc(treeRef);
-
-      if (!snapshot.exists()) {
-        console.error("Árvore não encontrada no servidor");
-        return;
-      }
-
-      const data = snapshot.data() as {
-        version: number;
-        nodes: Record<string, TalentNodeData>;
-      };
-
-      setBaseTree(data.nodes);
-      setTreeVersion(data.version);
-    };
-
-    loadTree();
-  }, []);
-
-  /* =============================
      🔄 SINCRONIZAR PROGRESSO
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(baseTree).length === 0) return;
-
     const user = auth.currentUser;
     if (!user) return;
 
     const ref = doc(db, "users", user.uid, "talents", "state");
 
     const unsubscribe = onSnapshot(ref, snapshot => {
+
       const data = snapshot.data() as {
         talents?: Partial<Record<string, Partial<TalentNodeData>>>;
         collapsed?: Record<string, boolean>;
@@ -85,7 +56,7 @@ export function useTalents(level: number): UseTalentsReturn {
       setTalentsMap(merged);
       setCollapsed(data?.collapsed ?? {});
 
-      // 🔥 Atualiza versão se estiver desatualizada
+      // 🔥 Atualiza versão caso mude no código futuramente
       if (data?.treeVersion !== treeVersion) {
         setDoc(ref, { treeVersion }, { merge: true });
       }
@@ -95,15 +66,13 @@ export function useTalents(level: number): UseTalentsReturn {
 
     return unsubscribe;
 
-  }, [baseTree, treeVersion]);
+  }, []);
 
   /* =============================
      💾 AUTO SAVE
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(baseTree).length === 0) return;
-
     const user = auth.currentUser;
     if (!user || isInitialSync.current) return;
 
@@ -115,7 +84,7 @@ export function useTalents(level: number): UseTalentsReturn {
       treeVersion
     }, { merge: true });
 
-  }, [talentsMap, collapsed, treeVersion, baseTree]);
+  }, [talentsMap, collapsed]);
 
   /* =============================
      📋 LISTA TIPADA
@@ -168,8 +137,6 @@ export function useTalents(level: number): UseTalentsReturn {
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(baseTree).length === 0) return;
-
     const user = auth.currentUser;
     if (!user) return;
 
@@ -187,15 +154,13 @@ export function useTalents(level: number): UseTalentsReturn {
       }, { merge: true });
     });
 
-  }, [talentList, baseTree]);
+  }, [talentList]);
 
   /* =============================
      🏆 LEADERBOARD
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(baseTree).length === 0) return;
-
     const user = auth.currentUser;
     if (!user) return;
 
@@ -210,7 +175,7 @@ export function useTalents(level: number): UseTalentsReturn {
         setDoc(leaderboardRef, { totalPower })
       );
 
-  }, [talentList, baseTree]);
+  }, [talentList]);
 
   /* =============================
      ⭐ SUGERIDOS
