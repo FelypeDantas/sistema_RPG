@@ -3,6 +3,21 @@ import { doc, setDoc, onSnapshot, updateDoc, getDoc } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
 
 export function useTalents(level: number): UseTalentsReturn {
+
+  /* =============================
+     🌳 ÁRVORE BASE (SERVIDOR)
+  ============================= */
+
+  const [baseTree, setBaseTree] =
+    useState<Record<string, TalentNodeData>>({});
+
+  const [treeVersion, setTreeVersion] =
+    useState<number>(1);
+
+  /* =============================
+     👤 ESTADO DO JOGADOR
+  ============================= */
+
   const [talentsMap, setTalentsMap] =
     useState<Record<string, TalentNodeData>>({});
 
@@ -10,7 +25,8 @@ export function useTalents(level: number): UseTalentsReturn {
     useState<Record<string, boolean>>({});
 
   const [points, setPoints] = useState(0);
-  const isInitialLoad = useRef(true);
+
+  const isInitialSync = useRef(true);
 
   /* =============================
      🌐 CARREGAR ÁRVORE BASE
@@ -27,22 +43,23 @@ export function useTalents(level: number): UseTalentsReturn {
       }
 
       const data = snapshot.data() as {
+        version: number;
         nodes: Record<string, TalentNodeData>;
       };
 
-      setTalentsMap(data.nodes);
+      setBaseTree(data.nodes);
+      setTreeVersion(data.version);
     };
 
     loadTree();
   }, []);
 
   /* =============================
-     🔄 SINCRONIZAR PROGRESSO DO USUÁRIO
+     🔄 SINCRONIZAR PROGRESSO
   ============================= */
 
   useEffect(() => {
-    // 👇 se a árvore ainda não carregou, não faz nada
-    if (Object.keys(talentsMap).length === 0) return;
+    if (Object.keys(baseTree).length === 0) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -50,58 +67,58 @@ export function useTalents(level: number): UseTalentsReturn {
     const ref = doc(db, "users", user.uid, "talents", "state");
 
     const unsubscribe = onSnapshot(ref, snapshot => {
-      if (!snapshot.exists()) {
-        isInitialLoad.current = false;
-        return;
-      }
-
       const data = snapshot.data() as {
         talents?: Partial<Record<string, Partial<TalentNodeData>>>;
         collapsed?: Record<string, boolean>;
+        treeVersion?: number;
       };
 
-      setTalentsMap(prev => {
-        const merged: Record<string, TalentNodeData> = {};
+      const merged: Record<string, TalentNodeData> = {};
 
-        for (const id in prev) {
-          merged[id] = {
-            ...prev[id],
-            ...data.talents?.[id]
-          };
-        }
+      for (const id in baseTree) {
+        merged[id] = {
+          ...baseTree[id],
+          ...data?.talents?.[id]
+        };
+      }
 
-        return merged;
-      });
+      setTalentsMap(merged);
+      setCollapsed(data?.collapsed ?? {});
 
-      setCollapsed(data.collapsed ?? {});
-      isInitialLoad.current = false;
+      // 🔥 Atualiza versão se estiver desatualizada
+      if (data?.treeVersion !== treeVersion) {
+        setDoc(ref, { treeVersion }, { merge: true });
+      }
+
+      isInitialSync.current = false;
     });
 
     return unsubscribe;
 
-  }, [talentsMap]);
+  }, [baseTree, treeVersion]);
 
   /* =============================
      💾 AUTO SAVE
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(talentsMap).length === 0) return;
+    if (Object.keys(baseTree).length === 0) return;
 
     const user = auth.currentUser;
-    if (!user || isInitialLoad.current) return;
+    if (!user || isInitialSync.current) return;
 
     const ref = doc(db, "users", user.uid, "talents", "state");
 
     setDoc(ref, {
       talents: talentsMap,
-      collapsed
+      collapsed,
+      treeVersion
     }, { merge: true });
 
-  }, [talentsMap, collapsed]);
+  }, [talentsMap, collapsed, treeVersion, baseTree]);
 
   /* =============================
-     🎯 LISTA TIPADA DERIVADA
+     📋 LISTA TIPADA
   ============================= */
 
   const talentList = useMemo<TalentNodeData[]>(
@@ -151,7 +168,7 @@ export function useTalents(level: number): UseTalentsReturn {
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(talentsMap).length === 0) return;
+    if (Object.keys(baseTree).length === 0) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -170,14 +187,14 @@ export function useTalents(level: number): UseTalentsReturn {
       }, { merge: true });
     });
 
-  }, [talentList]);
+  }, [talentList, baseTree]);
 
   /* =============================
      🏆 LEADERBOARD
   ============================= */
 
   useEffect(() => {
-    if (Object.keys(talentsMap).length === 0) return;
+    if (Object.keys(baseTree).length === 0) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -193,7 +210,7 @@ export function useTalents(level: number): UseTalentsReturn {
         setDoc(leaderboardRef, { totalPower })
       );
 
-  }, [talentList]);
+  }, [talentList, baseTree]);
 
   /* =============================
      ⭐ SUGERIDOS
