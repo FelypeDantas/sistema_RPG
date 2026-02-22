@@ -12,57 +12,76 @@ export default function TalentsTree() {
   const { level } = usePlayerRealtime();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const talentsHook = useTalents(level);
+
+  const safeTalents = Array.isArray(talentsHook?.talents)
+    ? talentsHook.talents
+    : [];
+
+  const safeById =
+    typeof talentsHook?.byId === "object" && talentsHook.byId
+      ? talentsHook.byId
+      : {};
+
+  const safeCollapsed =
+    typeof talentsHook?.collapsed === "object" && talentsHook.collapsed
+      ? talentsHook.collapsed
+      : {};
+
   const {
-    talents,
-    byId,
-    collapsed,
     toggleCollapse,
     addCustomTalent,
-    points,
+    points = 0,
     unlockTalent,
     trainTalent
-  } = useTalents(level);
+  } = talentsHook;
 
   const [modalOpen, setModalOpen] = useState(false);
   const [scale, setScale] = useState(1);
 
   /* =====================================================
-     🔎 CHECK SE ESTÁ OCULTO POR QUALQUER ANCESTRAL
+     🔎 PROTEÇÃO CONTRA LOOP E UNDEFINED
   ===================================================== */
   const isHiddenByAncestor = useCallback(
     (talentId: string) => {
-      let current = byId[talentId];
+      const visited = new Set<string>();
+      let current = safeById[talentId];
 
       while (current?.parentId) {
-        if (collapsed[current.parentId]) return true;
-        current = byId[current.parentId];
+        if (visited.has(current.id)) break;
+        visited.add(current.id);
+
+        if (safeCollapsed[current.parentId]) return true;
+        current = safeById[current.parentId];
       }
 
       return false;
     },
-    [byId, collapsed]
+    [safeById, safeCollapsed]
   );
 
   /* =====================================================
-     🌳 FILTRAR TALENTOS VISÍVEIS
+     🌳 TALENTOS VISÍVEIS SEGUROS
   ===================================================== */
   const visibleTalents = useMemo(() => {
-    return talents.filter(t => !isHiddenByAncestor(t.id));
-  }, [talents, isHiddenByAncestor]);
+    return safeTalents.filter(
+      t => t?.id && !isHiddenByAncestor(t.id)
+    );
+  }, [safeTalents, isHiddenByAncestor]);
 
   /* =====================================================
-     🔗 GERAR EDGES APENAS ENTRE VISÍVEIS
+     🔗 EDGES SEGURAS
   ===================================================== */
   const visibleEdges = useMemo(() => {
     return visibleTalents
-      .filter(t => t.parentId)
+      .filter(t => t?.parentId && safeById[t.parentId])
       .map(t => ({
         key: `${t.parentId}-${t.id}`,
-        from: byId[t.parentId!],
+        from: safeById[t.parentId!],
         to: t
       }))
-      .filter(edge => edge.from && !isHiddenByAncestor(edge.from.id));
-  }, [visibleTalents, byId, isHiddenByAncestor]);
+      .filter(edge => edge.from && edge.to);
+  }, [visibleTalents, safeById]);
 
   /* =====================================================
      🔎 ZOOM CONTROL
@@ -77,21 +96,22 @@ export default function TalentsTree() {
   };
 
   /* =====================================================
-     🧠 MAPA DE FILHOS (performance)
+     🧠 MAPA DE FILHOS SEGURO
   ===================================================== */
   const childrenMap = useMemo(() => {
     const map: Record<string, number> = {};
-    talents.forEach(t => {
-      if (t.parentId) {
+
+    safeTalents.forEach(t => {
+      if (t?.parentId) {
         map[t.parentId] = (map[t.parentId] || 0) + 1;
       }
     });
+
     return map;
-  }, [talents]);
+  }, [safeTalents]);
 
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white">
-
       {/* HEADER */}
       <header className="mb-8 flex items-center justify-between">
         <button
@@ -166,27 +186,29 @@ export default function TalentsTree() {
           {visibleTalents.map(talent => (
             <TalentNode
               key={talent.id}
-              title={talent.title}
-              position={{ x: talent.x, y: talent.y }}
-              progress={talent.progress}
-              locked={talent.locked}
+              title={talent.title ?? ""}
+              position={{
+                x: talent.x ?? 0,
+                y: talent.y ?? 0
+              }}
+              progress={talent.progress ?? 0}
+              locked={!!talent.locked}
               hasChildren={!!childrenMap[talent.id]}
-              collapsed={collapsed[talent.id]}
-              onToggle={() => toggleCollapse(talent.id)}
+              collapsed={!!safeCollapsed[talent.id]}
+              onToggle={() => toggleCollapse?.(talent.id)}
               points={points}
-              onUnlock={() => unlockTalent(talent.id)}
-              onTrain={() => trainTalent(talent.id)}
+              onUnlock={() => unlockTalent?.(talent.id)}
+              onTrain={() => trainTalent?.(talent.id)}
             />
           ))}
         </div>
       </div>
 
-      {/* MODAL */}
       <CreateTalentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={addCustomTalent}
-        talents={talents}
+        talents={safeTalents}
       />
     </div>
   );
