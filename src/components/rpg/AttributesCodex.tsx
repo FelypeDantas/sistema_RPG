@@ -67,10 +67,14 @@ const SegmentCard = memo(
   ({
     segment,
     value,
+    isSelected,
+    onSelect,
     onEvolve
   }: {
     segment: any;
     value: number;
+    isSelected: boolean;
+    onSelect: () => void;
     onEvolve: () => void;
   }) => {
     const safe = clamp(value);
@@ -79,29 +83,39 @@ const SegmentCard = memo(
 
     return (
       <div
-        className="
+        onClick={onSelect}
+        className={`
+          cursor-pointer
           bg-black/40 p-3 rounded-lg
-          border border-white/10
-          transition-all duration-200
-          hover:border-neon-cyan/40
-          hover:bg-black/60
-        "
+          border transition-all duration-200
+          ${
+            isSelected
+              ? "border-neon-cyan/70 bg-black/60"
+              : "border-white/10 hover:border-neon-cyan/40 hover:bg-black/60"
+          }
+        `}
       >
         <div className="flex justify-between items-center mb-1">
           <p className="text-white text-sm font-medium">
             {segment.name}
           </p>
-          <button
-            onClick={onEvolve}
-            className="
-              px-2 py-0.5 text-xs text-black
-              bg-neon-cyan rounded
-              active:scale-95
-              hover:brightness-110 transition
-            "
-          >
-            +5
-          </button>
+
+          {isSelected && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEvolve();
+              }}
+              className="
+                px-2 py-0.5 text-xs text-black
+                bg-neon-cyan rounded
+                active:scale-95
+                hover:brightness-110 transition
+              "
+            >
+              +5
+            </button>
+          )}
         </div>
 
         <p className="text-xs text-gray-400 leading-snug">
@@ -131,6 +145,7 @@ export const AttributesCodex = memo(() => {
 
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedSegment, setSelectedSegment] = useState<string | null>(null);
 
   const filteredAttributes = useMemo(() => {
     const term = search.toLowerCase();
@@ -210,12 +225,11 @@ export const AttributesCodex = memo(() => {
             `}
           >
             <button
-              onClick={() =>
-                setExpanded(isOpen ? null : attr.id)
-              }
+              onClick={() => {
+                setExpanded(isOpen ? null : attr.id);
+                setSelectedSegment(null);
+              }}
               className="w-full text-left p-6"
-              aria-expanded={isOpen}
-              aria-controls={`section-${attr.id}`}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -250,28 +264,28 @@ export const AttributesCodex = memo(() => {
               </div>
             </button>
 
-            <div
-              id={`section-${attr.id}`}
-              className={`
-                grid transition-all duration-500
-                ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}
-              `}
-            >
-              <div className="overflow-hidden px-6 pb-6 pt-0">
+            {isOpen && (
+              <div className="px-6 pb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   {attr.segments.map((segment) => (
                     <SegmentCard
                       key={segment.id}
                       segment={segment}
                       value={attributes?.[segment.id] ?? 0}
-                      onEvolve={() =>
-                        evolveSegment(segment.id)
+                      isSelected={selectedSegment === segment.id}
+                      onSelect={() =>
+                        setSelectedSegment(
+                          selectedSegment === segment.id
+                            ? null
+                            : segment.id
+                        )
                       }
+                      onEvolve={() => evolveSegment(segment.id)}
                     />
                   ))}
                 </div>
               </div>
-            </div>
+            )}
           </section>
         );
       })}
