@@ -3,30 +3,30 @@
 export const BASE_TREE_VERSION = 1;
 
 export const BASE_TALENTS: Record<string, TalentNodeData> = {
-  base_disciplina: {
-    id: "base_disciplina",
-    title: "Disciplina",
-    description: "Capacidade de agir mesmo sem motivação.",
+  base_hardSkills: {
+    id: "base_hardSkills",
+    title: "Hard Skills",
+    description: "Habilidades técnicas e específicas.",
     cost: 1,
     progress: 0,
     locked: false,
     children: []
   },
 
-  base_foco: {
-    id: "base_foco",
-    title: "Foco",
-    description: "Direcionar energia para uma única meta.",
+  base_softSkils: {
+    id: "base_softSkils",
+    title: "Soft Skills",
+    description: "Habilidades sociais e comportamentais.",
     cost: 1,
     progress: 0,
     locked: false,
     children: []
   },
 
-  base_energia: {
-    id: "base_energia",
-    title: "Energia",
-    description: "Capacidade física e mental para execução contínua.",
+  base_combate: {
+    id: "base_combate",
+    title: "Combate",
+    description: "Habilidades e técnicas de combate.",
     cost: 1,
     progress: 0,
     locked: false,
