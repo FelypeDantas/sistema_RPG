@@ -12,6 +12,7 @@ import AttributesPage from "@/pages/AttributesPage";
 // 👉 NOVO
 import { PlayerProvider } from "@/context/PlayerContext";
 import { AuthPage } from "./pages/AuthPage";
+import DailyTrackerPage from "./pages/DailyTrackerPage";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/quests/history" element={<QuestHistory />} />
             <Route path="/talents" element={<TalentsTree />} />
             <Route path="/attributes" element={<AttributesPage />} />
+            <Route path="/daily-tracker" element={<DailyTrackerPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

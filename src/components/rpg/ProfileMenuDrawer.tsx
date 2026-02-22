@@ -150,6 +150,15 @@ export const ProfileMenuDrawer = ({
                 onClick={() => goTo("/attributes")}
                 variants={itemVariants}
               />
+
+              <MenuButton
+                icon={BookOpen}
+                label="Acompanhamento Diário"
+                color="text-neon-yellow"
+                hover="hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
+                onClick={() => goTo("/daily-tracker")}
+                variants={itemVariants}
+              />
             </motion.nav>
           </motion.aside>
         </>

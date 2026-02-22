@@ -97,6 +97,13 @@ export const ProfileDrawer = ({
       hover: "hover:border-neon-yellow",
       color: "text-neon-yellow",
       external: true
+    },
+    {
+      label: "Acompanhamento Diário",
+      icon: BookOpen,
+      path: "/daily-tracker",
+      hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
+      color: "text-neon-yellow"
     }
   ];
 
