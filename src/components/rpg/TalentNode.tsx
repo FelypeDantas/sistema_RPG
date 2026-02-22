@@ -1,5 +1,5 @@
-import { Lock, ChevronDown } from "lucide-react";
-import { motion } from "framer-motion";
+import { Lock, ChevronDown, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState, useRef, useEffect } from "react";
 
 interface TalentNodeProps {
@@ -14,6 +14,7 @@ interface TalentNodeProps {
   onUnlock?: () => void;
   onTrain?: () => void;
   points?: number;
+  rarity?: "common" | "rare" | "epic" | "legendary";
 }
 
 export default function TalentNode({
@@ -27,11 +28,13 @@ export default function TalentNode({
   onToggle,
   onUnlock,
   onTrain,
-  points = 0
+  points = 0,
+  rarity = "common"
 }: TalentNodeProps) {
 
   const [isTraining, setIsTraining] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const safeProgress = useMemo(
@@ -45,54 +48,52 @@ export default function TalentNode({
     return "active";
   }, [locked, safeProgress]);
 
-  const cardStyle = useMemo(() => {
-    switch (state) {
-      case "locked":
-        return points > 0
-          ? "opacity-70 border-gray-600 hover:border-purple-500 cursor-pointer"
-          : "opacity-50 border-gray-700 cursor-not-allowed";
-      case "complete":
-        return "border-neon-green shadow-[0_0_20px_rgba(34,197,94,0.35)]";
+  const rarityStyle = useMemo(() => {
+    switch (rarity) {
+      case "rare":
+        return "border-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.35)]";
+      case "epic":
+        return "border-purple-500 shadow-[0_0_22px_rgba(168,85,247,0.4)]";
+      case "legendary":
+        return "border-yellow-400 shadow-[0_0_28px_rgba(250,204,21,0.5)]";
       default:
-        return "border-purple-500 hover:border-neon-cyan hover:shadow-[0_0_18px_rgba(34,211,238,0.25)]";
+        return "border-purple-500";
     }
-  }, [state, points]);
+  }, [rarity]);
 
-  /* =============================
-     🔓 Clique para desbloquear
-  ============================= */
+  const cardStyle = useMemo(() => {
+    if (state === "locked") {
+      return points > 0
+        ? "opacity-80 border-gray-600 hover:border-purple-500 cursor-pointer"
+        : "opacity-50 border-gray-700 cursor-not-allowed";
+    }
+
+    if (state === "complete") {
+      return "border-neon-green shadow-[0_0_25px_rgba(34,197,94,0.4)]";
+    }
+
+    return `${rarityStyle} hover:shadow-[0_0_25px_rgba(34,211,238,0.3)]`;
+  }, [state, rarityStyle, points]);
 
   const handleClick = () => {
     if (locked && points > 0) {
       onUnlock?.();
       setJustUnlocked(true);
-
-      setTimeout(() => {
-        setJustUnlocked(false);
-      }, 600);
+      setTimeout(() => setJustUnlocked(false), 700);
     }
   };
 
-  /* =============================
-     🏋️ Segurar para treinar
-  ============================= */
-
   const startTraining = () => {
     if (locked || safeProgress >= 100) return;
-
     setIsTraining(true);
-
     intervalRef.current = setInterval(() => {
       onTrain?.();
-    }, 200);
+    }, 180);
   };
 
   const stopTraining = () => {
     setIsTraining(false);
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
+    if (intervalRef.current) clearInterval(intervalRef.current);
   };
 
   useEffect(() => {
@@ -103,39 +104,53 @@ export default function TalentNode({
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.5 }}
+      initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 120, damping: 12 }}
-      whileHover={!locked ? { scale: 1.05 } : {}}
+      transition={{ type: "spring", stiffness: 110, damping: 14 }}
+      whileHover={!locked ? { scale: 1.07 } : {}}
       className="absolute select-none"
-      style={{
-        left: position.x,
-        top: position.y
-      }}
+      style={{ left: position.x, top: position.y }}
     >
       <div
         onClick={handleClick}
         onMouseDown={startTraining}
         onMouseUp={stopTraining}
         onMouseLeave={stopTraining}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeaveCapture={() => setHovered(false)}
         className={`
-          w-48 rounded-xl border p-4 text-center relative overflow-hidden
-          bg-cyber-card transition-all duration-300
+          w-52 rounded-2xl border p-4 text-center relative overflow-hidden
+          bg-cyber-card backdrop-blur-md transition-all duration-300
           ${cardStyle}
         `}
       >
 
-        {/* 🔥 Efeito desbloqueio */}
-        {justUnlocked && (
+        {/* Desbloqueio explosão suave */}
+        <AnimatePresence>
+          {justUnlocked && (
+            <motion.div
+              initial={{ opacity: 0.8, scale: 0.4 }}
+              animate={{ opacity: 0, scale: 2 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.7 }}
+              className="absolute inset-0 bg-neon-cyan/20 rounded-2xl pointer-events-none"
+            />
+          )}
+        </AnimatePresence>
+
+        {/* Aura de progresso dinâmica */}
+        {!locked && (
           <motion.div
-            initial={{ opacity: 1, scale: 0.5 }}
-            animate={{ opacity: 0, scale: 2 }}
-            transition={{ duration: 0.6 }}
-            className="absolute inset-0 bg-neon-cyan/20 rounded-xl pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
+            animate={{ opacity: 0.08 + safeProgress / 200 }}
+            style={{
+              background:
+                "radial-gradient(circle at center, rgba(34,211,238,0.5), transparent 70%)"
+            }}
           />
         )}
 
-        {/* 🌊 Treinando aura */}
+        {/* Treinando */}
         {isTraining && (
           <motion.div
             className="absolute inset-0 bg-neon-cyan/10 pointer-events-none"
@@ -144,7 +159,7 @@ export default function TalentNode({
           />
         )}
 
-        {/* Aura completa */}
+        {/* Completo */}
         {state === "complete" && (
           <motion.div
             className="absolute inset-0 bg-neon-green/10 pointer-events-none"
@@ -155,6 +170,10 @@ export default function TalentNode({
 
         {state === "locked" && (
           <Lock className="mx-auto mb-2 text-gray-400" size={18} />
+        )}
+
+        {state === "complete" && (
+          <Sparkles className="mx-auto mb-2 text-neon-green" size={16} />
         )}
 
         <h3
@@ -169,10 +188,11 @@ export default function TalentNode({
           Treinado {safeProgress}%
         </div>
 
-        <div className="mt-2 h-1.5 w-full bg-gray-700 rounded overflow-hidden relative z-10">
+        {/* Barra viva */}
+        <div className="mt-2 h-2 w-full bg-gray-700 rounded overflow-hidden relative z-10">
           <motion.div
             animate={{ width: `${safeProgress}%` }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.3 }}
             className={`h-full rounded ${
               state === "complete"
                 ? "bg-neon-green"
@@ -196,20 +216,25 @@ export default function TalentNode({
           </button>
         )}
 
-        {/* Tooltip */}
-        {description && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileHover={{ opacity: 1 }}
-            className="absolute -top-20 left-1/2 -translate-x-1/2 
-                       bg-black/90 text-xs px-3 py-2 rounded 
-                       border border-purple-500/40 
-                       shadow-[0_0_15px_rgba(168,85,247,0.3)] 
-                       pointer-events-none whitespace-nowrap z-20"
-          >
-            {description}
-          </motion.div>
-        )}
+        {/* Tooltip melhorado */}
+        <AnimatePresence>
+          {description && hovered && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.2 }}
+              className="absolute -top-24 left-1/2 -translate-x-1/2 
+                         bg-black/95 text-xs px-3 py-2 rounded-xl 
+                         border border-purple-500/40 
+                         shadow-[0_0_20px_rgba(168,85,247,0.35)] 
+                         pointer-events-none whitespace-nowrap z-20"
+            >
+              {description}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </motion.div>
   );
