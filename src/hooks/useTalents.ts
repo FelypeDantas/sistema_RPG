@@ -313,6 +313,32 @@ export function useTalents(level: number) {
     [points]
   );
 
+  const trainTalent = useCallback((id: string) => {
+    if (!id) return;
+
+    setPersisted(prev => {
+      const current = prev.talents?.[id];
+
+      if (!current || current.locked) return prev;
+
+      const nextProgress = Math.min(
+        (current.progress ?? 0) + 1,
+        100
+      );
+
+      return {
+        ...prev,
+        talents: {
+          ...prev.talents,
+          [id]: {
+            ...current,
+            progress: nextProgress
+          }
+        }
+      };
+    });
+  }, []);
+
   const addCustomTalent = useCallback(
     (
       parentId: string,
@@ -356,12 +382,13 @@ export function useTalents(level: number) {
   );
 
   return {
-    talents: talentList,
-    byId: talentsMap,
-    points,
+    talents: talentList ?? [],
+    byId: talentsMap ?? {},
+    points: points ?? 0,
     unlockTalent,
     addCustomTalent,
     collapsed: persisted.collapsed || {},
     toggleCollapse,
+    trainTalent
   };
 }

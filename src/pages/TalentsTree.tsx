@@ -9,32 +9,29 @@ import CreateTalentModal from "../components/rpg/CreateTalentModal";
 
 export default function TalentsTree() {
   const navigate = useNavigate();
-  const { level } = usePlayerRealtime();
+  const player = usePlayerRealtime();
+  const level = player?.level ?? 1;
   const containerRef = useRef<HTMLDivElement>(null);
 
   const talentsHook = useTalents(level);
 
-  const safeTalents = Array.isArray(talentsHook?.talents)
-    ? talentsHook.talents
-    : [];
+const {
+  talents = [],
+  byId = {},
+  collapsed = {},
+  toggleCollapse,
+  addCustomTalent,
+  points = 0,
+  unlockTalent,
+  trainTalent
+} = talentsHook ?? {};
 
-  const safeById =
-    typeof talentsHook?.byId === "object" && talentsHook.byId
-      ? talentsHook.byId
-      : {};
-
-  const safeCollapsed =
-    typeof talentsHook?.collapsed === "object" && talentsHook.collapsed
-      ? talentsHook.collapsed
-      : {};
-
-  const {
-    toggleCollapse,
-    addCustomTalent,
-    points = 0,
-    unlockTalent,
-    trainTalent
-  } = talentsHook;
+  /* =====================================================
+     🔒 PROTEÇÃO CONTRA UNDEFINED
+  ===================================================== */
+  const safeTalents = useMemo(() => talents || [], [talents]);
+  const safeById = useMemo(() => byId || {}, [byId]);
+  const safeCollapsed = useMemo(() => collapsed || {}, [collapsed]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [scale, setScale] = useState(1);
@@ -134,11 +131,10 @@ export default function TalentsTree() {
             </span>
 
             <span
-              className={`text-sm font-bold px-2 py-0.5 rounded ${
-                points > 0
+              className={`text-sm font-bold px-2 py-0.5 rounded ${points > 0
                   ? "bg-neon-cyan/20 text-neon-cyan"
                   : "bg-red-500/20 text-red-400"
-              }`}
+                }`}
             >
               {points}
             </span>
