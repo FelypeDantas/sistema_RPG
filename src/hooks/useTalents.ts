@@ -5,13 +5,17 @@ import { db, auth } from "@/services/firebase";
 import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
 import { Talent } from "@/types/Talents";
 
+/* ======================================================
+   🔐 TYPES
+====================================================== */
+
 export interface TalentNodeData extends Talent {
   progress: number;
   locked: boolean;
   parentId?: string;
   x: number;
   y: number;
-  children?: string[];
+  children: string[];
 }
 
 interface PersistedState {
@@ -22,70 +26,114 @@ interface PersistedState {
 }
 
 /* ======================================================
-   🌳 BUILD TREE
+   🧱 SAFE DEFAULT NODE
 ====================================================== */
-function buildTree(
+
+function createSafeNode(
+  id: string,
+  data?: Partial<TalentNodeData>
+): TalentNodeData {
+  return {
+    id,
+    title: data?.title ?? "Untitled",
+    description: data?.description ?? "",
+    cost: data?.cost ?? 1,
+    progress: data?.progress ?? 0,
+    locked: data?.locked ?? true,
+    parentId: data?.parentId,
+    x: 0,
+    y: 0,
+    children: [],
+  };
+}
+
+/* ======================================================
+   🌳 BUILD TREE SAFE
+====================================================== */
+
+function buildTreeSafe(
   nodes: Record<string, TalentNodeData>
 ) {
-  const map: Record<
-    string,
-    TalentNodeData & { children: string[] }
-  > = {};
+  const map: Record<string, TalentNodeData> = {};
 
-  // clone
-  Object.values(nodes).forEach(n => {
-    map[n.id] = { ...n, children: [] };
+  // clone defensivo
+  Object.values(nodes || {}).forEach(n => {
+    if (!n?.id) return;
+    map[n.id] = {
+      ...createSafeNode(n.id, n),
+      children: [],
+    };
   });
 
-  // rebuild children
+  // reconstruir filhos
   Object.values(map).forEach(n => {
-    if (n.parentId && map[n.parentId]) {
-      map[n.parentId].children.push(n.id);
-    }
+    if (!n.parentId) return;
+
+    const parent = map[n.parentId];
+    if (!parent) return; // pai inexistente não quebra
+
+    parent.children.push(n.id);
   });
 
-  // garantir ordem estável
+  // ordem estável
   Object.values(map).forEach(n => {
-    n.children.sort();
+    n.children = (n.children || []).sort();
   });
 
   return map;
 }
 
 /* ======================================================
-   📐 LAYOUT ESTÁVEL SEM COLISÃO
+   📐 LAYOUT SAFE
 ====================================================== */
+
 const CARD_W = 220;
 const CARD_H = 130;
 const H_SPACE = 80;
 const V_SPACE = 140;
 
-function computeLayout(
-  tree: Record<string, TalentNodeData & { children: string[] }>
+function computeLayoutSafe(
+  tree: Record<string, TalentNodeData>
 ) {
-  const roots = Object.values(tree).filter(n => !n.parentId);
+  if (!tree || Object.keys(tree).length === 0) {
+    return {};
+  }
+
+  const roots = Object.values(tree).filter(
+    n => !n.parentId || !tree[n.parentId]
+  );
 
   const levels: Record<number, string[]> = {};
 
+  const visited = new Set<string>();
+
   function dfs(id: string, depth: number) {
+    if (!tree[id]) return;
+    if (visited.has(id)) return; // evita loop infinito
+
+    visited.add(id);
+
     if (!levels[depth]) levels[depth] = [];
     levels[depth].push(id);
 
-    tree[id].children.forEach(child =>
+    (tree[id].children || []).forEach(child =>
       dfs(child, depth + 1)
     );
   }
 
-  roots.sort((a, b) => a.id.localeCompare(b.id));
-  roots.forEach(r => dfs(r.id, 0));
+  roots
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .forEach(r => dfs(r.id, 0));
 
   Object.entries(levels).forEach(([depthStr, ids]) => {
     const depth = Number(depthStr);
-
     const totalWidth =
-      (ids.length - 1) * (CARD_W + H_SPACE);
+      Math.max(ids.length - 1, 0) *
+      (CARD_W + H_SPACE);
 
     ids.forEach((id, i) => {
+      if (!tree[id]) return;
+
       tree[id].x =
         i * (CARD_W + H_SPACE) -
         totalWidth / 2 +
@@ -102,9 +150,10 @@ function computeLayout(
 /* ======================================================
    🧠 HOOK
 ====================================================== */
+
 export function useTalents(level: number) {
   const treeVersion = BASE_TREE_VERSION;
-  const isReady = useRef(false);
+  const readyRef = useRef(false);
 
   const [persisted, setPersisted] =
     useState<PersistedState>({
@@ -115,6 +164,7 @@ export function useTalents(level: number) {
     });
 
   /* ================= FIREBASE ================= */
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -127,26 +177,42 @@ export function useTalents(level: number) {
       "state"
     );
 
-    const unsub = onSnapshot(ref, snap => {
-      const data = snap.data();
+    const unsub = onSnapshot(
+      ref,
+      snap => {
+        const data = snap.data() || {};
 
-      setPersisted({
-        talents: data?.talents ?? {},
-        customTalents: data?.customTalents ?? {},
-        collapsed: data?.collapsed ?? {},
-        treeVersion:
-          data?.treeVersion ?? treeVersion,
-      });
+        setPersisted({
+          talents:
+            typeof data.talents === "object"
+              ? data.talents
+              : {},
+          customTalents:
+            typeof data.customTalents === "object"
+              ? data.customTalents
+              : {},
+          collapsed:
+            typeof data.collapsed === "object"
+              ? data.collapsed
+              : {},
+          treeVersion:
+            data.treeVersion ?? treeVersion,
+        });
 
-      isReady.current = true;
-    });
+        readyRef.current = true;
+      },
+      error => {
+        console.error("Talent snapshot error:", error);
+      }
+    );
 
     return unsub;
   }, []);
 
   /* ================= SAVE ================= */
+
   useEffect(() => {
-    if (!isReady.current) return;
+    if (!readyRef.current) return;
 
     const user = auth.currentUser;
     if (!user) return;
@@ -159,54 +225,54 @@ export function useTalents(level: number) {
       "state"
     );
 
-    setDoc(ref, persisted, { merge: true });
+    setDoc(ref, persisted, {
+      merge: true,
+    }).catch(err =>
+      console.error("Talent save error:", err)
+    );
   }, [persisted]);
 
-  /* ================= MERGE + TREE ================= */
+  /* ================= MERGE ================= */
+
   const talentsMap = useMemo(() => {
-    const merged: Record<
-      string,
-      TalentNodeData
-    > = {};
+    const merged: Record<string, TalentNodeData> =
+      {};
 
     // base
-    Object.entries(BASE_TALENTS).forEach(
+    Object.entries(BASE_TALENTS || {}).forEach(
       ([id, base]) => {
-        merged[id] = {
+        merged[id] = createSafeNode(id, {
           ...base,
-          locked:
-            persisted.talents[id]?.locked ??
-            base.locked,
-          progress:
-            persisted.talents[id]?.progress ??
-            0,
-        };
+          ...persisted.talents?.[id],
+        });
       }
     );
 
     // custom
     Object.entries(
-      persisted.customTalents
+      persisted.customTalents || {}
     ).forEach(([id, node]) => {
-      merged[id] = node;
+      if (!node?.id) return;
+      merged[id] = createSafeNode(id, node);
     });
 
-    const tree = buildTree(merged);
-    return computeLayout(tree);
+    const tree = buildTreeSafe(merged);
+    return computeLayoutSafe(tree);
   }, [persisted]);
 
-const talentList = useMemo(() => {
-  return Object.values(talentsMap).map(node => ({
-    ...node,
-    children: (node as any).children ?? []
-  }));
-}, [talentsMap]);
+  const talentList = useMemo(() => {
+    return Object.values(talentsMap || {});
+  }, [talentsMap]);
 
   /* ================= POINTS ================= */
+
   const points = useMemo(() => {
-    const spent = talentList
-      .filter(t => !t.locked)
-      .reduce((a, t) => a + t.cost, 0);
+    const spent = (talentList || [])
+      .filter(t => !t?.locked)
+      .reduce(
+        (acc, t) => acc + (t?.cost ?? 0),
+        0
+      );
 
     const earned = Math.max(level - 1, 0);
 
@@ -214,16 +280,17 @@ const talentList = useMemo(() => {
   }, [talentList, level]);
 
   /* ================= ACTIONS ================= */
+
   const unlockTalent = useCallback(
     (id: string) => {
-      if (points <= 0) return;
+      if (!id || points <= 0) return;
 
       setPersisted(prev => ({
         ...prev,
         talents: {
           ...prev.talents,
           [id]: {
-            ...prev.talents[id],
+            ...prev.talents?.[id],
             locked: false,
             progress: 1,
           },
@@ -240,23 +307,20 @@ const talentList = useMemo(() => {
       description: string,
       cost: number
     ) => {
+      if (!parentId) return;
+
       const id = `custom_${Date.now()}`;
 
       setPersisted(prev => ({
         ...prev,
         customTalents: {
           ...prev.customTalents,
-          [id]: {
-            id,
+          [id]: createSafeNode(id, {
+            parentId,
             title,
             description,
             cost,
-            progress: 0,
-            locked: true,
-            parentId,
-            x: 0,
-            y: 0,
-          },
+          }),
         },
       }));
     },
@@ -265,11 +329,13 @@ const talentList = useMemo(() => {
 
   const toggleCollapse = useCallback(
     (id: string) => {
+      if (!id) return;
+
       setPersisted(prev => ({
         ...prev,
         collapsed: {
           ...prev.collapsed,
-          [id]: !prev.collapsed[id],
+          [id]: !prev.collapsed?.[id],
         },
       }));
     },
@@ -282,7 +348,7 @@ const talentList = useMemo(() => {
     points,
     unlockTalent,
     addCustomTalent,
-    collapsed: persisted.collapsed,
+    collapsed: persisted.collapsed || {},
     toggleCollapse,
   };
 }
