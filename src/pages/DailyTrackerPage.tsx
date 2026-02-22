@@ -1,6 +1,15 @@
 // src/pages/DailyTrackerPage.tsx
 import { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
 
 const tasks = [
   "Acordar entre 6 e 8h",
@@ -55,55 +64,67 @@ const DailyTrackerPage = () => {
     localStorage.setItem("trackerData", JSON.stringify(newMonthData));
   };
 
+  const totalCompleted = monthData.reduce((a, b) => a + b.completed, 0);
+  const totalTasksInMonth = monthData.length * tasks.length;
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Acompanhamento Diário</h1>
-      <div className="mb-6">
-        <h2 className="font-semibold mb-2">Checklist de Hoje ({today})</h2>
-        {tasks.map(task => (
-          <label key={task} className="flex items-center mb-1">
-            <input
-              type="checkbox"
-              checked={!!tasksState[task]}
-              onChange={() => toggleTask(task)}
-              className="mr-2"
-            />
-            {task}
-          </label>
-        ))}
+    <div className="min-h-screen bg-cyber-dark p-6">
+      <h1 className="text-3xl font-bold text-white mb-6 tracking-wide">Acompanhamento Diário</h1>
+
+      {/* CHECKLIST */}
+      <div className="bg-cyber-card p-6 rounded-2xl shadow-lg mb-6">
+        <h2 className="text-neon-yellow font-bold text-xl mb-4">Checklist de Hoje ({today})</h2>
+        <ul className="space-y-2">
+          {tasks.map(task => (
+            <li key={task} className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                checked={!!tasksState[task]}
+                onChange={() => toggleTask(task)}
+                className="accent-neon-yellow w-5 h-5"
+              />
+              <span className={`text-white ${tasksState[task] ? "line-through opacity-70" : ""}`}>
+                {task}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      <div className="flex gap-6">
-        <div>
-          <h2 className="font-semibold mb-2">Tarefas Concluídas no Mês</h2>
-          <BarChart width={400} height={200} data={monthData}>
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="completed" fill="#4ade80" />
+      {/* GRÁFICOS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Barras mensais */}
+        <div className="bg-cyber-card p-6 rounded-2xl shadow-lg">
+          <h2 className="text-neon-green font-bold text-xl mb-4">Tarefas Concluídas no Mês</h2>
+          <BarChart width={400} height={220} data={monthData}>
+            <XAxis dataKey="date" stroke="#9ca3af" />
+            <YAxis stroke="#9ca3af" />
+            <Tooltip
+              contentStyle={{ backgroundColor: "#1f2937", borderRadius: 8, border: "none" }}
+              itemStyle={{ color: "#facc15" }}
+            />
+            <Bar dataKey="completed" fill="#facc15" radius={[6, 6, 0, 0]} />
           </BarChart>
         </div>
 
-        <div>
-          <h2 className="font-semibold mb-2">Progresso do Mês</h2>
+        {/* Pizza progresso */}
+        <div className="bg-cyber-card p-6 rounded-2xl shadow-lg flex flex-col items-center">
+          <h2 className="text-neon-pink font-bold text-xl mb-4">Progresso do Mês</h2>
           <PieChart width={200} height={200}>
             <Pie
               data={[
-                { name: "Concluídas", value: monthData.reduce((a, b) => a + b.completed, 0) },
-                {
-                  name: "Pendentes",
-                  value: monthData.length * tasks.length - monthData.reduce((a, b) => a + b.completed, 0)
-                }
+                { name: "Concluídas", value: totalCompleted },
+                { name: "Pendentes", value: totalTasksInMonth - totalCompleted }
               ]}
               dataKey="value"
               outerRadius={80}
-              fill="#8884d8"
               label
             >
-              <Cell fill="#4ade80" />
-              <Cell fill="#f87171" />
+              <Cell fill="#facc15" />
+              <Cell fill="#f472b6" />
             </Pie>
           </PieChart>
+          <span className="text-white font-semibold mt-2">{Math.round((totalCompleted / Math.max(totalTasksInMonth, 1)) * 100)}% concluído</span>
         </div>
       </div>
     </div>
