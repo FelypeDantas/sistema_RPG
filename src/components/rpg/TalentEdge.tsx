@@ -12,7 +12,7 @@ interface TalentEdgeProps {
   from?: Position;
   to?: Position;
   active?: boolean;
-  curvature?: number; // controla curva
+  curvature?: number;
 }
 
 export default function TalentEdge({
@@ -34,17 +34,10 @@ export default function TalentEdge({
   const x2 = to.x + toWidth / 2;
   const y2 = to.y + toHeight / 2;
 
-  /* ==============================
-     CURVA INTELIGENTE
-  ============================== */
   const pathD = useMemo(() => {
     const dx = x2 - x1;
-    const dy = y2 - y1;
-
-    const distance = Math.sqrt(dx * dx + dy * dy);
 
     const offsetX = dx * curvature;
-    const offsetY = dy * curvature;
 
     const c1x = x1 + offsetX;
     const c1y = y1;
@@ -57,7 +50,6 @@ export default function TalentEdge({
 
   return (
     <>
-      {/* Linha principal */}
       <motion.path
         d={pathD}
         stroke={active ? "#22d3ee" : "#555"}
@@ -70,7 +62,6 @@ export default function TalentEdge({
         transition={{ duration: 0.4 }}
       />
 
-      {/* Fluxo energético otimizado */}
       {active && (
         <motion.path
           d={pathD}
