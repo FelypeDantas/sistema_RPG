@@ -41,7 +41,7 @@ const RPGDashboardContent = (): ReactNode => {
 
   const achievements = useAchievements(player, missions);
   const playerClass = usePlayerClass(player);
-  const { talents, suggestedTalents, points, unlockTalent } =
+  const { talents, points, unlockTalent } =
     useTalents(player.level);
 
   const now = new Date();
