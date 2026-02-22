@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
 
 export type Talent = {
@@ -7,11 +7,10 @@ export type Talent = {
   title: string;
   description?: string;
   cost: number;
-  locked?: boolean;
 };
 
 type TalentTreeProps = {
-  talents: Talent[];
+  talents: Talent[]; // agora apenas bloqueados
   points: number;
   onUnlock: (id: string) => void;
 };
@@ -21,70 +20,76 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
   points,
   onUnlock
 }) => {
-  const totalLockedCost = useMemo(() => {
-    return talents
-      .filter(t => t.locked)
-      .reduce((acc, t) => acc + t.cost, 0);
+  const totalCost = useMemo(() => {
+    return talents.reduce((acc, t) => acc + t.cost, 0);
   }, [talents]);
 
   const progress = useMemo(() => {
-    if (totalLockedCost === 0) return 100;
-    return Math.min((points / totalLockedCost) * 100, 100);
-  }, [points, totalLockedCost]);
+    if (totalCost === 0) return 100;
+    return Math.min((points / totalCost) * 100, 100);
+  }, [points, totalCost]);
 
   return (
-    <div className="bg-cyber-card p-6 rounded-xl space-y-5 border border-white/10">
-      <h3 className="text-white font-semibold flex items-center gap-2">
-        🗺️ Árvore de Talentos
-      </h3>
+    <div className="relative bg-gradient-to-br from-[#12121c] to-[#0f172a] p-6 rounded-2xl border border-white/10 shadow-xl space-y-6 overflow-hidden">
+      
+      {/* brilho sutil no fundo */}
+      <div className="absolute -top-20 -right-20 w-60 h-60 bg-purple-500/10 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 space-y-6">
 
-      {/* Pontos + Barra */}
-      <div>
-        <p className="text-sm text-gray-400">
-          Pontos disponíveis:{" "}
-          <span className="text-neon-cyan font-semibold">
-            {points}
-          </span>
-        </p>
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h3 className="text-white text-lg font-semibold tracking-wide">
+            🌌 Talentos Disponíveis
+          </h3>
 
-        <div className="mt-2 h-2 bg-gray-800 rounded overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.6 }}
-            className="h-full bg-gradient-to-r from-purple-500 to-neon-cyan"
-          />
+          <div className="text-sm text-gray-400">
+            Pontos:{" "}
+            <span className="text-cyan-400 font-semibold">
+              {points}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-3">
-        <AnimatePresence>
+        {/* Barra de progresso */}
+        <div className="space-y-2">
+          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.6 }}
+              className="h-full bg-gradient-to-r from-purple-500 via-cyan-400 to-purple-500"
+            />
+          </div>
+
+          <p className="text-xs text-gray-500">
+            {Math.round(progress)}% do poder desbloqueável alcançado
+          </p>
+        </div>
+
+        {/* Lista */}
+        <div className="space-y-4">
           {talents.map(talent => {
-            const unlocked = !talent.locked;
-            const canUnlock = !unlocked && points >= talent.cost;
+            const canUnlock = points >= talent.cost;
 
             return (
               <motion.div
                 key={talent.id}
-                layout
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                whileHover={{ scale: 1.02 }}
+                whileHover={{ scale: 1.015 }}
                 transition={{ duration: 0.25 }}
-                className={`p-4 rounded-lg border relative overflow-hidden transition-all ${
-                  unlocked
-                    ? "border-neon-green/50 bg-neon-green/10"
-                    : canUnlock
-                    ? "border-purple-500/50 bg-purple-500/5"
+                className={`relative p-4 rounded-xl border transition-all ${
+                  canUnlock
+                    ? "border-purple-500/40 bg-purple-500/5 shadow-lg"
                     : "border-white/10 bg-white/5"
                 }`}
               >
-                {/* Glow quando pode desbloquear */}
+                {/* Aura animada se puder desbloquear */}
                 {canUnlock && (
                   <motion.div
-                    className="absolute inset-0 bg-purple-500/10"
-                    animate={{ opacity: [0.1, 0.3, 0.1] }}
+                    className="absolute inset-0 rounded-xl bg-purple-500/10"
+                    animate={{ opacity: [0.1, 0.25, 0.1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                   />
                 )}
@@ -92,54 +97,42 @@ export const TalentTree: React.FC<TalentTreeProps> = ({
                 <div className="relative flex justify-between items-center gap-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      {!unlocked && (
-                        <Lock
-                          size={14}
-                          className="text-gray-500"
-                        />
-                      )}
+                      <Lock
+                        size={14}
+                        className="text-gray-500"
+                      />
                       <p className="text-white font-medium">
                         {talent.title}
                       </p>
                     </div>
 
                     {talent.description && (
-                      <p className="text-xs text-gray-400 max-w-xs">
+                      <p className="text-xs text-gray-400 max-w-sm">
                         {talent.description}
                       </p>
                     )}
                   </div>
 
-                  {!unlocked ? (
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      whileHover={
-                        canUnlock ? { scale: 1.05 } : {}
-                      }
-                      disabled={!canUnlock}
-                      onClick={() => onUnlock(talent.id)}
-                      className={`text-xs px-4 py-1.5 rounded font-semibold transition-all ${
-                        canUnlock
-                          ? "bg-neon-purple hover:bg-neon-purple/80 text-white"
-                          : "bg-gray-700 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      💎 {talent.cost} TP
-                    </motion.button>
-                  ) : (
-                    <motion.span
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="text-xs text-neon-green font-semibold"
-                    >
-                      ✨ Desbloqueado
-                    </motion.span>
-                  )}
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    whileHover={
+                      canUnlock ? { scale: 1.05 } : {}
+                    }
+                    disabled={!canUnlock}
+                    onClick={() => onUnlock(talent.id)}
+                    className={`text-xs px-4 py-2 rounded-lg font-semibold transition-all ${
+                      canUnlock
+                        ? "bg-gradient-to-r from-purple-600 to-cyan-500 text-white shadow-md"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    💎 {talent.cost} TP
+                  </motion.button>
                 </div>
               </motion.div>
             );
           })}
-        </AnimatePresence>
+        </div>
       </div>
     </div>
   );
