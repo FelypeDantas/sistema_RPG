@@ -36,7 +36,6 @@ export default function TalentEdge({
 
   const pathD = useMemo(() => {
     const dx = x2 - x1;
-
     const offsetX = dx * curvature;
 
     const c1x = x1 + offsetX;
@@ -50,33 +49,86 @@ export default function TalentEdge({
 
   return (
     <>
+      {/* ===============================
+         🌫️ GLOW BASE (blur forte)
+      =============================== */}
+      {active && (
+        <motion.path
+          d={pathD}
+          stroke="url(#edgeGradient)"
+          strokeWidth={8}
+          strokeLinecap="round"
+          fill="transparent"
+          style={{
+            filter: "blur(6px)",
+            opacity: 0.4
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.5 }}
+          transition={{ duration: 0.6 }}
+        />
+      )}
+
+      {/* ===============================
+         🎨 MAIN LINE
+      =============================== */}
       <motion.path
         d={pathD}
-        stroke={active ? "#22d3ee" : "#555"}
-        strokeWidth={active ? 3 : 2}
+        stroke={active ? "url(#edgeGradient)" : "#555"}
+        strokeWidth={active ? 3.5 : 2}
         strokeDasharray={active ? "0" : "6 8"}
         strokeLinecap="round"
         fill="transparent"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: active ? 0.9 : 0.4 }}
-        transition={{ duration: 0.4 }}
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{
+          opacity: active ? 0.95 : 0.35
+        }}
       />
 
+      {/* ===============================
+         ⚡ ENERGY FLOW
+      =============================== */}
       {active && (
         <motion.path
           d={pathD}
           stroke="#ffffff"
-          strokeWidth={1.8}
-          strokeDasharray="10 16"
+          strokeWidth={2}
+          strokeDasharray="14 18"
           strokeLinecap="round"
           fill="transparent"
-          animate={{ strokeDashoffset: [0, -50] }}
+          animate={{ strokeDashoffset: [0, -60] }}
           transition={{
             repeat: Infinity,
-            duration: 2,
+            duration: 2.5,
             ease: "linear"
           }}
-          style={{ opacity: 0.4 }}
+          style={{
+            opacity: 0.45
+          }}
+        />
+      )}
+
+      {/* ===============================
+         ✨ ENERGY PULSE
+      =============================== */}
+      {active && (
+        <motion.path
+          d={pathD}
+          stroke="url(#edgeGradient)"
+          strokeWidth={4}
+          strokeLinecap="round"
+          fill="transparent"
+          animate={{ opacity: [0.2, 0.6, 0.2] }}
+          transition={{
+            repeat: Infinity,
+            duration: 3,
+            ease: "easeInOut"
+          }}
+          style={{
+            filter: "blur(3px)"
+          }}
         />
       )}
     </>
