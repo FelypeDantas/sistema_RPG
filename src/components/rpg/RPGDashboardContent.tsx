@@ -36,7 +36,7 @@ const RPGDashboardContent = (): ReactNode => {
   const missions = useMissions();
 
   if (!player) {
-   return null;
+    return null;
   }
 
   const achievements = useAchievements(player, missions);
@@ -61,7 +61,7 @@ const RPGDashboardContent = (): ReactNode => {
 
   // Total XP acumulado
   const totalXP = useMemo(() => {
-    return missions.history.reduce(
+    return (missions.history ?? []).reduce(
       (acc, h) => acc + (h.success ? h.xp : 0),
       0
     );
@@ -69,10 +69,10 @@ const RPGDashboardContent = (): ReactNode => {
 
   // Quests hoje
   const questsToday = useMemo(() => {
-    return missions.history.filter(
+    return (missions.history ?? []).filter(
       (h) => h.success && h.date.startsWith(todayKey)
     ).length;
-  }, [missions.history, todayKey]);
+  }, [missions.history ?? [], todayKey]);
 
   // Streak
   const currentStreak = useMemo(() => {
@@ -191,7 +191,11 @@ const RPGDashboardContent = (): ReactNode => {
               <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan" }} />
             </div>
 
-            <TalentTree talents={talents} points={points} onUnlock={unlockTalent} />
+            <TalentTree
+              talents={talents.filter(t => t?.locked).slice(0, 3)}
+              points={points}
+              onUnlock={unlockTalent}
+            />
           </div>
 
           {/* CENTER */}
@@ -239,30 +243,6 @@ const RPGDashboardContent = (): ReactNode => {
           {/* RIGHT */}
           <div className="space-y-6">
             <StreakCard weeklyXP={weeklyXP} currentStreak={currentStreak} />
-
-            {suggestedTalents.length > 0 && (
-              <div className="bg-cyber-card p-5 rounded-xl">
-                <h3 className="text-white mb-4">
-                  Sugestões de Talento
-                </h3>
-                <ul className="space-y-2">
-                  {suggestedTalents.map((talent) => (
-                    <li
-                      key={talent.id}
-                      className="flex justify-between items-center text-sm text-gray-300"
-                    >
-                      <span>{talent.title}</span>
-                      <button
-                        onClick={() => unlockTalent(talent.id)}
-                        className="text-neon-cyan hover:underline"
-                      >
-                        Desbloquear
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
             <div className="bg-cyber-card p-5 rounded-xl">
               <h3 className="text-white flex items-center gap-2 mb-4">
