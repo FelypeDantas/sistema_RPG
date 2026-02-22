@@ -1,6 +1,6 @@
 import { Lock, ChevronDown, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 
 interface TalentNodeProps {
   title: string;
@@ -21,7 +21,7 @@ export default function TalentNode({
   title,
   description,
   position,
-  progress,
+  progress = 0,
   locked = false,
   hasChildren = false,
   collapsed = false,
@@ -35,32 +35,41 @@ export default function TalentNode({
   const [isTraining, setIsTraining] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const safeProgress = useMemo(
-    () => Math.min(Math.max(progress ?? 0, 0), 100),
-    [progress]
-  );
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /* ===============================
+     PROGRESS SAFE
+  =============================== */
+  const safeProgress = useMemo(() => {
+    return Math.min(Math.max(progress, 0), 100);
+  }, [progress]);
+
+  /* ===============================
+     STATE
+  =============================== */
   const state = useMemo(() => {
     if (locked) return "locked";
     if (safeProgress >= 100) return "complete";
     return "active";
   }, [locked, safeProgress]);
 
+  /* ===============================
+     RARITY STYLE
+  =============================== */
   const rarityStyle = useMemo(() => {
-    switch (rarity) {
-      case "rare":
-        return "border-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.35)]";
-      case "epic":
-        return "border-purple-500 shadow-[0_0_22px_rgba(168,85,247,0.4)]";
-      case "legendary":
-        return "border-yellow-400 shadow-[0_0_28px_rgba(250,204,21,0.5)]";
-      default:
-        return "border-purple-500";
-    }
+    const styles = {
+      common: "border-purple-500",
+      rare: "border-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.35)]",
+      epic: "border-purple-500 shadow-[0_0_22px_rgba(168,85,247,0.4)]",
+      legendary: "border-yellow-400 shadow-[0_0_28px_rgba(250,204,21,0.5)]"
+    };
+    return styles[rarity];
   }, [rarity]);
 
+  /* ===============================
+     CARD STYLE
+  =============================== */
   const cardStyle = useMemo(() => {
     if (state === "locked") {
       return points > 0
@@ -75,32 +84,51 @@ export default function TalentNode({
     return `${rarityStyle} hover:shadow-[0_0_25px_rgba(34,211,238,0.3)]`;
   }, [state, rarityStyle, points]);
 
-  const handleClick = () => {
-    if (locked && points > 0) {
-      onUnlock?.();
-      setJustUnlocked(true);
-      setTimeout(() => setJustUnlocked(false), 700);
-    }
-  };
+  /* ===============================
+     UNLOCK
+  =============================== */
+  const handleUnlock = useCallback(() => {
+    if (!locked || points <= 0) return;
 
-  const startTraining = () => {
+    onUnlock?.();
+    setJustUnlocked(true);
+
+    setTimeout(() => {
+      setJustUnlocked(false);
+    }, 700);
+  }, [locked, points, onUnlock]);
+
+  /* ===============================
+     TRAIN
+  =============================== */
+  const startTraining = useCallback(() => {
     if (locked || safeProgress >= 100) return;
+
     setIsTraining(true);
+
     intervalRef.current = setInterval(() => {
       onTrain?.();
     }, 180);
-  };
+  }, [locked, safeProgress, onTrain]);
 
-  const stopTraining = () => {
+  const stopTraining = useCallback(() => {
     setIsTraining(false);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
+
+  /* ===============================
+     RENDER
+  =============================== */
 
   return (
     <motion.div
@@ -109,10 +137,14 @@ export default function TalentNode({
       transition={{ type: "spring", stiffness: 110, damping: 14 }}
       whileHover={!locked ? { scale: 1.07 } : {}}
       className="absolute select-none"
-      style={{ left: position.x, top: position.y }}
+      style={{
+        left: position.x,
+        top: position.y,
+        transform: "translate(-50%, -50%)" // evita colisão visual centralizando
+      }}
     >
       <div
-        onClick={handleClick}
+        onClick={handleUnlock}
         onMouseDown={startTraining}
         onMouseUp={stopTraining}
         onMouseLeave={stopTraining}
@@ -124,8 +156,6 @@ export default function TalentNode({
           ${cardStyle}
         `}
       >
-
-        {/* Desbloqueio explosão suave */}
         <AnimatePresence>
           {justUnlocked && (
             <motion.div
@@ -138,7 +168,6 @@ export default function TalentNode({
           )}
         </AnimatePresence>
 
-        {/* Aura de progresso dinâmica */}
         {!locked && (
           <motion.div
             className="absolute inset-0 pointer-events-none"
@@ -150,24 +179,6 @@ export default function TalentNode({
           />
         )}
 
-        {/* Treinando */}
-        {isTraining && (
-          <motion.div
-            className="absolute inset-0 bg-neon-cyan/10 pointer-events-none"
-            animate={{ opacity: [0.2, 0.6, 0.2] }}
-            transition={{ repeat: Infinity, duration: 1 }}
-          />
-        )}
-
-        {/* Completo */}
-        {state === "complete" && (
-          <motion.div
-            className="absolute inset-0 bg-neon-green/10 pointer-events-none"
-            animate={{ opacity: [0.3, 0.7, 0.3] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-          />
-        )}
-
         {state === "locked" && (
           <Lock className="mx-auto mb-2 text-gray-400" size={18} />
         )}
@@ -176,20 +187,15 @@ export default function TalentNode({
           <Sparkles className="mx-auto mb-2 text-neon-green" size={16} />
         )}
 
-        <h3
-          className={`font-semibold text-sm relative z-10 ${
-            state === "locked" ? "text-gray-400" : "text-white"
-          }`}
-        >
+        <h3 className={`font-semibold text-sm ${state === "locked" ? "text-gray-400" : "text-white"}`}>
           {title}
         </h3>
 
-        <div className="mt-2 text-xs text-gray-400 relative z-10">
+        <div className="mt-2 text-xs text-gray-400">
           Treinado {safeProgress}%
         </div>
 
-        {/* Barra viva */}
-        <div className="mt-2 h-2 w-full bg-gray-700 rounded overflow-hidden relative z-10">
+        <div className="mt-2 h-2 w-full bg-gray-700 rounded overflow-hidden">
           <motion.div
             animate={{ width: `${safeProgress}%` }}
             transition={{ duration: 0.3 }}
@@ -204,7 +210,7 @@ export default function TalentNode({
         {hasChildren && state !== "locked" && (
           <button
             onClick={onToggle}
-            className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition relative z-10"
+            className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition"
           >
             <ChevronDown
               className={`transition-transform duration-300 ${
@@ -216,7 +222,6 @@ export default function TalentNode({
           </button>
         )}
 
-        {/* Tooltip melhorado */}
         <AnimatePresence>
           {description && hovered && (
             <motion.div
@@ -234,7 +239,6 @@ export default function TalentNode({
             </motion.div>
           )}
         </AnimatePresence>
-
       </div>
     </motion.div>
   );
