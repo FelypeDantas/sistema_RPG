@@ -2,6 +2,21 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { db } from "@/services/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
+const DEFAULT_TALENTS: Talent[] = [
+  {
+    id: "focus",
+    unlocked: true,
+    effect: { segmentBonus: { foco: 1.2 } },
+  },
+  {
+    id: "physical_mastery",
+    unlocked: false,
+    effect: {
+      segmentBonus: { forca: 1.15, resistencia: 1.1 },
+    },
+  },
+];
+
 export type TraitId =
   | "disciplinado"
   | "impulsivo"
@@ -123,7 +138,9 @@ export function usePlayerRealtime(userId?: string) {
       );
 
       setTalents(
-        Array.isArray(data.talents) ? data.talents : []
+        Array.isArray(data.talents) && data.talents.length > 0
+          ? data.talents
+          : DEFAULT_TALENTS
       );
 
       setTraits(
