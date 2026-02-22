@@ -1,23 +1,14 @@
 // src/hooks/useTalents.ts
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
-import { doc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
 import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
 import { Talent } from "@/types/Talents";
 
-interface PlayerTalent extends Talent {
-  progress: number;
-}
-
-export interface TalentNodeData {
-  id: string;
-  title: string;
-  description: string;
-  cost: number;
+export interface TalentNodeData extends Talent {
   progress: number;
   locked: boolean;
   parentId?: string;
-  unlocksMission?: boolean;
   x: number;
   y: number;
 }
@@ -29,37 +20,45 @@ interface PersistedState {
   treeVersion: number;
 }
 
-const CARD_WIDTH = 220;
-const CARD_HEIGHT = 130;
-const H_SPACING = 80;
-const V_SPACING = 120;
-
 /* ======================================================
-   🌳 BUILD TREE STRUCTURE (RECONSTRÓI VIA parentId)
+   🌳 BUILD TREE
 ====================================================== */
-function buildTreeStructure(
+function buildTree(
   nodes: Record<string, TalentNodeData>
-): Record<string, TalentNodeData & { children: string[] }> {
-  const map: Record<string, TalentNodeData & { children: string[] }> = {};
+) {
+  const map: Record<
+    string,
+    TalentNodeData & { children: string[] }
+  > = {};
 
   // clone
-  Object.values(nodes).forEach(node => {
-    map[node.id] = { ...node, children: [] };
+  Object.values(nodes).forEach(n => {
+    map[n.id] = { ...n, children: [] };
   });
 
   // rebuild children
-  Object.values(map).forEach(node => {
-    if (node.parentId && map[node.parentId]) {
-      map[node.parentId].children.push(node.id);
+  Object.values(map).forEach(n => {
+    if (n.parentId && map[n.parentId]) {
+      map[n.parentId].children.push(n.id);
     }
+  });
+
+  // garantir ordem estável
+  Object.values(map).forEach(n => {
+    n.children.sort();
   });
 
   return map;
 }
 
 /* ======================================================
-   📐 AUTO LAYOUT (NO COLLISION)
+   📐 LAYOUT ESTÁVEL SEM COLISÃO
 ====================================================== */
+const CARD_W = 220;
+const CARD_H = 130;
+const H_SPACE = 80;
+const V_SPACE = 140;
+
 function computeLayout(
   tree: Record<string, TalentNodeData & { children: string[] }>
 ) {
@@ -67,30 +66,32 @@ function computeLayout(
 
   const levels: Record<number, string[]> = {};
 
-  function traverse(id: string, depth: number) {
+  function dfs(id: string, depth: number) {
     if (!levels[depth]) levels[depth] = [];
     levels[depth].push(id);
 
     tree[id].children.forEach(child =>
-      traverse(child, depth + 1)
+      dfs(child, depth + 1)
     );
   }
 
-  roots.forEach(root => traverse(root.id, 0));
+  roots.sort((a, b) => a.id.localeCompare(b.id));
+  roots.forEach(r => dfs(r.id, 0));
 
   Object.entries(levels).forEach(([depthStr, ids]) => {
     const depth = Number(depthStr);
-    const totalWidth =
-      (ids.length - 1) * (CARD_WIDTH + H_SPACING);
 
-    ids.forEach((id, index) => {
+    const totalWidth =
+      (ids.length - 1) * (CARD_W + H_SPACE);
+
+    ids.forEach((id, i) => {
       tree[id].x =
-        index * (CARD_WIDTH + H_SPACING) -
+        i * (CARD_W + H_SPACE) -
         totalWidth / 2 +
-        500;
+        800;
 
       tree[id].y =
-        depth * (CARD_HEIGHT + V_SPACING) + 100;
+        depth * (CARD_H + V_SPACE) + 150;
     });
   });
 
@@ -102,70 +103,94 @@ function computeLayout(
 ====================================================== */
 export function useTalents(level: number) {
   const treeVersion = BASE_TREE_VERSION;
-  const isInitialSync = useRef(true);
+  const isReady = useRef(false);
 
-  const [persisted, setPersisted] = useState<PersistedState>({
-    talents: {},
-    customTalents: {},
-    collapsed: {},
-    treeVersion,
-  });
+  const [persisted, setPersisted] =
+    useState<PersistedState>({
+      talents: {},
+      customTalents: {},
+      collapsed: {},
+      treeVersion,
+    });
 
   /* ================= FIREBASE ================= */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const ref = doc(db, "users", user.uid, "talents", "state");
+    const ref = doc(
+      db,
+      "users",
+      user.uid,
+      "talents",
+      "state"
+    );
 
-    const unsub = onSnapshot(ref, snapshot => {
-      const data = snapshot.data();
+    const unsub = onSnapshot(ref, snap => {
+      const data = snap.data();
 
       setPersisted({
         talents: data?.talents ?? {},
         customTalents: data?.customTalents ?? {},
         collapsed: data?.collapsed ?? {},
-        treeVersion: data?.treeVersion ?? treeVersion,
+        treeVersion:
+          data?.treeVersion ?? treeVersion,
       });
 
-      if (data?.treeVersion !== treeVersion) {
-        setDoc(ref, { treeVersion }, { merge: true });
-      }
-
-      isInitialSync.current = false;
+      isReady.current = true;
     });
 
     return unsub;
   }, []);
 
+  /* ================= SAVE ================= */
   useEffect(() => {
-    if (isInitialSync.current) return;
+    if (!isReady.current) return;
 
     const user = auth.currentUser;
     if (!user) return;
 
-    const ref = doc(db, "users", user.uid, "talents", "state");
+    const ref = doc(
+      db,
+      "users",
+      user.uid,
+      "talents",
+      "state"
+    );
+
     setDoc(ref, persisted, { merge: true });
   }, [persisted]);
 
-  /* ================= MERGE ================= */
+  /* ================= MERGE + TREE ================= */
   const talentsMap = useMemo(() => {
-    const merged: Record<string, TalentNodeData> = {};
+    const merged: Record<
+      string,
+      TalentNodeData
+    > = {};
 
-    // Base
-    Object.entries(BASE_TALENTS).forEach(([id, base]) => {
-      merged[id] = {
-        ...base,
-        ...persisted.talents[id],
-      };
-    });
+    // base
+    Object.entries(BASE_TALENTS).forEach(
+      ([id, base]) => {
+        merged[id] = {
+          ...base,
+          locked:
+            persisted.talents[id]?.locked ??
+            base.locked,
+          progress:
+            persisted.talents[id]?.progress ??
+            0,
+        };
+      }
+    );
 
-    // Custom
-    Object.entries(persisted.customTalents).forEach(([id, node]) => {
+    // custom
+    Object.entries(
+      persisted.customTalents
+    ).forEach(([id, node]) => {
       merged[id] = node;
     });
 
-    const tree = buildTreeStructure(merged);
+    const tree = buildTree(merged);
     return computeLayout(tree);
   }, [persisted]);
 
@@ -178,7 +203,7 @@ export function useTalents(level: number) {
   const points = useMemo(() => {
     const spent = talentList
       .filter(t => !t.locked)
-      .reduce((acc, t) => acc + t.cost, 0);
+      .reduce((a, t) => a + t.cost, 0);
 
     const earned = Math.max(level - 1, 0);
 
@@ -206,55 +231,51 @@ export function useTalents(level: number) {
   );
 
   const addCustomTalent = useCallback(
-    (parentId: string, title: string, description: string, cost: number) => {
+    (
+      parentId: string,
+      title: string,
+      description: string,
+      cost: number
+    ) => {
       const id = `custom_${Date.now()}`;
-
-      const newTalent: TalentNodeData = {
-        id,
-        title,
-        description,
-        cost,
-        progress: 0,
-        locked: true,
-        parentId,
-        x: 0,
-        y: 0,
-      };
 
       setPersisted(prev => ({
         ...prev,
         customTalents: {
           ...prev.customTalents,
-          [id]: newTalent,
+          [id]: {
+            id,
+            title,
+            description,
+            cost,
+            progress: 0,
+            locked: true,
+            parentId,
+            x: 0,
+            y: 0,
+          },
         },
       }));
     },
     []
   );
 
-  const toggleCollapse = useCallback((id: string) => {
-    setPersisted(prev => ({
-      ...prev,
-      collapsed: {
-        ...prev.collapsed,
-        [id]: !prev.collapsed[id],
-      },
-    }));
-  }, []);
-
-  /* ================= SUGGESTIONS ================= */
-  const suggestedTalents = useMemo(() => {
-    return talentList.filter(t => {
-      if (!t.locked || !t.parentId) return false;
-      const parent = talentsMap[t.parentId];
-      return parent && !parent.locked;
-    });
-  }, [talentList, talentsMap]);
+  const toggleCollapse = useCallback(
+    (id: string) => {
+      setPersisted(prev => ({
+        ...prev,
+        collapsed: {
+          ...prev.collapsed,
+          [id]: !prev.collapsed[id],
+        },
+      }));
+    },
+    []
+  );
 
   return {
     talents: talentList,
     byId: talentsMap,
-    suggestedTalents,
     points,
     unlockTalent,
     addCustomTalent,
