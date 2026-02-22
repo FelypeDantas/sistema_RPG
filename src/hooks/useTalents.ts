@@ -225,13 +225,30 @@ export function useTalents(level: number): UseTalentsReturn {
       };
 
       // Atualiza local state
-      setPersisted(prev => ({
-        ...prev,
-        customTalents: {
-          ...prev.customTalents,
-          [id]: newTalent,
-        },
-      }));
+      setPersisted(prev => {
+        const updated = {
+          ...prev,
+          customTalents: {
+            ...prev.customTalents,
+            [id]: newTalent,
+          },
+        };
+
+        // Atualizar o array de filhos do pai
+        if (parentId) {
+          if (!updated.talents[parentId]?.children) updated.talents[parentId] = { ...updated.talents[parentId], children: [] };
+          if (!updated.talents[parentId]?.children?.includes(id)) {
+            updated.talents[parentId].children?.push(id);
+          }
+          // Se o pai também for custom
+          if (prev.customTalents[parentId]) {
+            if (!updated.customTalents[parentId]?.children) updated.customTalents[parentId] = { ...updated.customTalents[parentId], children: [] };
+            updated.customTalents[parentId].children?.push(id);
+          }
+        }
+
+        return updated;
+      });
 
       // Salva direto no Firebase
       const user = auth.currentUser;
