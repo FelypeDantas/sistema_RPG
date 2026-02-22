@@ -10,6 +10,8 @@ interface TalentNodeProps {
   hasChildren?: boolean;
   collapsed?: boolean;
   onToggle?: () => void;
+  onUnlock?: () => void;
+  points?: number;
 }
 
 export default function TalentNode({
@@ -83,9 +85,8 @@ export default function TalentNode({
         )}
 
         <h3
-          className={`font-semibold text-sm relative z-10 ${
-            state === "locked" ? "text-gray-400" : "text-white"
-          }`}
+          className={`font-semibold text-sm relative z-10 ${state === "locked" ? "text-gray-400" : "text-white"
+            }`}
         >
           {title}
         </h3>
@@ -99,11 +100,10 @@ export default function TalentNode({
             initial={{ width: 0 }}
             animate={{ width: `${safeProgress}%` }}
             transition={{ duration: 0.8 }}
-            className={`h-full rounded ${
-              state === "complete"
+            className={`h-full rounded ${state === "complete"
                 ? "bg-neon-green"
                 : "bg-gradient-to-r from-purple-500 to-neon-cyan"
-            }`}
+              }`}
           />
         </div>
 
@@ -113,9 +113,8 @@ export default function TalentNode({
             className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition relative z-10"
           >
             <ChevronDown
-              className={`transition-transform duration-300 ${
-                collapsed ? "-rotate-90" : "rotate-0"
-              }`}
+              className={`transition-transform duration-300 ${collapsed ? "-rotate-90" : "rotate-0"
+                }`}
               size={14}
             />
             Sub-habilidades
