@@ -11,6 +11,7 @@ import {
   Cell
 } from "recharts";
 import { AnimatePresence, motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const tasks = [
   "Acordar entre 6 e 8h",
@@ -28,10 +29,12 @@ const tasks = [
 type TaskData = { [key: string]: boolean };
 
 const DailyTrackerPage = () => {
+  const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
   const [tasksState, setTasksState] = useState<TaskData>({});
   const [monthData, setMonthData] = useState<{ date: string; completed: number }[]>([]);
   const [showResetNotice, setShowResetNotice] = useState(false);
+  const [flashTask, setFlashTask] = useState<string | null>(null);
 
   // Inicializa ou reseta mês com animação neon
   useEffect(() => {
@@ -64,6 +67,10 @@ const DailyTrackerPage = () => {
     setTasksState(newState);
     localStorage.setItem(today, JSON.stringify(newState));
 
+    // Flash neon na tarefa marcada
+    setFlashTask(task);
+    setTimeout(() => setFlashTask(null), 400);
+
     // Atualiza dados mensais
     const completedCount = Object.values(newState).filter(Boolean).length;
     const newMonthData = monthData.filter(d => d.date !== today);
@@ -77,6 +84,14 @@ const DailyTrackerPage = () => {
 
   return (
     <div className="min-h-screen bg-cyber-dark p-6 relative">
+      {/* Voltar ao Dashboard */}
+      <button
+        onClick={() => navigate("/")}
+        className="mb-6 px-4 py-2 bg-neon-blue hover:bg-neon-blue/70 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 tracking-wide"
+      >
+        ← Voltar ao Dashboard
+      </button>
+
       {/* Aviso de Reset Mensal */}
       <AnimatePresence>
         {showResetNotice && (
@@ -84,7 +99,7 @@ const DailyTrackerPage = () => {
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className="absolute top-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl bg-neon-purple text-white font-bold shadow-xl text-lg z-50 tracking-wider"
+            className="absolute top-16 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl bg-neon-purple text-white font-bold shadow-xl text-lg z-50 tracking-wider"
           >
             🌙 Novo mês iniciado! Boa sorte!
           </motion.div>
@@ -105,9 +120,13 @@ const DailyTrackerPage = () => {
                 onChange={() => toggleTask(task)}
                 className="accent-neon-yellow w-5 h-5"
               />
-              <span className={`text-white ${tasksState[task] ? "line-through opacity-70" : ""}`}>
+              <motion.span
+                className={`text-white ${tasksState[task] ? "line-through opacity-70" : ""}`}
+                animate={flashTask === task ? { textShadow: "0 0 8px #facc15, 0 0 16px #facc15" } : {}}
+                transition={{ duration: 0.4 }}
+              >
                 {task}
-              </span>
+              </motion.span>
             </li>
           ))}
         </ul>
