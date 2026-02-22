@@ -220,39 +220,41 @@ export function useTalents(level: number): UseTalentsReturn {
       progress: 0,
       locked: true,
       parentId,
+      children: [],
       x: 0,
       y: 0,
     };
 
     setPersisted(prev => {
-      const updatedCustom = { ...prev.customTalents, [id]: newTalent };
-      const updatedTalents = { ...prev.talents };
+      const updated = {
+        ...prev,
+        customTalents: {
+          ...prev.customTalents,
+          [id]: newTalent,
+        },
+      };
 
-      // Atualizar filhos do pai (base ou custom)
+      // Adiciona no array de filhos do pai
       if (parentId) {
-        if (updatedTalents[parentId]) {
-          updatedTalents[parentId] = {
-            ...updatedTalents[parentId],
-            children: updatedTalents[parentId].children
-              ? [...updatedTalents[parentId].children, id]
-              : [id],
+        if (prev.talents[parentId]) {
+          const parentChildren = prev.talents[parentId].children ?? [];
+          updated.talents[parentId] = {
+            ...prev.talents[parentId],
+            children: [...parentChildren, id],
           };
-        }
-
-        if (updatedCustom[parentId]) {
-          updatedCustom[parentId] = {
-            ...updatedCustom[parentId],
-            children: updatedCustom[parentId].children
-              ? [...updatedCustom[parentId].children, id]
-              : [id],
+        } else if (prev.customTalents[parentId]) {
+          const parentChildren = prev.customTalents[parentId].children ?? [];
+          updated.customTalents[parentId] = {
+            ...prev.customTalents[parentId],
+            children: [...parentChildren, id],
           };
         }
       }
 
-      return { ...prev, customTalents: updatedCustom, talents: updatedTalents };
+      return updated;
     });
 
-    // Salva direto no Firebase (somente o novo talento)
+    // Salva no Firebase
     const user = auth.currentUser;
     if (!user) return;
     const ref = doc(db, "users", user.uid, "talents", "state");
