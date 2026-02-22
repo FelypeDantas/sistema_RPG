@@ -342,6 +342,16 @@ export function useTalents(level: number) {
     });
   }, []);
 
+  const suggestedTalents = useMemo(() => {
+  if (!Array.isArray(talentList)) return [];
+
+  return talentList.filter(
+    t =>
+      t?.locked &&
+      (!t.parentId || !talentsMap[t.parentId]?.locked)
+  );
+}, [talentList, talentsMap]);
+
   const addCustomTalent = useCallback(
     (
       parentId: string,
@@ -386,6 +396,7 @@ export function useTalents(level: number) {
 
   return {
     talents: Array.isArray(talentList) ? talentList : [],
+    suggestedTalents,
     byId: talentsMap && typeof talentsMap === "object" ? talentsMap : {},
     points: points ?? 0,
     unlockTalent,
