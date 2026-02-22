@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { doc, setDoc, onSnapshot, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
 import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
+import { Talent } from "@/types/Talents";
+
+interface PlayerTalent extends Talent {
+  progress: number;
+}
+
+const [playerTalents, setPlayerTalents] = useState<Record<string, PlayerTalent>>({});
 
 export interface TalentNodeData {
   id: string;
@@ -60,14 +67,18 @@ export function useTalents(level: number): UseTalentsReturn {
     collapsed: {},
     treeVersion
   });
-  const trainTalent = useCallback((id: string) => {
-  setPlayerTalents(prev => ({
-    ...prev,
-    [id]: {
-      ...prev[id],
-      progress: Math.min((prev[id]?.progress ?? 0) + 2, 100)
-    }
-  }));
+
+const trainTalent = useCallback((id: string) => {
+  setPlayerTalents(prev => {
+    const current = prev[id] ?? { progress: 0 };
+    return {
+      ...prev,
+      [id]: {
+        ...current,
+        progress: Math.min(current.progress + 2, 100),
+      },
+    };
+  });
 }, []);
 
   const isInitialSync = useRef(true);
