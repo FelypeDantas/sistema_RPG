@@ -124,68 +124,71 @@ export function useTalents(level: number): UseTalentsReturn {
   /* =============================
      🧬 MERGE TREE
   ============================= */
-const talentsMap = useMemo(() => {
-  const merged: Record<string, TalentNodeData> = {};
+  const talentsMap = useMemo(() => {
+    const merged: Record<string, TalentNodeData> = {};
 
-  // Base
-  for (const id in baseTree) {
-    merged[id] = {
-      ...baseTree[id],
-      ...persisted.talents[id],
-      children: [...(baseTree[id].children ?? [])], // mantém filhos do base
-    };
-  }
+    // Base
+    for (const id in baseTree) {
+      merged[id] = {
+        ...baseTree[id],
+        ...persisted.talents[id],
+        children: [...(baseTree[id].children ?? [])], // mantém filhos do base
+      };
+    }
 
-  // Custom
-  for (const id in persisted.customTalents) {
-    merged[id] = {
-      ...persisted.customTalents[id],
-      children: [...(persisted.customTalents[id].children ?? [])],
-    };
-  }
+    // Custom
+    for (const id in persisted.customTalents) {
+      merged[id] = {
+        ...persisted.customTalents[id],
+        children: [...(persisted.customTalents[id].children ?? [])],
+      };
+    }
 
-  // Garante que todos os pais tenham os filhos atualizados
-  for (const id in merged) {
-    const talent = merged[id];
-    if (talent.parentId && merged[talent.parentId]) {
-      const parent = merged[talent.parentId];
-      if (!parent.children?.includes(id)) {
-        parent.children = [...(parent.children ?? []), id];
+    // Garante que todos os pais tenham os filhos atualizados
+    for (const id in merged) {
+      const talent = merged[id];
+      if (talent.parentId && merged[talent.parentId]) {
+        const parent = merged[talent.parentId];
+        if (!parent.children?.includes(id)) {
+          parent.children = [...(parent.children ?? []), id];
+        }
       }
     }
-  }
 
-  // Calcular posições
-  const roots = Object.values(merged).filter(t => !t.parentId);
-  const levelMap: Record<number, TalentNodeData[]> = {};
+    // Calcular posições
+    const roots = Object.values(merged).filter(t => !t.parentId);
+    const levelMap: Record<number, TalentNodeData[]> = {};
 
-  function traverse(node: TalentNodeData, depth = 0) {
-    if (!levelMap[depth]) levelMap[depth] = [];
-    levelMap[depth].push(node);
+    function traverse(node: TalentNodeData, depth = 0) {
+      if (!levelMap[depth]) levelMap[depth] = [];
+      levelMap[depth].push(node);
 
-    node.children?.forEach(childId => {
-      const child = merged[childId];
-      if (child) traverse(child, depth + 1);
+      node.children?.forEach(childId => {
+        const child = merged[childId];
+        if (child) traverse(child, depth + 1);
+      });
+    }
+
+    roots.forEach(root => traverse(root));
+
+    const CARD_WIDTH = 208;
+    const CARD_HEIGHT = 128;
+
+    const horizontalSpacing = CARD_WIDTH + 80;  // espaço lateral
+    const verticalSpacing = CARD_HEIGHT + 100;  // espaço vertical
+
+    Object.entries(levelMap).forEach(([depthStr, nodes]) => {
+      const depth = Number(depthStr);
+      const totalWidth = (nodes.length - 1) * horizontalSpacing;
+
+      nodes.forEach((node, index) => {
+        node.x = index * horizontalSpacing - totalWidth / 2 + 400;
+        node.y = depth * verticalSpacing + 100;
+      });
     });
-  }
 
-  roots.forEach(root => traverse(root));
-
-  const verticalSpacing = 140;
-  const horizontalSpacing = 200;
-
-  Object.entries(levelMap).forEach(([depthStr, nodes]) => {
-    const depth = Number(depthStr);
-    const totalWidth = (nodes.length - 1) * horizontalSpacing;
-
-    nodes.forEach((node, index) => {
-      node.x = index * horizontalSpacing - totalWidth / 2 + 400;
-      node.y = depth * verticalSpacing + 100;
-    });
-  });
-
-  return merged;
-}, [baseTree, persisted]);
+    return merged;
+  }, [baseTree, persisted]);
 
   const talentList = useMemo(() => Object.values(talentsMap), [talentsMap]);
 
@@ -223,59 +226,59 @@ const talentsMap = useMemo(() => {
   /* =============================
      🌿 ADD CUSTOM + SAVE NO FIREBASE
   ============================= */
- const addCustomTalent = useCallback(
-  async (parentId: string, title: string, description: string, cost: number) => {
-    const id = `custom_${Date.now()}`;
-    const newTalent: TalentNodeData = {
-      id,
-      title,
-      description,
-      cost,
-      progress: 0,
-      locked: true,
-      parentId,
-      children: [],
-      x: 0,
-      y: 0,
-    };
-
-    setPersisted(prev => {
-      const updated = {
-        ...prev,
-        customTalents: {
-          ...prev.customTalents,
-          [id]: newTalent,
-        },
+  const addCustomTalent = useCallback(
+    async (parentId: string, title: string, description: string, cost: number) => {
+      const id = `custom_${Date.now()}`;
+      const newTalent: TalentNodeData = {
+        id,
+        title,
+        description,
+        cost,
+        progress: 0,
+        locked: true,
+        parentId,
+        children: [],
+        x: 0,
+        y: 0,
       };
 
-      // Adiciona no array de filhos do pai
-      if (parentId) {
-        if (prev.talents[parentId]) {
-          const parentChildren = prev.talents[parentId].children ?? [];
-          updated.talents[parentId] = {
-            ...prev.talents[parentId],
-            children: [...parentChildren, id],
-          };
-        } else if (prev.customTalents[parentId]) {
-          const parentChildren = prev.customTalents[parentId].children ?? [];
-          updated.customTalents[parentId] = {
-            ...prev.customTalents[parentId],
-            children: [...parentChildren, id],
-          };
+      setPersisted(prev => {
+        const updated = {
+          ...prev,
+          customTalents: {
+            ...prev.customTalents,
+            [id]: newTalent,
+          },
+        };
+
+        // Adiciona no array de filhos do pai
+        if (parentId) {
+          if (prev.talents[parentId]) {
+            const parentChildren = prev.talents[parentId].children ?? [];
+            updated.talents[parentId] = {
+              ...prev.talents[parentId],
+              children: [...parentChildren, id],
+            };
+          } else if (prev.customTalents[parentId]) {
+            const parentChildren = prev.customTalents[parentId].children ?? [];
+            updated.customTalents[parentId] = {
+              ...prev.customTalents[parentId],
+              children: [...parentChildren, id],
+            };
+          }
         }
-      }
 
-      return updated;
-    });
+        return updated;
+      });
 
-    // Salva no Firebase
-    const user = auth.currentUser;
-    if (!user) return;
-    const ref = doc(db, "users", user.uid, "talents", "state");
-    await setDoc(ref, { customTalents: { [id]: newTalent } }, { merge: true });
-  },
-  []
-);
+      // Salva no Firebase
+      const user = auth.currentUser;
+      if (!user) return;
+      const ref = doc(db, "users", user.uid, "talents", "state");
+      await setDoc(ref, { customTalents: { [id]: newTalent } }, { merge: true });
+    },
+    []
+  );
 
   /* =============================
      🎯 MISSIONS
