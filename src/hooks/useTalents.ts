@@ -124,54 +124,68 @@ export function useTalents(level: number): UseTalentsReturn {
   /* =============================
      🧬 MERGE TREE
   ============================= */
-  const talentsMap = useMemo(() => {
-    const merged: Record<string, TalentNodeData> = {};
+const talentsMap = useMemo(() => {
+  const merged: Record<string, TalentNodeData> = {};
 
-    for (const id in baseTree) {
-      merged[id] = {
-        ...baseTree[id],
-        ...persisted.talents[id],
-        children: [],
-      };
+  // Base
+  for (const id in baseTree) {
+    merged[id] = {
+      ...baseTree[id],
+      ...persisted.talents[id],
+      children: [...(baseTree[id].children ?? [])], // mantém filhos do base
+    };
+  }
+
+  // Custom
+  for (const id in persisted.customTalents) {
+    merged[id] = {
+      ...persisted.customTalents[id],
+      children: [...(persisted.customTalents[id].children ?? [])],
+    };
+  }
+
+  // Garante que todos os pais tenham os filhos atualizados
+  for (const id in merged) {
+    const talent = merged[id];
+    if (talent.parentId && merged[talent.parentId]) {
+      const parent = merged[talent.parentId];
+      if (!parent.children?.includes(id)) {
+        parent.children = [...(parent.children ?? []), id];
+      }
     }
+  }
 
-    for (const id in persisted.customTalents) {
-      merged[id] = {
-        ...persisted.customTalents[id],
-        children: [],
-      };
-    }
+  // Calcular posições
+  const roots = Object.values(merged).filter(t => !t.parentId);
+  const levelMap: Record<number, TalentNodeData[]> = {};
 
-    const roots = Object.values(merged).filter(t => !t.parentId);
-    const levelMap: Record<number, TalentNodeData[]> = {};
+  function traverse(node: TalentNodeData, depth = 0) {
+    if (!levelMap[depth]) levelMap[depth] = [];
+    levelMap[depth].push(node);
 
-    function traverse(node: TalentNodeData, depth = 0) {
-      if (!levelMap[depth]) levelMap[depth] = [];
-      levelMap[depth].push(node);
-
-      node.children?.forEach(childId => {
-        const child = merged[childId];
-        if (child) traverse(child, depth + 1);
-      });
-    }
-
-    roots.forEach(root => traverse(root));
-
-    const verticalSpacing = 140;
-    const horizontalSpacing = 200;
-
-    Object.entries(levelMap).forEach(([depthStr, nodes]) => {
-      const depth = Number(depthStr);
-      const totalWidth = (nodes.length - 1) * horizontalSpacing;
-
-      nodes.forEach((node, index) => {
-        node.x = index * horizontalSpacing - totalWidth / 2 + 400;
-        node.y = depth * verticalSpacing + 100;
-      });
+    node.children?.forEach(childId => {
+      const child = merged[childId];
+      if (child) traverse(child, depth + 1);
     });
+  }
 
-    return merged;
-  }, [baseTree, persisted]);
+  roots.forEach(root => traverse(root));
+
+  const verticalSpacing = 140;
+  const horizontalSpacing = 200;
+
+  Object.entries(levelMap).forEach(([depthStr, nodes]) => {
+    const depth = Number(depthStr);
+    const totalWidth = (nodes.length - 1) * horizontalSpacing;
+
+    nodes.forEach((node, index) => {
+      node.x = index * horizontalSpacing - totalWidth / 2 + 400;
+      node.y = depth * verticalSpacing + 100;
+    });
+  });
+
+  return merged;
+}, [baseTree, persisted]);
 
   const talentList = useMemo(() => Object.values(talentsMap), [talentsMap]);
 
