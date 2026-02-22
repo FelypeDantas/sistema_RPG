@@ -1,6 +1,6 @@
 import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useTalents } from "../hooks/useTalents";
 import TalentNode from "../components/rpg/TalentNode";
 import TalentEdge from "../components/rpg/TalentEdge";
@@ -10,6 +10,7 @@ import CreateTalentModal from "../components/rpg/CreateTalentModal";
 export default function TalentsTree() {
   const navigate = useNavigate();
   const { level } = usePlayerRealtime();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     talents,
@@ -23,31 +24,36 @@ export default function TalentsTree() {
   } = useTalents(level);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [scale, setScale] = useState(1);
 
-  // Gera as linhas entre talentos
+  /* =====================================
+     🔗 GERAR EDGES (via parentId)
+  ===================================== */
   const visibleEdges = useMemo(() => {
-    const edges: { from: any; to: any; key: string }[] = [];
-
-    talents.forEach(talent => {
-      if (collapsed[talent.id]) return;
-
-      talent.children?.forEach(childId => {
-        const child = byId[childId];
-        if (!child) return;
-
-        edges.push({
-          from: talent,
-          to: child,
-          key: `${talent.id}-${childId}`
-        });
-      });
-    });
-
-    return edges;
+    return talents
+      .filter(t => t.parentId && !collapsed[t.parentId])
+      .map(t => ({
+        key: `${t.parentId}-${t.id}`,
+        from: byId[t.parentId!],
+        to: t
+      }))
+      .filter(e => e.from);
   }, [talents, byId, collapsed]);
 
+  /* =====================================
+     🔎 ZOOM CONTROL
+  ===================================== */
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      setScale(prev =>
+        Math.min(1.5, Math.max(0.5, prev - e.deltaY * 0.001))
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen p-6 bg-cyber-dark text-white overflow-hidden">
+    <div className="min-h-screen p-6 bg-cyber-dark text-white">
 
       {/* HEADER */}
       <header className="mb-8 flex items-center justify-between">
@@ -71,10 +77,11 @@ export default function TalentsTree() {
             </span>
 
             <span
-              className={`text-sm font-bold px-2 py-0.5 rounded ${points > 0
-                ? "bg-neon-cyan/20 text-neon-cyan"
-                : "bg-red-500/20 text-red-400"
-                }`}
+              className={`text-sm font-bold px-2 py-0.5 rounded ${
+                points > 0
+                  ? "bg-neon-cyan/20 text-neon-cyan"
+                  : "bg-red-500/20 text-red-400"
+              }`}
             >
               {points}
             </span>
@@ -90,49 +97,66 @@ export default function TalentsTree() {
       </header>
 
       {/* ÁRVORE */}
-      <div className="relative w-full h-[800px] border border-white/10 rounded-xl overflow-hidden">
-        <svg className="absolute inset-0 w-full h-full">
-          <defs>
-            <linearGradient id="edgeGradient">
-              <stop offset="0%" stopColor="#a855f7" />
-              <stop offset="100%" stopColor="#22d3ee" />
-            </linearGradient>
-          </defs>
+      <div
+        ref={containerRef}
+        onWheel={handleWheel}
+        className="relative w-full h-[85vh] border border-white/10 rounded-xl overflow-hidden bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] bg-[size:40px_40px]"
+      >
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top center",
+          }}
+          className="absolute inset-0 transition-transform duration-200"
+        >
+          <svg className="absolute inset-0 w-full h-full pointer-events-none">
+            <defs>
+              <linearGradient id="edgeGradient">
+                <stop offset="0%" stopColor="#a855f7" />
+                <stop offset="100%" stopColor="#22d3ee" />
+              </linearGradient>
+            </defs>
 
-          {visibleEdges.map(edge => (
-            <TalentEdge
-              key={edge.key}
-              from={edge.from}
-              to={edge.to}
-            />
-          ))}
-        </svg>
+            {visibleEdges.map(edge => (
+              <TalentEdge
+                key={edge.key}
+                from={edge.from}
+                to={edge.to}
+              />
+            ))}
+          </svg>
 
-        {talents.map(talent => (
-          <TalentNode
-            key={talent.id}
-            title={talent.title}
-            position={{ x: talent.x, y: talent.y }}
-            progress={talent.progress}
-            locked={talent.locked}
-            hasChildren={!!talent.children?.length}
-            collapsed={collapsed[talent.id]}
-            onToggle={() => toggleCollapse(talent.id)}
-            points={points}
-            onUnlock={() => unlockTalent(talent.id)}
-            onTrain={() => trainTalent(talent.id)}
-          />
-        ))}
+          {talents.map(talent => {
+            if (talent.parentId && collapsed[talent.parentId]) return null;
+
+            return (
+              <TalentNode
+                key={talent.id}
+                title={talent.title}
+                position={{ x: talent.x, y: talent.y }}
+                progress={talent.progress}
+                locked={talent.locked}
+                hasChildren={
+                  talents.some(t => t.parentId === talent.id)
+                }
+                collapsed={collapsed[talent.id]}
+                onToggle={() => toggleCollapse(talent.id)}
+                points={points}
+                onUnlock={() => unlockTalent(talent.id)}
+                onTrain={() => trainTalent(talent.id)}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* MODAL DE CRIAÇÃO */}
+      {/* MODAL */}
       <CreateTalentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCreate={addCustomTalent}
         talents={talents}
       />
-
     </div>
   );
 }
