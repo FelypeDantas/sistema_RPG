@@ -60,6 +60,15 @@ export function useTalents(level: number): UseTalentsReturn {
     collapsed: {},
     treeVersion
   });
+  const trainTalent = useCallback((id: string) => {
+  setPlayerTalents(prev => ({
+    ...prev,
+    [id]: {
+      ...prev[id],
+      progress: Math.min((prev[id]?.progress ?? 0) + 2, 100)
+    }
+  }));
+}, []);
 
   const isInitialSync = useRef(true);
 

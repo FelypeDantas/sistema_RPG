@@ -70,8 +70,8 @@ export default function TalentsTree() {
 
             <span
               className={`text-sm font-bold px-2 py-0.5 rounded ${points > 0
-                  ? "bg-neon-cyan/20 text-neon-cyan"
-                  : "bg-red-500/20 text-red-400"
+                ? "bg-neon-cyan/20 text-neon-cyan"
+                : "bg-red-500/20 text-red-400"
                 }`}
             >
               {points}
@@ -122,6 +122,9 @@ export default function TalentsTree() {
               hasChildren={!!talent.children?.length}
               collapsed={collapsed[talent.id]}
               onToggle={() => toggleCollapse(talent.id)}
+              points={points}
+              onUnlock={() => unlockTalent(talent.id)}
+              onTrain={() => trainTalent(talent.id)}
             />
           );
         })}
