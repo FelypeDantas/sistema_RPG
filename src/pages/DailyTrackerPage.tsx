@@ -89,7 +89,7 @@ const DailyTrackerPage = () => {
         onClick={() => navigate("/")}
         className="mb-6 px-4 py-2 bg-neon-blue hover:bg-neon-blue/70 text-white font-semibold rounded-xl shadow-lg transition-all duration-200 tracking-wide"
       >
-        ← Voltar ao Dashboard
+        ← Voltar
       </button>
 
       {/* Aviso de Reset Mensal */}
