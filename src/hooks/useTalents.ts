@@ -11,6 +11,7 @@ export interface TalentNodeData extends Talent {
   parentId?: string;
   x: number;
   y: number;
+  children?: string[];
 }
 
 interface PersistedState {
