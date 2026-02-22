@@ -49,10 +49,13 @@ function createSafeNode(
     cost: data?.cost ?? 1,
     progress: data?.progress ?? 0,
     locked: data?.locked ?? true,
-    parentId: data?.parentId,
-    x: 0,
-    y: 0,
-    children: [],
+    parentId: data?.parentId ?? undefined,
+    x: typeof data?.x === "number" ? data.x : 0,
+    y: typeof data?.y === "number" ? data.y : 0,
+    children: Array.isArray(data?.children)
+      ? data!.children
+      : [],
+    category: data?.category,
   };
 }
 
@@ -382,12 +385,16 @@ export function useTalents(level: number) {
   );
 
   return {
-    talents: talentList ?? [],
-    byId: talentsMap ?? {},
+    talents: Array.isArray(talentList) ? talentList : [],
+    byId: talentsMap && typeof talentsMap === "object" ? talentsMap : {},
     points: points ?? 0,
     unlockTalent,
     addCustomTalent,
-    collapsed: persisted.collapsed || {},
+    collapsed:
+      persisted?.collapsed &&
+        typeof persisted.collapsed === "object"
+        ? persisted.collapsed
+        : {},
     toggleCollapse,
     trainTalent
   };
