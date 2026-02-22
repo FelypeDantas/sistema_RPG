@@ -194,10 +194,12 @@ export function useTalents(level: number) {
     return computeLayout(tree);
   }, [persisted]);
 
-  const talentList = useMemo(
-    () => Object.values(talentsMap),
-    [talentsMap]
-  );
+const talentList = useMemo(() => {
+  return Object.values(talentsMap).map(node => ({
+    ...node,
+    children: (node as any).children ?? []
+  }));
+}, [talentsMap]);
 
   /* ================= POINTS ================= */
   const points = useMemo(() => {
