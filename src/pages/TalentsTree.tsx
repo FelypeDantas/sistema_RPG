@@ -18,11 +18,13 @@ export default function TalentsTree() {
     toggleCollapse,
     addCustomTalent,
     points,
-    unlockTalent
+    unlockTalent,
+    trainTalent
   } = useTalents(level);
 
   const [modalOpen, setModalOpen] = useState(false);
 
+  // Gera as linhas entre talentos
   const visibleEdges = useMemo(() => {
     const edges: { from: any; to: any; key: string }[] = [];
 
@@ -47,8 +49,8 @@ export default function TalentsTree() {
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white overflow-hidden">
 
+      {/* HEADER */}
       <header className="mb-8 flex items-center justify-between">
-
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition"
@@ -85,13 +87,11 @@ export default function TalentsTree() {
         >
           + Nova Habilidade
         </button>
-
       </header>
 
+      {/* ÁRVORE */}
       <div className="relative w-full h-[800px] border border-white/10 rounded-xl overflow-hidden">
-
         <svg className="absolute inset-0 w-full h-full">
-
           <defs>
             <linearGradient id="edgeGradient">
               <stop offset="0%" stopColor="#a855f7" />
@@ -106,31 +106,26 @@ export default function TalentsTree() {
               to={edge.to}
             />
           ))}
-
         </svg>
 
-        {talents.map(talent => {
-          if (talent.locked) return null;
-
-          return (
-            <TalentNode
-              key={talent.id}
-              title={talent.title}
-              position={{ x: talent.x, y: talent.y }}
-              progress={talent.progress}
-              locked={talent.locked}
-              hasChildren={!!talent.children?.length}
-              collapsed={collapsed[talent.id]}
-              onToggle={() => toggleCollapse(talent.id)}
-              points={points}
-              onUnlock={() => unlockTalent(talent.id)}
-              onTrain={() => trainTalent(talent.id)}
-            />
-          );
-        })}
-
+        {talents.map(talent => (
+          <TalentNode
+            key={talent.id}
+            title={talent.title}
+            position={{ x: talent.x, y: talent.y }}
+            progress={talent.progress}
+            locked={talent.locked}
+            hasChildren={!!talent.children?.length}
+            collapsed={collapsed[talent.id]}
+            onToggle={() => toggleCollapse(talent.id)}
+            points={points}
+            onUnlock={() => unlockTalent(talent.id)}
+            onTrain={() => trainTalent(talent.id)}
+          />
+        ))}
       </div>
 
+      {/* MODAL DE CRIAÇÃO */}
       <CreateTalentModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
