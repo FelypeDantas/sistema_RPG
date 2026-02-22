@@ -1,6 +1,6 @@
 import { ArrowLeft, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useTalents } from "../hooks/useTalents";
 import TalentNode from "../components/rpg/TalentNode";
 import TalentEdge from "../components/rpg/TalentEdge";
@@ -26,23 +26,47 @@ export default function TalentsTree() {
   const [modalOpen, setModalOpen] = useState(false);
   const [scale, setScale] = useState(1);
 
-  /* =====================================
-     🔗 GERAR EDGES (via parentId)
-  ===================================== */
+  /* =====================================================
+     🔎 CHECK SE ESTÁ OCULTO POR QUALQUER ANCESTRAL
+  ===================================================== */
+  const isHiddenByAncestor = useCallback(
+    (talentId: string) => {
+      let current = byId[talentId];
+
+      while (current?.parentId) {
+        if (collapsed[current.parentId]) return true;
+        current = byId[current.parentId];
+      }
+
+      return false;
+    },
+    [byId, collapsed]
+  );
+
+  /* =====================================================
+     🌳 FILTRAR TALENTOS VISÍVEIS
+  ===================================================== */
+  const visibleTalents = useMemo(() => {
+    return talents.filter(t => !isHiddenByAncestor(t.id));
+  }, [talents, isHiddenByAncestor]);
+
+  /* =====================================================
+     🔗 GERAR EDGES APENAS ENTRE VISÍVEIS
+  ===================================================== */
   const visibleEdges = useMemo(() => {
-    return talents
-      .filter(t => t.parentId && !collapsed[t.parentId])
+    return visibleTalents
+      .filter(t => t.parentId)
       .map(t => ({
         key: `${t.parentId}-${t.id}`,
         from: byId[t.parentId!],
         to: t
       }))
-      .filter(e => e.from);
-  }, [talents, byId, collapsed]);
+      .filter(edge => edge.from && !isHiddenByAncestor(edge.from.id));
+  }, [visibleTalents, byId, isHiddenByAncestor]);
 
-  /* =====================================
+  /* =====================================================
      🔎 ZOOM CONTROL
-  ===================================== */
+  ===================================================== */
   const handleWheel = (e: React.WheelEvent) => {
     if (e.ctrlKey) {
       e.preventDefault();
@@ -51,6 +75,19 @@ export default function TalentsTree() {
       );
     }
   };
+
+  /* =====================================================
+     🧠 MAPA DE FILHOS (performance)
+  ===================================================== */
+  const childrenMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    talents.forEach(t => {
+      if (t.parentId) {
+        map[t.parentId] = (map[t.parentId] || 0) + 1;
+      }
+    });
+    return map;
+  }, [talents]);
 
   return (
     <div className="min-h-screen p-6 bg-cyber-dark text-white">
@@ -105,7 +142,7 @@ export default function TalentsTree() {
         <div
           style={{
             transform: `scale(${scale})`,
-            transformOrigin: "top center",
+            transformOrigin: "top center"
           }}
           className="absolute inset-0 transition-transform duration-200"
         >
@@ -126,27 +163,21 @@ export default function TalentsTree() {
             ))}
           </svg>
 
-          {talents.map(talent => {
-            if (talent.parentId && collapsed[talent.parentId]) return null;
-
-            return (
-              <TalentNode
-                key={talent.id}
-                title={talent.title}
-                position={{ x: talent.x, y: talent.y }}
-                progress={talent.progress}
-                locked={talent.locked}
-                hasChildren={
-                  talents.some(t => t.parentId === talent.id)
-                }
-                collapsed={collapsed[talent.id]}
-                onToggle={() => toggleCollapse(talent.id)}
-                points={points}
-                onUnlock={() => unlockTalent(talent.id)}
-                onTrain={() => trainTalent(talent.id)}
-              />
-            );
-          })}
+          {visibleTalents.map(talent => (
+            <TalentNode
+              key={talent.id}
+              title={talent.title}
+              position={{ x: talent.x, y: talent.y }}
+              progress={talent.progress}
+              locked={talent.locked}
+              hasChildren={!!childrenMap[talent.id]}
+              collapsed={collapsed[talent.id]}
+              onToggle={() => toggleCollapse(talent.id)}
+              points={points}
+              onUnlock={() => unlockTalent(talent.id)}
+              onTrain={() => trainTalent(talent.id)}
+            />
+          ))}
         </div>
       </div>
 
