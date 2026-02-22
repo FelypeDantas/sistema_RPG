@@ -49,15 +49,9 @@ interface UseTalentsReturn {
 }
 
 export function useTalents(level: number): UseTalentsReturn {
-  /* =============================
-     🌳 BASE
-  ============================= */
   const baseTree = BASE_TALENTS;
   const treeVersion = BASE_TREE_VERSION;
 
-  /* =============================
-     📦 LOCAL STATE
-  ============================= */
   const [persisted, setPersisted] = useState<PersistedState>({
     talents: {},
     customTalents: {},
@@ -66,7 +60,6 @@ export function useTalents(level: number): UseTalentsReturn {
   });
 
   const [playerTalents, setPlayerTalents] = useState<Record<string, PlayerTalent>>({});
-
   const isInitialSync = useRef(true);
 
   /* =============================
@@ -74,23 +67,15 @@ export function useTalents(level: number): UseTalentsReturn {
   ============================= */
   const trainTalent = useCallback((id: string) => {
     setPlayerTalents(prev => {
-      const current = prev[id] ?? {
-        id,
-        title: "Unknown",
-        description: "",
-        cost: 0,
-        unlocked: false,
-        position: { x: 0, y: 0 },
-        progress: 0,
-      } as PlayerTalent;
-
-      return {
+      const updated = {
         ...prev,
         [id]: {
-          ...current,
-          progress: Math.min(current.progress + 2, 100),
-        },
+          ...prev[id],
+          progress: Math.min((prev[id]?.progress ?? 0) + 2, 100)
+        }
       };
+      localStorage.setItem('playerTalents', JSON.stringify(updated));
+      return updated;
     });
   }, []);
 
@@ -142,7 +127,6 @@ export function useTalents(level: number): UseTalentsReturn {
   const talentsMap = useMemo(() => {
     const merged: Record<string, TalentNodeData> = {};
 
-    // Base
     for (const id in baseTree) {
       merged[id] = {
         ...baseTree[id],
@@ -151,7 +135,6 @@ export function useTalents(level: number): UseTalentsReturn {
       };
     }
 
-    // Custom
     for (const id in persisted.customTalents) {
       merged[id] = {
         ...persisted.customTalents[id],
@@ -159,7 +142,6 @@ export function useTalents(level: number): UseTalentsReturn {
       };
     }
 
-    // Gerar posições
     const roots = Object.values(merged).filter(t => !t.parentId);
     const levelMap: Record<number, TalentNodeData[]> = {};
 
@@ -225,29 +207,37 @@ export function useTalents(level: number): UseTalentsReturn {
   );
 
   /* =============================
-     🌿 ADD CUSTOM
+     🌿 ADD CUSTOM + SAVE NO FIREBASE
   ============================= */
   const addCustomTalent = useCallback(
-    (parentId: string, title: string, description: string, cost: number) => {
+    async (parentId: string, title: string, description: string, cost: number) => {
       const id = `custom_${Date.now()}`;
+      const newTalent: TalentNodeData = {
+        id,
+        title,
+        description,
+        cost,
+        progress: 0,
+        locked: true,
+        parentId,
+        x: 0,
+        y: 0,
+      };
 
+      // Atualiza local state
       setPersisted(prev => ({
         ...prev,
         customTalents: {
           ...prev.customTalents,
-          [id]: {
-            id,
-            title,
-            description,
-            cost,
-            progress: 0,
-            locked: true,
-            parentId,
-            x: 0,
-            y: 0,
-          },
+          [id]: newTalent,
         },
       }));
+
+      // Salva direto no Firebase
+      const user = auth.currentUser;
+      if (!user) return;
+      const ref = doc(db, "users", user.uid, "talents", "state");
+      await setDoc(ref, { customTalents: { [id]: newTalent } }, { merge: true });
     },
     []
   );
