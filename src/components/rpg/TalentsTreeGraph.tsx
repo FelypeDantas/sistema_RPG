@@ -4,17 +4,13 @@ import { usePlayerRealtime } from "@/hooks/usePlayer";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
-const WIDTH = 800;
-const HEIGHT = 600;
+const WIDTH = 900;
+const HEIGHT = 650;
 
 export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayerRealtime();
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
-
-  /* =============================
-     🗺️ MAPA VALIDADO
-  ============================= */
 
   const validTalents = useMemo(() => {
     return TALENT_GRAPH.filter(
@@ -30,10 +26,6 @@ export default function TalentsTreeGraph() {
     return map;
   }, [validTalents]);
 
-  /* =============================
-     🔗 EDGES SEGURAS
-  ============================= */
-
   const edges = useMemo(() => {
     const result: {
       key: string;
@@ -48,8 +40,6 @@ export default function TalentsTreeGraph() {
       for (const req of t.requires) {
         const from = talentMap.get(req);
         if (!from?.position) continue;
-
-        if (!t.position) continue;
 
         result.push({
           key: `${req}-${t.id}`,
@@ -84,67 +74,79 @@ export default function TalentsTreeGraph() {
   return (
     <svg
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="w-full h-[600px] bg-cyber-dark rounded-xl"
+      className="w-full h-[650px] rounded-2xl bg-gradient-to-br from-[#0f0f1a] via-[#111827] to-[#0c0c16] shadow-2xl"
     >
       <defs>
+        {/* Glow */}
         <filter id="glow">
-          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feGaussianBlur stdDeviation="5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
 
+        {/* Edge Gradient */}
         <linearGradient id="activeEdge">
           <stop offset="0%" stopColor="#22c55e" />
-          <stop offset="50%" stopColor="#22d3ee" />
-          <stop offset="100%" stopColor="#22c55e" />
+          <stop offset="50%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
+
+        {/* Node Gradient */}
+        <radialGradient id="nodeActive">
+          <stop offset="0%" stopColor="#4ade80" />
+          <stop offset="100%" stopColor="#166534" />
+        </radialGradient>
+
+        <pattern
+          id="grid"
+          width="40"
+          height="40"
+          patternUnits="userSpaceOnUse"
+        >
+          <path
+            d="M 40 0 L 0 0 0 40"
+            fill="none"
+            stroke="#1f2937"
+            strokeWidth="1"
+          />
+        </pattern>
       </defs>
 
-      {/* CONEXÕES */}
-      {edges.map(edge => {
-        if (
-          edge.from?.x == null ||
-          edge.from?.y == null ||
-          edge.to?.x == null ||
-          edge.to?.y == null
-        ) {
-          return null;
-        }
+      {/* GRID BACKGROUND */}
+      <rect width="100%" height="100%" fill="url(#grid)" opacity="0.3" />
 
-        return (
-          <motion.path
-            key={edge.key}
-            d={getCurve(
-              edge.from.x,
-              edge.from.y,
-              edge.to.x,
-              edge.to.y
-            )}
-            stroke={
-              edge.active
-                ? "url(#activeEdge)"
-                : "#444"
-            }
-            strokeWidth="3"
-            fill="transparent"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.6 }}
-            style={
-              edge.active
-                ? { filter: "url(#glow)" }
-                : undefined
-            }
-          />
-        );
-      })}
+      {/* EDGES */}
+      {edges.map(edge => (
+        <motion.path
+          key={edge.key}
+          d={getCurve(
+            edge.from.x,
+            edge.from.y,
+            edge.to.x,
+            edge.to.y
+          )}
+          stroke={
+            edge.active
+              ? "url(#activeEdge)"
+              : "#374151"
+          }
+          strokeWidth="3"
+          fill="transparent"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.8 }}
+          style={
+            edge.active
+              ? { filter: "url(#glow)" }
+              : undefined
+          }
+        />
+      ))}
 
-      {/* NÓS */}
+      {/* NODES */}
       {validTalents.map(t => {
-        if (!t.position) return null;
-
         const isUnlocked = unlocked.includes(t.id);
         const available = canUnlock(t);
         const clickable = available && !isUnlocked;
@@ -153,25 +155,44 @@ export default function TalentsTreeGraph() {
           <motion.g
             key={t.id}
             whileHover={
-              clickable ? { scale: 1.12 } : {}
+              clickable
+                ? { scale: 1.15 }
+                : {}
             }
+            transition={{ type: "spring", stiffness: 200 }}
             onClick={() =>
               clickable && unlockTalent(t.id)
             }
-            className={
-              clickable ? "cursor-pointer" : ""
-            }
+            className={clickable ? "cursor-pointer" : ""}
           >
+            {/* Outer Ring */}
             <circle
               cx={t.position.x}
               cy={t.position.y}
-              r="22"
-              fill={
+              r="30"
+              fill="transparent"
+              stroke={
                 isUnlocked
                   ? "#22c55e"
                   : available
                   ? "#a855f7"
                   : "#333"
+              }
+              strokeWidth="2"
+              opacity="0.4"
+            />
+
+            {/* Core */}
+            <circle
+              cx={t.position.x}
+              cy={t.position.y}
+              r="20"
+              fill={
+                isUnlocked
+                  ? "url(#nodeActive)"
+                  : available
+                  ? "#9333ea"
+                  : "#1f2937"
               }
               style={
                 isUnlocked
@@ -180,12 +201,14 @@ export default function TalentsTreeGraph() {
               }
             />
 
+            {/* Title */}
             <text
               x={t.position.x}
-              y={t.position.y + 40}
+              y={t.position.y + 45}
               textAnchor="middle"
-              fill="#ccc"
-              fontSize="11"
+              fill="#e5e7eb"
+              fontSize="12"
+              fontWeight="500"
             >
               {t.title}
             </text>
