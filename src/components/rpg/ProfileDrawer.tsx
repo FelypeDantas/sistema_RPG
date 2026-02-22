@@ -5,7 +5,8 @@ import {
   GitBranch,
   LayoutDashboard,
   BookOpen,
-  Coins
+  Coins,
+  Calendar
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef } from "react";
@@ -100,7 +101,7 @@ export const ProfileDrawer = ({
     },
     {
       label: "Acompanhamento Diário",
-      icon: BookOpen,
+      icon: Calendar,
       path: "/daily-tracker",
       hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
       color: "text-neon-yellow"

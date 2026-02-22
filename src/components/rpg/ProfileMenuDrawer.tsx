@@ -4,7 +4,8 @@ import {
   GitBranch,
   LayoutDashboard,
   BookOpen,
-  X
+  X,
+  Calendar
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef } from "react";
@@ -152,7 +153,7 @@ export const ProfileMenuDrawer = ({
               />
 
               <MenuButton
-                icon={BookOpen}
+                icon={Calendar}
                 label="Acompanhamento Diário"
                 color="text-neon-yellow"
                 hover="hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
