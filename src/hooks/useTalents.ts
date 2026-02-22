@@ -209,55 +209,57 @@ export function useTalents(level: number): UseTalentsReturn {
   /* =============================
      🌿 ADD CUSTOM + SAVE NO FIREBASE
   ============================= */
-  const addCustomTalent = useCallback(
-    async (parentId: string, title: string, description: string, cost: number) => {
-      const id = `custom_${Date.now()}`;
-      const newTalent: TalentNodeData = {
-        id,
-        title,
-        description,
-        cost,
-        progress: 0,
-        locked: true,
-        parentId,
-        x: 0,
-        y: 0,
-      };
+ const addCustomTalent = useCallback(
+  async (parentId: string, title: string, description: string, cost: number) => {
+    const id = `custom_${Date.now()}`;
+    const newTalent: TalentNodeData = {
+      id,
+      title,
+      description,
+      cost,
+      progress: 0,
+      locked: true,
+      parentId,
+      x: 0,
+      y: 0,
+    };
 
-      // Atualiza local state
-      setPersisted(prev => {
-        const updated = {
-          ...prev,
-          customTalents: {
-            ...prev.customTalents,
-            [id]: newTalent,
-          },
-        };
+    setPersisted(prev => {
+      const updatedCustom = { ...prev.customTalents, [id]: newTalent };
+      const updatedTalents = { ...prev.talents };
 
-        // Atualizar o array de filhos do pai
-        if (parentId) {
-          if (!updated.talents[parentId]?.children) updated.talents[parentId] = { ...updated.talents[parentId], children: [] };
-          if (!updated.talents[parentId]?.children?.includes(id)) {
-            updated.talents[parentId].children?.push(id);
-          }
-          // Se o pai também for custom
-          if (prev.customTalents[parentId]) {
-            if (!updated.customTalents[parentId]?.children) updated.customTalents[parentId] = { ...updated.customTalents[parentId], children: [] };
-            updated.customTalents[parentId].children?.push(id);
-          }
+      // Atualizar filhos do pai (base ou custom)
+      if (parentId) {
+        if (updatedTalents[parentId]) {
+          updatedTalents[parentId] = {
+            ...updatedTalents[parentId],
+            children: updatedTalents[parentId].children
+              ? [...updatedTalents[parentId].children, id]
+              : [id],
+          };
         }
 
-        return updated;
-      });
+        if (updatedCustom[parentId]) {
+          updatedCustom[parentId] = {
+            ...updatedCustom[parentId],
+            children: updatedCustom[parentId].children
+              ? [...updatedCustom[parentId].children, id]
+              : [id],
+          };
+        }
+      }
 
-      // Salva direto no Firebase
-      const user = auth.currentUser;
-      if (!user) return;
-      const ref = doc(db, "users", user.uid, "talents", "state");
-      await setDoc(ref, { customTalents: { [id]: newTalent } }, { merge: true });
-    },
-    []
-  );
+      return { ...prev, customTalents: updatedCustom, talents: updatedTalents };
+    });
+
+    // Salva direto no Firebase (somente o novo talento)
+    const user = auth.currentUser;
+    if (!user) return;
+    const ref = doc(db, "users", user.uid, "talents", "state");
+    await setDoc(ref, { customTalents: { [id]: newTalent } }, { merge: true });
+  },
+  []
+);
 
   /* =============================
      🎯 MISSIONS
