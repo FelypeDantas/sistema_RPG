@@ -3,24 +3,33 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { db, auth } from "@/services/firebase";
 import { BASE_TALENTS, BASE_TREE_VERSION } from "@/core/talents/baseTree";
-import { Talent } from "@/types/Talents";
 
 /* ======================================================
    🔐 TYPES
 ====================================================== */
 
-export interface TalentNodeData extends Talent {
+export interface TalentNodeData {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+
   progress: number;
   locked: boolean;
+
   parentId?: string;
+
   x: number;
   y: number;
+
   children: string[];
+
+  category?: "soft" | "hard" | "combat" | "intellect";
 }
 
 interface PersistedState {
   talents: Record<string, Partial<TalentNodeData>>;
-  customTalents: Record<string, TalentNodeData>;
+  customTalents?: Record<string, TalentNodeData>;
   collapsed: Record<string, boolean>;
   treeVersion: number;
 }
@@ -249,12 +258,16 @@ export function useTalents(level: number) {
     );
 
     // custom
-    Object.entries(
-      persisted.customTalents || {}
-    ).forEach(([id, node]) => {
-      if (!node?.id) return;
-      merged[id] = createSafeNode(id, node);
-    });
+    const customTalents: Record<string, TalentNodeData> =
+      persisted.customTalents ?? {};
+
+    Object.entries(customTalents).forEach(
+      ([id, node]) => {
+        if (!node) return;
+
+        merged[id] = createSafeNode(id, node);
+      }
+    );
 
     const tree = buildTreeSafe(merged);
     return computeLayoutSafe(tree);
