@@ -1,5 +1,6 @@
-import { useState, useCallback, FormEvent } from "react";
+import { useState, useCallback, FormEvent, useMemo } from "react";
 import { Mission } from "@/hooks/useMissions";
+import clsx from "clsx";
 
 type AttributeType = "Mente" | "Físico" | "Social" | "Finanças";
 
@@ -14,9 +15,23 @@ const ATTRIBUTE_OPTIONS: AttributeType[] = [
   "Finanças"
 ];
 
+const ATTRIBUTE_COLORS: Record<AttributeType, string> = {
+  Mente: "text-purple-400",
+  Físico: "text-red-400",
+  Social: "text-blue-400",
+  Finanças: "text-green-400"
+};
+
 const clampXP = (value: number) => {
   if (isNaN(value)) return 1;
-  return Math.max(1, Math.floor(value));
+  return Math.max(1, Math.min(500, Math.floor(value)));
+};
+
+const getDifficulty = (xp: number) => {
+  if (xp >= 200) return { label: "Épica", color: "text-red-400" };
+  if (xp >= 100) return { label: "Difícil", color: "text-orange-400" };
+  if (xp >= 50) return { label: "Média", color: "text-yellow-400" };
+  return { label: "Fácil", color: "text-green-400" };
 };
 
 export const MissionForm = ({ onAdd }: MissionFormProps) => {
@@ -26,7 +41,9 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
   const [attribute, setAttribute] =
     useState<AttributeType>("Mente");
 
-  const isValid = title.trim().length > 0;
+  const isValid = title.trim().length >= 3;
+
+  const difficulty = useMemo(() => getDifficulty(xp), [xp]);
 
   const resetForm = useCallback(() => {
     setTitle("");
@@ -66,7 +83,7 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-cyber-card p-4 rounded-xl space-y-3 border border-white/5"
+      className="bg-cyber-card p-4 rounded-xl space-y-4 border border-white/5"
     >
       <input
         className="
@@ -78,7 +95,6 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         onChange={(e) => setTitle(e.target.value)}
         maxLength={80}
         required
-        aria-label="Título da missão"
       />
 
       <textarea
@@ -91,7 +107,11 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         onChange={(e) => setDescription(e.target.value)}
         rows={3}
         maxLength={200}
-        aria-label="Descrição da missão"
+        onKeyDown={(e) => {
+          if (e.ctrlKey && e.key === "Enter") {
+            handleSubmit();
+          }
+        }}
       />
 
       <div className="flex gap-2">
@@ -104,7 +124,6 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
           value={xp}
           onChange={(e) => handleXPChange(e.target.value)}
           min={1}
-          aria-label="Quantidade de XP"
         />
 
         <select
@@ -116,7 +135,6 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
           onChange={(e) =>
             setAttribute(e.target.value as AttributeType)
           }
-          aria-label="Atributo relacionado"
         >
           {ATTRIBUTE_OPTIONS.map((option) => (
             <option key={option} value={option}>
@@ -126,19 +144,28 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         </select>
       </div>
 
+      {/* Preview estratégico */}
+      <div className="flex justify-between text-xs">
+        <span className={ATTRIBUTE_COLORS[attribute]}>
+          Atributo: {attribute}
+        </span>
+
+        <span className={difficulty.color}>
+          Dificuldade: {difficulty.label}
+        </span>
+      </div>
+
       <button
         type="submit"
         disabled={!isValid}
-        className={`
-          w-full py-2 rounded text-white transition-all duration-200
-          ${
-            isValid
-              ? "bg-neon-purple/80 hover:bg-neon-purple active:scale-[0.98]"
-              : "bg-gray-700 cursor-not-allowed opacity-60"
-          }
-        `}
+        className={clsx(
+          "w-full py-2 rounded text-white transition-all duration-200",
+          isValid
+            ? "bg-neon-purple/80 hover:bg-neon-purple active:scale-[0.98] shadow-[0_0_15px_rgba(168,85,247,0.4)]"
+            : "bg-gray-700 cursor-not-allowed opacity-60"
+        )}
       >
-        Criar Missão
+        Criar Missão (+{xp} XP)
       </button>
     </form>
   );
