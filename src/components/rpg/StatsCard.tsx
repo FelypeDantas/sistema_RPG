@@ -7,7 +7,6 @@ interface Stats {
   totalQuests: number;
   xpToday: number;
   streak: number;
-  weeklyXP: number[];
 }
 
 interface StatsCardProps {
@@ -19,8 +18,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
     questsToday = 0,
     totalQuests = 0,
     xpToday = 0,
-    streak = 0,
-    weeklyXP = []
+    streak = 0
   } = stats;
 
   const safeTotal = Math.max(totalQuests, 0);
@@ -56,11 +54,11 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
     const animate = (time: number) => {
       const progress = Math.min((time - startTime) / duration, 1);
 
-      const current = Math.floor(
+      const value = Math.floor(
         startValue + (endValue - startValue) * progress
       );
 
-      setDisplayXp(current);
+      setDisplayXp(value);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
@@ -75,12 +73,6 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
       }
     };
   }, [safeXpToday]);
-
-  /* ---------------- MINI WEEKLY CHART ---------------- */
-
-  const maxWeeklyXP = useMemo(() => {
-    return Math.max(...weeklyXP, 1);
-  }, [weeklyXP]);
 
   return (
     <motion.div
@@ -111,7 +103,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
             </span>
           </div>
 
-          <div className="mt-2 h-1.5 bg-cyber-dark rounded-full overflow-hidden">
+          <div className="mt-3 h-1.5 bg-cyber-dark rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${completionRate}%` }}
@@ -120,7 +112,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
             />
           </div>
 
-          <div className="text-xs text-gray-400 mt-1">
+          <div className="text-xs text-gray-400 mt-2">
             {completionRate}% concluído
           </div>
         </div>
@@ -144,7 +136,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
             </span>
           </motion.div>
 
-          <div className="flex items-center gap-1 mt-2 text-neon-green text-xs">
+          <div className="flex items-center gap-1 mt-3 text-neon-green text-xs">
             <TrendingUp className="w-3 h-3" />
             <span>
               {safeXpToday > 0
@@ -154,48 +146,35 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           </div>
         </div>
 
-        {/* STREAK + MINI CHART */}
+        {/* STREAK */}
         <div className="col-span-2 bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-3">
             <Activity className="w-4 h-4 text-neon-orange" />
             <span className="text-gray-400 text-sm">Streak</span>
           </div>
 
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-neon-orange">
-                {safeStreak} dias
-              </span>
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-bold text-neon-orange">
+              {safeStreak} dias consecutivos
+            </span>
 
-              {safeStreak >= 7 && (
-                <motion.span
-                  initial={{ scale: 0.95 }}
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ repeat: Infinity, duration: 1.8 }}
-                  className="text-xs bg-neon-orange/20 px-2 py-1 rounded-full text-neon-orange"
-                >
-                  Em chamas 🔥
-                </motion.span>
-              )}
+            {safeStreak >= 7 && (
+              <motion.span
+                initial={{ scale: 0.95 }}
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 1.8 }}
+                className="text-xs bg-neon-orange/20 px-3 py-1 rounded-full text-neon-orange"
+              >
+                🔥 Em chamas
+              </motion.span>
+            )}
+          </div>
+
+          {safeStreak === 0 && (
+            <div className="text-xs text-gray-500 mt-2">
+              Conclua uma missão hoje para iniciar sua sequência.
             </div>
-          </div>
-
-          {/* MINI BAR CHART */}
-          <div className="flex items-end justify-between gap-2 h-16">
-            {weeklyXP.map((xp, index) => {
-              const heightPercent = (xp / maxWeeklyXP) * 100;
-
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ height: 0 }}
-                  animate={{ height: `${heightPercent}%` }}
-                  transition={{ duration: 0.6, delay: index * 0.05 }}
-                  className="flex-1 bg-gradient-to-t from-neon-cyan to-neon-purple rounded-md"
-                />
-              );
-            })}
-          </div>
+          )}
         </div>
 
       </div>
