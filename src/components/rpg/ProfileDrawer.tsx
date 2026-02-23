@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef } from "react";
+import type { LucideIcon } from "lucide-react";
 
 interface ProfileDrawerProps {
   open: boolean;
@@ -18,17 +19,68 @@ interface ProfileDrawerProps {
 
 interface NavItem {
   label: string;
-  icon: any;
+  icon: LucideIcon;
   path: string;
   hover: string;
   color: string;
   external?: boolean;
 }
 
-export const ProfileDrawer = ({
-  open,
-  onClose
-}: ProfileDrawerProps) => {
+/* -----------------------------
+   Navigation Config (isolado)
+------------------------------ */
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/",
+    hover: "hover:border-neon-cyan",
+    color: "text-neon-cyan"
+  },
+  {
+    label: "Histórico de Quests",
+    icon: ScrollText,
+    path: "/quests/history",
+    hover: "hover:border-neon-green",
+    color: "text-neon-green"
+  },
+  {
+    label: "Árvore de Habilidades",
+    icon: GitBranch,
+    path: "/talents",
+    hover: "hover:border-purple-400",
+    color: "text-purple-400"
+  },
+  {
+    label: "Codex de Atributos",
+    icon: BookOpen,
+    path: "/attributes",
+    hover: "hover:border-neon-orange",
+    color: "text-neon-orange"
+  },
+  {
+    label: "Moedas",
+    icon: Coins,
+    path: "https://meu-dashboard-financeiro.vercel.app/",
+    hover: "hover:border-neon-yellow",
+    color: "text-neon-yellow",
+    external: true
+  },
+  {
+    label: "Acompanhamento Diário",
+    icon: Calendar,
+    path: "/daily-tracker",
+    hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
+    color: "text-neon-yellow"
+  }
+];
+
+/* -----------------------------
+   Component
+------------------------------ */
+
+export const ProfileDrawer = ({ open, onClose }: ProfileDrawerProps) => {
   const navigate = useNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -44,69 +96,24 @@ export const ProfileDrawer = ({
     [navigate, onClose]
   );
 
-  // ESC + trava scroll + foco
+  /* ESC + Scroll Lock */
+
   useEffect(() => {
+    if (!open) return;
+
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
 
-    if (open) {
-      window.addEventListener("keydown", handleEsc);
-      document.body.style.overflow = "hidden";
-      drawerRef.current?.focus();
-    }
+    window.addEventListener("keydown", handleEsc);
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.focus();
 
     return () => {
       window.removeEventListener("keydown", handleEsc);
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
-
-  const navItems: NavItem[] = [
-    {
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      path: "/",
-      hover: "hover:border-neon-cyan",
-      color: "text-neon-cyan"
-    },
-    {
-      label: "Histórico de Quests",
-      icon: ScrollText,
-      path: "/quests/history",
-      hover: "hover:border-neon-green",
-      color: "text-neon-green"
-    },
-    {
-      label: "Árvore de Habilidades",
-      icon: GitBranch,
-      path: "/talents",
-      hover: "hover:border-purple-400",
-      color: "text-purple-400"
-    },
-    {
-      label: "Codex de Atributos",
-      icon: BookOpen,
-      path: "/attributes",
-      hover: "hover:border-neon-orange",
-      color: "text-neon-orange"
-    },
-    {
-      label: "Moedas",
-      icon: Coins,
-      path: "https://meu-dashboard-financeiro.vercel.app/",
-      hover: "hover:border-neon-yellow",
-      color: "text-neon-yellow",
-      external: true
-    },
-    {
-      label: "Acompanhamento Diário",
-      icon: Calendar,
-      path: "/daily-tracker",
-      hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
-      color: "text-neon-yellow"
-    }
-  ];
 
   return (
     <AnimatePresence>
@@ -159,14 +166,14 @@ export const ProfileDrawer = ({
               </button>
             </header>
 
-            {/* Navegação */}
+            {/* Navigation */}
             <nav className="space-y-4">
-              {navItems.map((item) => {
+              {NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
 
                 return (
                   <button
-                    key={item.path}
+                    key={item.label}
                     onClick={() => goTo(item.path, item.external)}
                     className={`
                       w-full flex items-center gap-3 p-4 rounded-xl
