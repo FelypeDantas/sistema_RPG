@@ -15,41 +15,52 @@ interface StatsCardProps {
 }
 
 export const StatsCard = ({ stats }: StatsCardProps) => {
-  const safeTotal = Math.max(0, stats.totalQuests);
-  const safeToday = Math.max(0, stats.questsToday);
-  const safeXpToday = Math.max(0, stats.xpToday);
-  const safeStreak = Math.max(0, stats.streak);
+  const {
+    questsToday = 0,
+    totalQuests = 0,
+    xpToday = 0,
+    streak = 0,
+    weeklyXP = []
+  } = stats;
+
+  const safeTotal = Math.max(totalQuests, 0);
+  const safeToday = Math.max(questsToday, 0);
+  const safeXpToday = Math.max(xpToday, 0);
+  const safeStreak = Math.max(streak, 0);
+
+  /* ---------------- COMPLETION RATE ---------------- */
 
   const completionRate = useMemo(() => {
     if (safeTotal === 0) return 0;
     return Math.min(100, Math.round((safeToday / safeTotal) * 100));
   }, [safeToday, safeTotal]);
 
+  /* ---------------- XP COUNTER ANIMATION ---------------- */
+
   const [displayXp, setDisplayXp] = useState(0);
   const animationRef = useRef<number | null>(null);
-  const previousXpRef = useRef(0);
 
   useEffect(() => {
-    if (safeXpToday === previousXpRef.current) return;
-
-    previousXpRef.current = safeXpToday;
-
     if (animationRef.current) {
       cancelAnimationFrame(animationRef.current);
     }
 
-    if (safeXpToday <= 0) {
-      setDisplayXp(0);
-      return;
-    }
+    const startValue = displayXp;
+    const endValue = safeXpToday;
 
-    const duration = 700;
-    const start = performance.now();
+    if (startValue === endValue) return;
+
+    const duration = 600;
+    const startTime = performance.now();
 
     const animate = (time: number) => {
-      const progress = Math.min((time - start) / duration, 1);
-      const value = Math.floor(progress * safeXpToday);
-      setDisplayXp(value);
+      const progress = Math.min((time - startTime) / duration, 1);
+
+      const current = Math.floor(
+        startValue + (endValue - startValue) * progress
+      );
+
+      setDisplayXp(current);
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
@@ -65,6 +76,12 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
     };
   }, [safeXpToday]);
 
+  /* ---------------- MINI WEEKLY CHART ---------------- */
+
+  const maxWeeklyXP = useMemo(() => {
+    return Math.max(...weeklyXP, 1);
+  }, [weeklyXP]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -77,8 +94,8 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
       )}
 
       <div className="grid grid-cols-2 gap-4 relative z-10">
-        
-        {/* Missões */}
+
+        {/* MISSÕES */}
         <div className="bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-2">
             <Target className="w-4 h-4 text-neon-purple" />
@@ -108,18 +125,24 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           </div>
         </div>
 
-        {/* XP Hoje */}
+        {/* XP HOJE */}
         <div className="bg-cyber-darker rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-2 mb-2">
             <Zap className="w-4 h-4 text-neon-cyan" />
             <span className="text-gray-400 text-sm">XP Hoje</span>
           </div>
 
-          <div className="flex items-end gap-1">
+          <motion.div
+            key={safeXpToday}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.08, 1] }}
+            transition={{ duration: 0.4 }}
+            className="flex items-end gap-1"
+          >
             <span className="text-3xl font-bold text-neon-cyan text-glow-cyan">
               +{displayXp}
             </span>
-          </div>
+          </motion.div>
 
           <div className="flex items-center gap-1 mt-2 text-neon-green text-xs">
             <TrendingUp className="w-3 h-3" />
@@ -131,28 +154,47 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
           </div>
         </div>
 
-        {/* Streak */}
+        {/* STREAK + MINI CHART */}
         <div className="col-span-2 bg-cyber-darker rounded-xl p-4 border border-white/5">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-3">
             <Activity className="w-4 h-4 text-neon-orange" />
             <span className="text-gray-400 text-sm">Streak</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-neon-orange">
-              {safeStreak} dias
-            </span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-neon-orange">
+                {safeStreak} dias
+              </span>
 
-            {safeStreak >= 7 && (
-              <motion.span
-                initial={{ scale: 0.95 }}
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 1.8 }}
-                className="text-xs bg-neon-orange/20 px-2 py-1 rounded-full text-neon-orange"
-              >
-                Em chamas 🔥
-              </motion.span>
-            )}
+              {safeStreak >= 7 && (
+                <motion.span
+                  initial={{ scale: 0.95 }}
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.8 }}
+                  className="text-xs bg-neon-orange/20 px-2 py-1 rounded-full text-neon-orange"
+                >
+                  Em chamas 🔥
+                </motion.span>
+              )}
+            </div>
+          </div>
+
+          {/* MINI BAR CHART */}
+          <div className="flex items-end justify-between gap-2 h-16">
+            {weeklyXP.map((xp, index) => {
+              const heightPercent = (xp / maxWeeklyXP) * 100;
+
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${heightPercent}%` }}
+                  transition={{ duration: 0.6, delay: index * 0.05 }}
+                  className="flex-1 bg-gradient-to-t from-neon-cyan to-neon-purple rounded-md"
+                />
+              );
+            })}
           </div>
         </div>
 
