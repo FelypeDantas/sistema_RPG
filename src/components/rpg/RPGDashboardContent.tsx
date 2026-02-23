@@ -46,7 +46,7 @@ const RPGDashboardContent = (): ReactNode => {
 
   const now = new Date();
   const todayKey = now.toISOString().split("T")[0];
-
+  const history = missions.history ?? [];
   // 👇 Quando subir para nível > 1 e ainda for nome padrão, pede nome definitivo
   useEffect(() => {
     if (player.level > 1 && avatarName === "Player One") {
@@ -61,18 +61,31 @@ const RPGDashboardContent = (): ReactNode => {
 
   // Total XP acumulado
   const totalXP = useMemo(() => {
-    return (missions.history ?? []).reduce(
+    return history.reduce(
       (acc, h) => acc + (h.success ? h.xp : 0),
       0
     );
-  }, [missions.history]);
+  }, [history]);
+
+  const xpByDay = useMemo(() => {
+    const map = new Map<string, number>();
+
+    history.forEach((h) => {
+      if (!h.success) return;
+
+      const key = h.date.split("T")[0];
+      map.set(key, (map.get(key) ?? 0) + h.xp);
+    });
+
+    return map;
+  }, [history]);
 
   // Quests hoje
   const questsToday = useMemo(() => {
-    return (missions.history ?? []).filter(
+    return history.filter(
       (h) => h.success && h.date.startsWith(todayKey)
     ).length;
-  }, [missions.history ?? [], todayKey]);
+  }, [history, todayKey]);
 
   // Streak
   const currentStreak = useMemo(() => {
@@ -83,12 +96,11 @@ const RPGDashboardContent = (): ReactNode => {
       day.setDate(now.getDate() - i);
       const key = day.toISOString().split("T")[0];
 
-      const didSomething = missions.history.some(
-        (h) => h.success && h.date.startsWith(key)
-      );
-
-      if (didSomething) streak++;
-      else break;
+      if ((xpByDay.get(key) ?? 0) > 0) {
+        streak++;
+      } else {
+        break;
+      }
     }
 
     if (streak === 0 && player.hasTrait?.("persistente")) {
@@ -96,7 +108,7 @@ const RPGDashboardContent = (): ReactNode => {
     }
 
     return streak;
-  }, [missions.history, player]);
+  }, [xpByDay, player]);
 
   const handleMissionComplete = (mission: Mission, success: boolean) => {
     missions.completeMission(mission.id, success);
@@ -123,11 +135,9 @@ const RPGDashboardContent = (): ReactNode => {
       day.setDate(now.getDate() - (6 - i));
       const key = day.toISOString().split("T")[0];
 
-      return missions.history
-        .filter((h) => h.success && h.date.startsWith(key))
-        .reduce((acc, h) => acc + h.xp, 0);
+      return xpByDay.get(key) ?? 0;
     });
-  }, [missions.history]);
+  }, [xpByDay]);
 
   // ESC fecha modal
   useEffect(() => {
@@ -147,7 +157,8 @@ const RPGDashboardContent = (): ReactNode => {
     };
   }, [showConfirm]);
 
-  const safeNextLevelXP = player.nextLevelXP || 1;
+  const safeNextLevelXP = Math.max(player.nextLevelXP ?? 1, 1);
+
   const xpProgress = Math.min(
     100,
     (player.xp / safeNextLevelXP) * 100
