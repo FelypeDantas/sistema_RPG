@@ -1,49 +1,61 @@
-import { usePlayer } from "@/context/PlayerContext";
-import {
-  calculateGlobalXP,
-  calculateLevel,
-  calculateLevelProgress,
-  getGlobalRank,
-} from "@/utils/playerProgression";
+// utils/playerProgression.ts
 
-export const PlayerStatusCard = () => {
-  const { attributes } = usePlayer();
+export type Attributes = Record<string, number>;
 
-  const totalXP = calculateGlobalXP(attributes);
-  const level = calculateLevel(totalXP);
-  const levelProgress = calculateLevelProgress(totalXP);
-  const rank = getGlobalRank(level);
+/**
+ * 1️⃣ XP Global
+ * Soma todos os atributos.
+ * Pode futuramente aplicar pesos diferentes.
+ */
+export function calculateGlobalXP(attributes: Attributes): number {
+  return Object.values(attributes).reduce((acc, value) => acc + value, 0);
+}
 
-  const progressPercent = (levelProgress / 100) * 100;
+/**
+ * 2️⃣ Curva de XP por nível
+ * Fórmula: 100 * level²
+ * Cria progressão crescente elegante.
+ */
+export function xpRequiredForLevel(level: number): number {
+  return 100 * level * level;
+}
 
-  return (
-    <div className="bg-cyber-card p-6 rounded-xl border border-white/5 space-y-4">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-white text-xl font-semibold">
-            Level {level}
-          </h2>
-          <p className="text-gray-400 text-sm">{rank}</p>
-        </div>
+/**
+ * 3️⃣ Calcula Level com base no XP total
+ */
+export function calculateLevel(totalXP: number): number {
+  let level = 1;
 
-        <div className="text-right">
-          <p className="text-white font-mono font-bold">
-            {totalXP} XP
-          </p>
-        </div>
-      </div>
+  while (totalXP >= xpRequiredForLevel(level + 1)) {
+    level++;
+  }
 
-      {/* Barra de Level */}
-      <div className="relative h-3 bg-black/40 rounded-full overflow-hidden border border-white/10">
-        <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-cyan-400 rounded-full transition-all duration-700"
-          style={{ width: `${progressPercent}%` }}
-        />
-      </div>
+  return level;
+}
 
-      <p className="text-xs text-gray-400">
-        {levelProgress}/100 XP para o próximo nível
-      </p>
-    </div>
-  );
-};
+/**
+ * 4️⃣ Calcula progresso dentro do nível atual
+ */
+export function calculateLevelProgress(totalXP: number): number {
+  const currentLevel = calculateLevel(totalXP);
+
+  const currentLevelXP = xpRequiredForLevel(currentLevel);
+  const nextLevelXP = xpRequiredForLevel(currentLevel + 1);
+
+  const xpIntoLevel = totalXP - currentLevelXP;
+  const xpRange = nextLevelXP - currentLevelXP;
+
+  return (xpIntoLevel / xpRange) * 100;
+}
+
+/**
+ * 5️⃣ Rank Global (E → S)
+ */
+export function getGlobalRank(level: number): string {
+  if (level >= 100) return "S";
+  if (level >= 70) return "A";
+  if (level >= 40) return "B";
+  if (level >= 20) return "C";
+  if (level >= 10) return "D";
+  return "E";
+}

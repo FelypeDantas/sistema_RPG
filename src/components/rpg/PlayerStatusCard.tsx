@@ -38,7 +38,6 @@ export const PlayerStatusCard = () => {
     levelProgress,
     rank,
     playerClass,
-    prestigeMultiplier,
   } = playerData;
 
   return (
