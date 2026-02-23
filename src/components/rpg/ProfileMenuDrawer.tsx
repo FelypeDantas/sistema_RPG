@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, Variants } from "framer-motion";
 import {
   ScrollText,
   GitBranch,
@@ -7,13 +7,84 @@ import {
   X,
   Calendar
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 
 interface ProfileMenuDrawerProps {
   open: boolean;
   onClose: () => void;
 }
+
+interface MenuItem {
+  label: string;
+  icon: LucideIcon;
+  path: string;
+  color: string;
+  hover: string;
+}
+
+/* -------------------------
+   Menu Config
+-------------------------- */
+
+const MENU_ITEMS: MenuItem[] = [
+  {
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    path: "/",
+    color: "text-neon-green",
+    hover: "hover:border-neon-green/50 hover:bg-neon-green/10"
+  },
+  {
+    label: "Histórico de Quests",
+    icon: ScrollText,
+    path: "/quests/history",
+    color: "text-neon-purple",
+    hover: "hover:border-neon-purple/50 hover:bg-neon-purple/10"
+  },
+  {
+    label: "Árvore de Habilidades",
+    icon: GitBranch,
+    path: "/skills",
+    color: "text-neon-cyan",
+    hover: "hover:border-neon-cyan/50 hover:bg-neon-cyan/10"
+  },
+  {
+    label: "Codex de Atributos",
+    icon: BookOpen,
+    path: "/attributes",
+    color: "text-neon-orange",
+    hover: "hover:border-neon-orange/50 hover:bg-neon-orange/10"
+  },
+  {
+    label: "Acompanhamento Diário",
+    icon: Calendar,
+    path: "/daily-tracker",
+    color: "text-neon-yellow",
+    hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
+  }
+];
+
+/* -------------------------
+   Animation Variants
+-------------------------- */
+
+const containerVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.06 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, x: 20 },
+  visible: { opacity: 1, x: 0 }
+};
+
+/* -------------------------
+   Component
+-------------------------- */
 
 export const ProfileMenuDrawer = ({
   open,
@@ -22,41 +93,30 @@ export const ProfileMenuDrawer = ({
   const navigate = useNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  function goTo(path: string) {
-    onClose();
-    setTimeout(() => navigate(path), 180);
-  }
+  const goTo = useCallback(
+    (path: string) => {
+      onClose();
+      setTimeout(() => navigate(path), 180);
+    },
+    [navigate, onClose]
+  );
 
   useEffect(() => {
-    function handleEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
+    if (!open) return;
 
-    if (open) {
-      window.addEventListener("keydown", handleEsc);
-      document.body.style.overflow = "hidden";
-      drawerRef.current?.focus();
-    }
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleEsc);
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.focus();
 
     return () => {
       window.removeEventListener("keydown", handleEsc);
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
-
-  const containerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.06
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { opacity: 1, x: 0 }
-  };
 
   return (
     <AnimatePresence>
@@ -109,57 +169,20 @@ export const ProfileMenuDrawer = ({
               </button>
             </div>
 
-            {/* Menu */}
+            {/* Navigation */}
             <motion.nav
               className="space-y-4"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
-              <MenuButton
-                icon={LayoutDashboard}
-                label="Dashboard"
-                color="text-neon-green"
-                hover="hover:border-neon-green/50 hover:bg-neon-green/10"
-                onClick={() => goTo("/")}
-                variants={itemVariants}
-              />
-
-              <MenuButton
-                icon={ScrollText}
-                label="Histórico de Quests"
-                color="text-neon-purple"
-                hover="hover:border-neon-purple/50 hover:bg-neon-purple/10"
-                onClick={() => goTo("/quests/history")}
-                variants={itemVariants}
-              />
-
-              <MenuButton
-                icon={GitBranch}
-                label="Árvore de Habilidades"
-                color="text-neon-cyan"
-                hover="hover:border-neon-cyan/50 hover:bg-neon-cyan/10"
-                onClick={() => goTo("/skills")}
-                variants={itemVariants}
-              />
-
-              <MenuButton
-                icon={BookOpen}
-                label="Codex de Atributos"
-                color="text-neon-orange"
-                hover="hover:border-neon-orange/50 hover:bg-neon-orange/10"
-                onClick={() => goTo("/attributes")}
-                variants={itemVariants}
-              />
-
-              <MenuButton
-                icon={Calendar}
-                label="Acompanhamento Diário"
-                color="text-neon-yellow"
-                hover="hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
-                onClick={() => goTo("/daily-tracker")}
-                variants={itemVariants}
-              />
+              {MENU_ITEMS.map((item) => (
+                <MenuButton
+                  key={item.label}
+                  item={item}
+                  onClick={() => goTo(item.path)}
+                />
+              ))}
             </motion.nav>
           </motion.aside>
         </>
@@ -168,38 +191,33 @@ export const ProfileMenuDrawer = ({
   );
 };
 
+/* -------------------------
+   Menu Button
+-------------------------- */
+
 interface MenuButtonProps {
-  icon: any;
-  label: string;
-  color: string;
-  hover: string;
+  item: MenuItem;
   onClick: () => void;
-  variants: any;
 }
 
-function MenuButton({
-  icon: Icon,
-  label,
-  color,
-  hover,
-  onClick,
-  variants
-}: MenuButtonProps) {
+function MenuButton({ item, onClick }: MenuButtonProps) {
+  const Icon = item.icon;
+
   return (
     <motion.button
-      variants={variants}
+      variants={itemVariants}
       onClick={onClick}
       className={`
         w-full flex items-center gap-3 p-4 rounded-xl
         bg-cyber-card border border-white/10
         transition-all duration-200
         hover:-translate-y-0.5 hover:shadow-lg
-        ${hover}
+        ${item.hover}
       `}
     >
-      <Icon className={`${color} shrink-0`} />
+      <Icon className={`${item.color} shrink-0`} />
       <span className="text-white font-medium tracking-wide">
-        {label}
+        {item.label}
       </span>
     </motion.button>
   );
