@@ -8,7 +8,7 @@ interface QuestCardProps {
   onComplete: () => void;
 }
 
-const attributeColors: Record<string, string> = {
+const attributeStyles: Record<string, string> = {
   Físico: "text-neon-red border-neon-red/30 bg-neon-red/10",
   Mente: "text-neon-blue border-neon-blue/30 bg-neon-blue/10",
   Social: "text-neon-purple border-neon-purple/30 bg-neon-purple/10",
@@ -16,70 +16,55 @@ const attributeColors: Record<string, string> = {
 };
 
 export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
-  const [showTooltip, setShowTooltip] = useState(false);
   const [hovering, setHovering] = useState(false);
-  const [displayXp, setDisplayXp] = useState(
-    quest.completed ? quest.xp : 0
-  );
+  const [displayXp, setDisplayXp] = useState(quest.completed ? quest.xp : 0);
   const [burst, setBurst] = useState(false);
 
-  const hasPlayedRef = useRef(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const playedRef = useRef(false);
+  const intervalRef = useRef<number | null>(null);
 
-  // Reset quando a quest muda
+  /* ---------------- RESET WHEN QUEST CHANGES ---------------- */
   useEffect(() => {
     setDisplayXp(quest.completed ? quest.xp : 0);
-    hasPlayedRef.current = false;
-  }, [quest.id]);
+    playedRef.current = false;
+  }, [quest.id, quest.completed, quest.xp]);
 
-  // Tooltip
+  /* ---------------- XP COUNTER ANIMATION ---------------- */
   useEffect(() => {
-    setShowTooltip(hovering);
-  }, [hovering]);
+    if (!quest.completed || displayXp === quest.xp) return;
 
-  // XP counter animation
-  useEffect(() => {
-    if (!quest.completed) return;
-    if (displayXp === quest.xp) return;
-
-    let current = 0;
     const duration = 600;
     const stepTime = 16;
     const steps = duration / stepTime;
     const increment = quest.xp / steps;
 
-    intervalRef.current = setInterval(() => {
+    let current = 0;
+
+    intervalRef.current = window.setInterval(() => {
       current += increment;
 
       if (current >= quest.xp) {
         setDisplayXp(quest.xp);
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
       } else {
         setDisplayXp(Math.floor(current));
       }
     }, stepTime);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [quest.completed, quest.xp, displayXp]);
+  }, [quest.completed, quest.xp]);
 
-  // Sound + burst (uma única vez)
+  /* ---------------- BURST + SOUND ---------------- */
   useEffect(() => {
-    if (!quest.completed) return;
-    if (hasPlayedRef.current) return;
+    if (!quest.completed || playedRef.current) return;
 
-    hasPlayedRef.current = true;
+    playedRef.current = true;
     setBurst(true);
 
     const audio = new Audio("/complete.mp3");
-    audio.preload = "auto";
     audio.volume = 0.4;
     audio.play().catch(() => {});
 
@@ -88,7 +73,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
   }, [quest.completed]);
 
   const attributeStyle =
-    attributeColors[quest.attribute] ??
+    attributeStyles[quest.attribute] ??
     "text-gray-300 border-white/20 bg-white/5";
 
   return (
@@ -102,8 +87,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
       onMouseLeave={() => setHovering(false)}
       whileHover={!quest.completed ? { scale: 1.02 } : {}}
       className={`
-        relative p-4 rounded-xl border
-        transition-all duration-300
+        relative p-4 rounded-xl border transition-all duration-300
         ${hovering ? "z-50" : "z-0"}
         ${
           quest.completed
@@ -112,7 +96,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
         }
       `}
     >
-      {/* Holographic overlay */}
+      {/* Holographic hover overlay */}
       {!quest.completed && hovering && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -122,7 +106,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
         />
       )}
 
-      {/* Burst */}
+      {/* Completion burst */}
       <AnimatePresence>
         {burst && (
           <motion.div
@@ -137,13 +121,11 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
 
       <div className="flex items-start justify-between relative z-10">
         <div className="flex items-start gap-3">
-          <div
-            onClick={() => {
-              if (!quest.completed) onComplete();
-            }}
+          <button
+            onClick={() => !quest.completed && onComplete()}
             className={`
               w-6 h-6 rounded-lg border-2 flex items-center justify-center
-              transition-all cursor-pointer
+              transition-all
               ${
                 quest.completed
                   ? "bg-neon-green border-neon-green"
@@ -154,7 +136,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
             {quest.completed && (
               <Check className="w-4 h-4 text-cyber-dark" />
             )}
-          </div>
+          </button>
 
           <div>
             <h4
@@ -198,7 +180,7 @@ export const QuestCard = ({ quest, onComplete }: QuestCardProps) => {
 
       {/* Tooltip */}
       <AnimatePresence>
-        {quest.description && showTooltip && (
+        {quest.description && hovering && (
           <motion.div
             initial={{ opacity: 0, y: 6, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
