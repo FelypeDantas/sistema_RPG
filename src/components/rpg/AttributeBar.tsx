@@ -13,107 +13,149 @@ interface Attribute {
 
 interface AttributeBarProps {
   attribute: Attribute;
+  highestValue?: number; // 🔥 valor do atributo dominante
 }
 
-export const AttributeBar = memo(({ attribute }: AttributeBarProps) => {
-  const Icon = attribute.icon;
+type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "SS";
 
-  // 🔐 Normaliza ID (evita espaço quebrando aria)
-  const attributeId = useMemo(
-    () => `attribute-${attribute.name.replace(/\s+/g, "-").toLowerCase()}`,
-    [attribute.name]
-  );
+const getRank = (value: number): Rank => {
+  if (value >= 140) return "SS";
+  if (value >= 120) return "S";
+  if (value >= 100) return "A";
+  if (value >= 75) return "B";
+  if (value >= 50) return "C";
+  if (value >= 25) return "D";
+  return "E";
+};
 
-  // 🧠 Permite expansão futura além de 100
-  const safeValue = useMemo(
-    () => Math.min(Math.max(attribute.value, 0), 100),
-    [attribute.value]
-  );
+export const AttributeBar = memo(
+  ({ attribute, highestValue }: AttributeBarProps) => {
+    const Icon = attribute.icon;
 
-  // ✨ animação real de crescimento
-  const [animatedValue, setAnimatedValue] = useState(0);
+    const attributeId = useMemo(
+      () => `attribute-${attribute.name.replace(/\s+/g, "-").toLowerCase()}`,
+      [attribute.name]
+    );
 
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setAnimatedValue(safeValue);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [safeValue]);
+    const rawValue = attribute.value;
+    const cappedValue = Math.min(Math.max(rawValue, 0), 100);
+    const overflowValue = rawValue > 100 ? rawValue - 100 : 0;
 
-  // 💎 glow dinâmico baseado no nível
-  const intensityGlow =
-    safeValue >= 80
-      ? "shadow-[0_0_12px_rgba(255,255,255,0.3)]"
-      : safeValue >= 50
-      ? "shadow-[0_0_8px_rgba(255,255,255,0.15)]"
-      : "";
+    const rank = getRank(rawValue);
 
-  const barClasses = clsx(
-    "absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out",
-    "bg-gradient-to-r",
-    attribute.color,
-    intensityGlow
-  );
+    const isDominant =
+      highestValue !== undefined && rawValue === highestValue;
 
-  return (
-    <div className="group">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <div
-            className={clsx(
-              "p-1.5 rounded-lg transition-all duration-300",
-              attribute.bgColor,
-              "group-hover:scale-110"
-            )}
-          >
-            <Icon className="w-4 h-4 text-white" />
+    const [animatedValue, setAnimatedValue] = useState(0);
+
+    useEffect(() => {
+      const frame = requestAnimationFrame(() => {
+        setAnimatedValue(cappedValue);
+      });
+      return () => cancelAnimationFrame(frame);
+    }, [cappedValue]);
+
+    const barClasses = clsx(
+      "absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out",
+      "bg-gradient-to-r",
+      attribute.color,
+      isDominant && "ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(255,215,0,0.6)]"
+    );
+
+    const rankColor = clsx(
+      "px-2 py-0.5 rounded text-xs font-bold",
+      rank === "SS" && "bg-red-600 text-white animate-pulse",
+      rank === "S" && "bg-orange-500 text-white",
+      rank === "A" && "bg-green-500 text-white",
+      rank === "B" && "bg-blue-500 text-white",
+      rank === "C" && "bg-purple-500 text-white",
+      rank === "D" && "bg-gray-500 text-white",
+      rank === "E" && "bg-gray-700 text-gray-300"
+    );
+
+    return (
+      <div
+        className={clsx(
+          "group transition-all duration-300 p-3 rounded-xl",
+          isDominant && "bg-yellow-400/5 border border-yellow-400/30"
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div
+              className={clsx(
+                "p-1.5 rounded-lg transition-all duration-300",
+                attribute.bgColor,
+                isDominant && "scale-110"
+              )}
+            >
+              <Icon className="w-4 h-4 text-white" />
+            </div>
+
+            <div>
+              <span
+                id={attributeId}
+                className="text-white font-medium text-sm"
+              >
+                {attribute.name}
+              </span>
+
+              <span className="text-gray-500 text-xs ml-2 hidden group-hover:inline">
+                {attribute.description}
+              </span>
+            </div>
           </div>
 
-          <div className="relative">
-            <span
-              id={attributeId}
-              className="text-white font-medium text-sm"
-            >
-              {attribute.name}
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold font-mono text-lg">
+              {rawValue}%
             </span>
 
-            {/* Tooltip elegante */}
-            <div className="absolute left-0 top-full mt-1 w-56 opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-200 pointer-events-none">
-              <div className="bg-cyber-darker text-gray-400 text-xs p-2 rounded-lg border border-white/5 shadow-lg">
-                {attribute.description}
-              </div>
-            </div>
+            {/* 🌟 Rank Badge */}
+            <span className={rankColor}>{rank}</span>
           </div>
         </div>
 
-        <span className="text-white font-bold font-mono text-lg tabular-nums">
-          {animatedValue}%
-        </span>
-      </div>
-
-      {/* Progress Bar */}
-      <div
-        className="relative h-2.5 bg-cyber-darker rounded-full overflow-hidden border border-white/5"
-        role="progressbar"
-        aria-labelledby={attributeId}
-        aria-valuenow={safeValue}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
+        {/* Barra principal */}
         <div
-          className={barClasses}
-          style={{ width: `${animatedValue}%` }}
-        />
+          className="relative h-2.5 bg-cyber-darker rounded-full overflow-hidden border border-white/5"
+          role="progressbar"
+          aria-labelledby={attributeId}
+          aria-valuenow={rawValue}
+          aria-valuemin={0}
+          aria-valuemax={150}
+        >
+          <div
+            className={barClasses}
+            style={{ width: `${animatedValue}%` }}
+          />
 
-        {/* Shimmer mais refinado */}
-        <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
-          style={{ width: `${animatedValue}%` }}
-        />
+          {/* shimmer */}
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
+            style={{ width: `${animatedValue}%` }}
+          />
+        </div>
+
+        {/* 🏆 Overflow power acima de 100 */}
+        {overflowValue > 0 && (
+          <div className="mt-2 relative">
+            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-pulse"
+                style={{ width: `${Math.min(overflowValue, 50) * 2}%` }}
+              />
+            </div>
+
+            <span className="text-xs text-yellow-400 font-semibold mt-1 block">
+              Overdrive +{overflowValue}%
+            </span>
+          </div>
+        )}
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 AttributeBar.displayName = "AttributeBar";
