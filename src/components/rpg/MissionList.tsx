@@ -5,57 +5,66 @@ import "./MissionModal.css";
 export function MissionList() {
   const { missions, completeMission } = useMissions();
 
-  const [selectedMission, setSelectedMission] =
-    useState<Mission | null>(null);
-
-  const [showConfirm, setShowConfirm] = useState(false);
-
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const successButtonRef = useRef<HTMLButtonElement | null>(null);
 
+  const showConfirm = selectedMission !== null;
+
+  // ----------------------------
+  // Modal Controls
+  // ----------------------------
+
+  const openModal = useCallback((mission: Mission) => {
+    setSelectedMission(mission);
+  }, []);
+
   const closeModal = useCallback(() => {
-    setShowConfirm(false);
     setSelectedMission(null);
   }, []);
 
   const handleComplete = useCallback(
     (success: boolean) => {
       if (!selectedMission) return;
+
       completeMission(selectedMission, success);
       closeModal();
     },
     [selectedMission, completeMission, closeModal]
   );
 
-  // Fecha com ESC
+  // ----------------------------
+  // ESC Key Listener
+  // ----------------------------
+
   useEffect(() => {
+    if (!showConfirm) return;
+
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        closeModal();
-      }
+      if (e.key === "Escape") closeModal();
     };
 
-    if (showConfirm) {
-      window.addEventListener("keydown", handleEsc);
-    }
-
-    return () => {
-      window.removeEventListener("keydown", handleEsc);
-    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
   }, [showConfirm, closeModal]);
 
-  // Impede scroll do fundo
+  // ----------------------------
+  // Prevent Background Scroll
+  // ----------------------------
+
   useEffect(() => {
-    if (showConfirm) {
-      document.body.style.overflow = "hidden";
-      successButtonRef.current?.focus();
-    } else {
-      document.body.style.overflow = "auto";
-    }
+    if (!showConfirm) return;
+
+    document.body.style.overflow = "hidden";
+    successButtonRef.current?.focus();
 
     return () => {
       document.body.style.overflow = "auto";
     };
   }, [showConfirm]);
+
+  // ----------------------------
+  // Render
+  // ----------------------------
 
   return (
     <>
@@ -66,12 +75,7 @@ export function MissionList() {
             <p>{mission.description}</p>
             <p>XP: {mission.xp}</p>
 
-            <button
-              onClick={() => {
-                setSelectedMission(mission);
-                setShowConfirm(true);
-              }}
-            >
+            <button onClick={() => openModal(mission)}>
               Finalizar missão
             </button>
           </li>
@@ -93,7 +97,7 @@ export function MissionList() {
             <h2 id="modal-title">Concluir Missão</h2>
 
             <p>
-              Tem certeza de que deseja concluir a missão
+              Tem certeza que deseja concluir a missão
               <strong> "{selectedMission.title}"</strong>?
             </p>
 
