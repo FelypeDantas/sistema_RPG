@@ -155,7 +155,7 @@ export const StatsCard = ({ stats }: StatsCardProps) => {
 
           <div className="flex items-center justify-between">
             <span className="text-2xl font-bold text-neon-orange">
-              {safeStreak} dias consecutivos
+              {safeStreak} dias
             </span>
 
             {safeStreak >= 7 && (
