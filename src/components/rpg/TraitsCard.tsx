@@ -99,7 +99,9 @@ export const TraitsPanel = ({ traits }: Props) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <AnimatePresence>
               {categoryTraits.map((trait, index) => (
-                <TraitCard key={trait.id} trait={trait} index={index} />
+                <motion.div key={trait.id} layout>
+                  <TraitCard trait={trait} index={index} />
+                </motion.div>
               ))}
             </AnimatePresence>
           </div>
