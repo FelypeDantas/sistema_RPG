@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -30,10 +30,21 @@ type TaskData = { [key: string]: boolean };
 const DailyTrackerPage = () => {
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
+
   const [tasksState, setTasksState] = useState<TaskData>({});
   const [monthData, setMonthData] = useState<{ date: string; completed: number }[]>([]);
   const [showResetNotice, setShowResetNotice] = useState(false);
   const [flashTask, setFlashTask] = useState<string | null>(null);
+
+  // Inteligência: estatísticas por tarefa
+  const taskStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    tasks.forEach(task => {
+      const count = monthData.filter(d => JSON.parse(localStorage.getItem(d.date) || "{}")[task]).length;
+      stats[task] = count;
+    });
+    return stats;
+  }, [monthData]);
 
   // Reset mensal
   useEffect(() => {
@@ -63,9 +74,11 @@ const DailyTrackerPage = () => {
     setTasksState(newState);
     localStorage.setItem(today, JSON.stringify(newState));
 
+    // Flash neon
     setFlashTask(task);
     setTimeout(() => setFlashTask(null), 400);
 
+    // Atualiza dados mensais
     const completedCount = Object.values(newState).filter(Boolean).length;
     const newMonthData = monthData.filter(d => d.date !== today);
     newMonthData.push({ date: today, completed: completedCount });
@@ -76,16 +89,19 @@ const DailyTrackerPage = () => {
   const totalCompleted = monthData.reduce((a, b) => a + b.completed, 0);
   const totalTasksInMonth = monthData.length * tasks.length || 1;
 
+  // Sugestões inteligentes
+  const recommendations = tasks.filter(task => taskStats[task] < 2 && !tasksState[task]);
+
   return (
     <div className="min-h-screen bg-cyber-dark p-6 relative overflow-hidden">
-      {/* Scanner de fundo */}
+      {/* Fundo animado */}
       <motion.div
         className="absolute inset-0 bg-gradient-to-b from-neon-blue/10 via-neon-purple/10 to-neon-pink/10"
         animate={{ y: ["0%", "100%"] }}
         transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
       />
 
-      {/* Botão Voltar */}
+      {/* Voltar */}
       <motion.button
         onClick={() => navigate("/")}
         className="mb-6 px-5 py-2 bg-neon-blue hover:bg-neon-blue/70 text-white font-bold rounded-xl shadow-neon tracking-wide"
@@ -95,7 +111,7 @@ const DailyTrackerPage = () => {
         ← Voltar
       </motion.button>
 
-      {/* Aviso reset mensal */}
+      {/* Aviso reset */}
       <AnimatePresence>
         {showResetNotice && (
           <motion.div
@@ -135,12 +151,9 @@ const DailyTrackerPage = () => {
                 whileTap={{ scale: 0.95 }}
               />
               <motion.span
-                className={`text-white ${tasksState[task] ? "line-through opacity-70" : ""} cursor-pointer`}
-                animate={
-                  flashTask === task
-                    ? { textShadow: "0 0 8px #facc15, 0 0 16px #facc15, 0 0 24px #facc15" }
-                    : {}
-                }
+                className={`text-white ${tasksState[task] ? "line-through opacity-70" : ""} cursor-pointer
+                  ${taskStats[task] < 2 && !tasksState[task] ? "text-neon-red font-semibold" : ""}`}
+                animate={flashTask === task ? { textShadow: "0 0 8px #facc15, 0 0 16px #facc15" } : {}}
                 transition={{ duration: 0.4 }}
               >
                 {task}
@@ -148,11 +161,22 @@ const DailyTrackerPage = () => {
             </li>
           ))}
         </ul>
+
+        {/* Recomendações */}
+        {recommendations.length > 0 && (
+          <motion.div
+            className="mt-4 p-3 rounded-xl bg-neon-red/20 text-neon-red font-semibold tracking-wide"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            💡 Sugestido hoje: {recommendations.join(", ")}
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico de Barras */}
         <motion.div
           className="bg-cyber-card p-6 rounded-2xl shadow-neon relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -171,7 +195,6 @@ const DailyTrackerPage = () => {
           </BarChart>
         </motion.div>
 
-        {/* Gráfico Pizza */}
         <motion.div
           className="bg-cyber-card p-6 rounded-2xl shadow-neon flex flex-col items-center relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
