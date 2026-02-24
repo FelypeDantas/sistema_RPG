@@ -28,6 +28,25 @@ function xpToNext(level: number) {
   return Math.round(100 * Math.pow(level, 1.4));
 }
 
+function classBonus(
+  playerClass: PlayerClass,
+  attribute?: string
+): number {
+  if (!playerClass || !attribute) return 1;
+
+  const bonusMap: Record<
+    Exclude<PlayerClass, null>,
+    string
+  > = {
+    Guerreiro: "Físico",
+    Mago: "Mente",
+    Mercador: "Finanças",
+    Diplomata: "Social",
+  };
+
+  return bonusMap[playerClass] === attribute ? 1.2 : 1;
+}
+
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [xp, setXP] = useState(() => Number(localStorage.getItem(XP_KEY)) || 0);
   const [level, setLevel] = useState(() => Number(localStorage.getItem(LEVEL_KEY)) || 1);
@@ -37,7 +56,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   );
 
   const xpToNextLevel = xpToNext(level);
-  const levelProgress = Math.min((xp / xpToNextLevel) * 100, 100);
+  const levelProgress =
+    xpToNextLevel > 0
+      ? Math.min((xp / xpToNextLevel) * 100, 100)
+      : 0;
 
   useEffect(() => {
     localStorage.setItem(XP_KEY, String(xp));
@@ -51,21 +73,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }
 
   function gainXP(amount: number, attribute?: string) {
-    const bonus = classBonus(playerClass, attribute);
-    const finalXP = Math.round(amount * bonus);
+  const bonus = classBonus(playerClass, attribute);
+  const finalXP = Math.round(amount * bonus);
 
-    let newXP = xp + finalXP;
-    let newLevel = level;
+  setXP(prevXP => {
+    let newXP = prevXP + finalXP;
 
-    while (newXP >= xpToNext(newLevel)) {
-      newXP -= xpToNext(newLevel);
-      newLevel++;
-    }
+    setLevel(prevLevel => {
+      let newLevel = prevLevel;
 
-    setXP(newXP);
-    setLevel(newLevel);
-    setStreak(prev => prev + 1);
-  }
+      while (newXP >= xpToNext(newLevel)) {
+        newXP -= xpToNext(newLevel);
+        newLevel++;
+      }
+
+      return newLevel;
+    });
+
+    return newXP;
+  });
+
+  setStreak(prev => prev + 1);
+}
 
   function loseXP(amount: number) {
     setXP(prev => Math.max(prev - amount, 0));
