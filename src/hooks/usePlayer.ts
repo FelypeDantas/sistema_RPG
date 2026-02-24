@@ -240,37 +240,40 @@ export function usePlayerRealtime(userId?: string) {
   );
 
   const gainXP = useCallback(
-    (amount: number, attribute?: keyof typeof attributes) => {
-      undoStack.current.push({
-        xp,
-        attributes: { ...attributes },
-      });
+  (amount: number, attribute?: keyof typeof attributes) => {
+    undoStack.current.push({
+      xp,
+      attributes: { ...attributes },
+    });
 
-      setXP(prevXP => {
-        let total = prevXP + amount;
-        let newLevel = level;
+    setXP(prevXP => {
+      let totalXP = prevXP + amount;
+      let newLevel = level;
 
-        while (total >= nextLevelXP()) {
-          total -= nextLevelXP();
-          newLevel += 1;
-        }
+      let xpRequired = nextLevelXP(newLevel);
 
-        if (newLevel !== level) {
-          setLevel(newLevel);
-        }
-
-        return total;
-      });
-
-      if (attribute) {
-        setAttributes(prev => ({
-          ...prev,
-          [attribute]: prev[attribute] + 1,
-        }));
+      while (totalXP >= xpRequired) {
+        totalXP -= xpRequired;
+        newLevel += 1;
+        xpRequired = nextLevelXP(newLevel);
       }
-    },
-    [xp, attributes, level, nextLevelXP]
-  );
+
+      if (newLevel !== level) {
+        setLevel(newLevel);
+      }
+
+      return totalXP;
+    });
+
+    if (attribute) {
+      setAttributes(prev => ({
+        ...prev,
+        [attribute]: prev[attribute] + 1,
+      }));
+    }
+  },
+  [level, xp, attributes]
+);
 
   const gainSegmentXP = useCallback(
     (segmentId: string, baseAmount: number) => {
