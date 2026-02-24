@@ -1,49 +1,35 @@
 import { useMemo } from "react";
 import { usePlayer } from "@/context/PlayerContext";
-import {
-  calculateGlobalXP,
-  calculateLevel,
-  calculateLevelProgress,
-  getGlobalRank,
-} from "@/utils/playerProgression";
 import { calculatePlayerClass } from "@/utils/playerClass";
+import { getGlobalRank } from "@/utils/playerProgression";
 
 export const PlayerStatusCard = () => {
-  const { attributes, prestige = 0 } = usePlayer();
+  const {
+    level,
+    xp,
+    xpToNextLevel,
+    levelProgress,
+    attributes,
+    prestige = 0,
+  } = usePlayer();
 
-  const playerData = useMemo(() => {
+  const derivedData = useMemo(() => {
     const prestigeMultiplier = 1 + prestige * 0.05;
-
-    const baseXP = calculateGlobalXP(attributes);
-    const totalXP = baseXP * prestigeMultiplier;
-
-    const level = calculateLevel(totalXP);
-    const levelProgress = calculateLevelProgress(totalXP);
     const rank = getGlobalRank(level);
     const playerClass = calculatePlayerClass(attributes);
 
     return {
-      totalXP,
-      level,
-      levelProgress: Math.min(Math.max(levelProgress, 0), 100),
+      prestigeMultiplier,
       rank,
       playerClass,
-      prestigeMultiplier,
     };
-  }, [attributes, prestige]);
+  }, [level, attributes, prestige]);
 
-  const {
-    totalXP,
-    level,
-    levelProgress,
-    rank,
-    playerClass,
-  } = playerData;
+  const { prestigeMultiplier, rank, playerClass } = derivedData;
 
   return (
     <div className="bg-cyber-card p-6 rounded-xl border border-white/5 space-y-4 relative overflow-hidden">
 
-      {/* Glow animado sutil */}
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-cyan-500/5 to-purple-500/5 animate-pulse" />
 
       <div className="flex justify-between items-center relative z-10">
@@ -70,7 +56,7 @@ export const PlayerStatusCard = () => {
 
         <div className="text-right">
           <p className="text-white font-mono font-bold text-lg">
-            {Math.floor(totalXP)} XP
+            {Math.floor(xp)} / {xpToNextLevel} XP
           </p>
         </div>
       </div>
@@ -84,7 +70,7 @@ export const PlayerStatusCard = () => {
       </div>
 
       <p className="text-xs text-gray-400">
-        {Math.floor(levelProgress)}/100 XP para o próximo nível
+        {Math.floor(levelProgress)}% para o próximo nível
       </p>
     </div>
   );
