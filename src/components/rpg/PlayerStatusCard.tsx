@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { usePlayer } from "@/context/PlayerContext";
+import { usePlayerRealtime } from "@/hooks/usePlayer";
 import { calculatePlayerClass } from "@/utils/playerClass";
 import { getGlobalRank } from "@/utils/playerProgression";
 
@@ -11,7 +11,7 @@ export const PlayerStatusCard = () => {
     levelProgress,
     attributes,
     prestige = 0,
-  } = usePlayer();
+  } = usePlayerRealtime();
 
   const derivedData = useMemo(() => {
     const prestigeMultiplier = 1 + prestige * 0.05;
