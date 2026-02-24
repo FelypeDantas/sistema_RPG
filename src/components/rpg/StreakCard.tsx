@@ -1,4 +1,4 @@
-import { Flame } from "lucide-react";
+import { Flame, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 
@@ -30,11 +30,13 @@ export const StreakCard = ({
   }, [safeWeeklyXP]);
 
   const todayIndex = useMemo(() => {
-    const jsDay = new Date().getDay(); // 0 = Dom
+    const jsDay = new Date().getDay();
     return jsDay === 0 ? 6 : jsDay - 1;
   }, []);
 
-  /* ---------------- MILESTONE LOGIC ---------------- */
+  const todayXP = safeWeeklyXP[todayIndex];
+
+  /* ---------------- MILESTONE ---------------- */
 
   const nextMilestone = useMemo(() => {
     if (safeStreak === 0) return 5;
@@ -42,6 +44,27 @@ export const StreakCard = ({
   }, [safeStreak]);
 
   const remainingDays = Math.max(0, nextMilestone - safeStreak);
+  const milestoneProgress = (safeStreak / nextMilestone) * 100;
+
+  /* ---------------- LEVEL SYSTEM ---------------- */
+
+  const level = useMemo(() => {
+    if (safeStreak >= 20) return "Lendário";
+    if (safeStreak >= 10) return "Focado";
+    if (safeStreak >= 5) return "Consistente";
+    return "Iniciante";
+  }, [safeStreak]);
+
+  /* ---------------- TREND DETECTION ---------------- */
+
+  const trend = useMemo(() => {
+    const firstHalf = safeWeeklyXP.slice(0, 3).reduce((a, b) => a + b, 0);
+    const secondHalf = safeWeeklyXP.slice(3, 6).reduce((a, b) => a + b, 0);
+
+    if (secondHalf > firstHalf) return "up";
+    if (secondHalf < firstHalf) return "down";
+    return "stable";
+  }, [safeWeeklyXP]);
 
   /* ---------------- HELPERS ---------------- */
 
@@ -51,18 +74,13 @@ export const StreakCard = ({
     return `${Math.max(normalized, MIN_BAR_HEIGHT)}%`;
   };
 
-  const getBarStyle = (
-    isToday: boolean,
-    hasXP: boolean
-  ) => {
+  const getBarStyle = (isToday: boolean, hasXP: boolean) => {
     if (isToday) {
       return "bg-gradient-to-t from-neon-orange to-neon-yellow shadow-[0_0_15px_rgba(255,140,0,0.4)]";
     }
-
     if (hasXP) {
       return "bg-gradient-to-t from-neon-cyan/50 to-neon-cyan";
     }
-
     return "bg-gray-700/40";
   };
 
@@ -71,7 +89,6 @@ export const StreakCard = ({
   return (
     <div className="bg-cyber-card border border-neon-orange/30 rounded-xl p-5 relative overflow-hidden">
 
-      {/* Glow ambiente */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-neon-orange/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative">
@@ -83,59 +100,61 @@ export const StreakCard = ({
             Streak Semanal
           </h3>
 
-          <div className="flex items-center gap-2 bg-neon-orange/20 px-3 py-1 rounded-lg relative">
-            <motion.div
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ repeat: Infinity, duration: 1.8 }}
-            >
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-2 bg-neon-orange/20 px-3 py-1 rounded-lg">
               <Flame className="w-4 h-4 text-neon-orange" />
-            </motion.div>
-
-            <span className="text-neon-orange font-bold">
-              {safeStreak} dias
+              <span className="text-neon-orange font-bold">
+                {safeStreak} dias
+              </span>
+            </div>
+            <span className="text-xs text-gray-400 mt-1">
+              {level}
             </span>
-
-            {safeStreak >= 7 && (
-              <motion.span
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute -top-6 text-xs text-neon-orange"
-              >
-                Em chamas 🔥
-              </motion.span>
-            )}
           </div>
         </div>
 
-        {/* WEEKLY XP CHART */}
+        {/* ALERTA DE RISCO */}
+        {todayXP === 0 && (
+          <div className="flex items-center gap-2 text-yellow-400 text-xs mb-3">
+            <AlertTriangle size={14} />
+            Hoje ainda sem XP. Não quebre a sequência.
+          </div>
+        )}
+
+        {/* TREND */}
+        <div className="flex items-center gap-2 text-xs mb-3 text-gray-400">
+          {trend === "up" && (
+            <>
+              <TrendingUp size={14} className="text-green-400" />
+              Semana melhorando
+            </>
+          )}
+          {trend === "down" && (
+            <>
+              <TrendingDown size={14} className="text-red-400" />
+              Ritmo caiu um pouco
+            </>
+          )}
+          {trend === "stable" && <>Ritmo estável</>}
+        </div>
+
+        {/* WEEKLY CHART */}
         <div className="flex items-end justify-between gap-2 h-24 mb-2">
           {safeWeeklyXP.map((xp, index) => {
             const isToday = index === todayIndex;
             const hasXP = xp > 0;
 
             return (
-              <div
-                key={index}
-                className="flex-1 flex flex-col items-center gap-1"
-              >
+              <div key={index} className="flex-1 flex flex-col items-center gap-1">
                 <motion.div
                   initial={{ height: 0 }}
                   animate={{ height: getBarHeight(xp) }}
-                  transition={{
-                    duration: 0.8,
-                    delay: index * 0.05,
-                  }}
-                  className={`w-full rounded-t-lg relative ${getBarStyle(
+                  transition={{ duration: 0.8, delay: index * 0.05 }}
+                  className={`w-full rounded-t-lg ${getBarStyle(
                     isToday,
                     hasXP
                   )}`}
-                >
-                  {hasXP && (
-                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs text-gray-400 font-mono">
-                      {xp}
-                    </span>
-                  )}
-                </motion.div>
+                />
               </div>
             );
           })}
@@ -146,7 +165,7 @@ export const StreakCard = ({
           {DAYS.map((day, index) => (
             <div
               key={day}
-              className={`flex-1 text-center text-xs py-1 rounded-md transition-all ${
+              className={`flex-1 text-center text-xs py-1 rounded-md ${
                 index === todayIndex
                   ? "bg-neon-orange/20 text-neon-orange font-bold"
                   : "text-gray-500"
@@ -157,29 +176,21 @@ export const StreakCard = ({
           ))}
         </div>
 
-        {/* MILESTONE */}
-        <div className="mt-4 pt-4 border-t border-white/10 text-center">
-          <p className="text-gray-400 text-sm">
-            {remainingDays === 0 ? (
-              <>
-                Você atingiu{" "}
-                <span className="text-white font-semibold">
-                  {nextMilestone} dias
-                </span>{" "}
-                🎉
-              </>
-            ) : (
-              <>
-                Faltam{" "}
-                <span className="text-neon-orange font-bold">
-                  {remainingDays} dias
-                </span>{" "}
-                para alcançar{" "}
-                <span className="text-white font-semibold">
-                  {nextMilestone} dias
-                </span>.
-              </>
-            )}
+        {/* PROGRESS BAR MILESTONE */}
+        <div className="mt-4">
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${milestoneProgress}%` }}
+              transition={{ duration: 0.8 }}
+              className="h-full bg-gradient-to-r from-neon-orange to-neon-yellow"
+            />
+          </div>
+
+          <p className="text-gray-400 text-xs mt-2 text-center">
+            {remainingDays === 0
+              ? `Você atingiu ${nextMilestone} dias 🎉`
+              : `Faltam ${remainingDays} dias para ${nextMilestone} dias`}
           </p>
         </div>
 
