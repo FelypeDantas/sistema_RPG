@@ -49,13 +49,17 @@ function classBonus(
 
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [xp, setXP] = useState(() => Number(localStorage.getItem(XP_KEY)) || 0);
-  const [level, setLevel] = useState(() => Number(localStorage.getItem(LEVEL_KEY)) || 1);
+  const [level, setLevel] = useState(() => {
+    const stored = Number(localStorage.getItem(LEVEL_KEY));
+    return stored > 0 ? stored : 1;
+  });
   const [streak, setStreak] = useState(() => Number(localStorage.getItem(STREAK_KEY)) || 0);
   const [playerClass, setPlayerClass] = useState<PlayerClass>(
     () => (localStorage.getItem(CLASS_KEY) as PlayerClass) || null
   );
 
-  const xpToNextLevel = xpToNext(level);
+  const xpToNextLevel = Math.max(xpToNext(level), 1);
+
   const levelProgress =
     xpToNextLevel > 0
       ? Math.min((xp / xpToNextLevel) * 100, 100)
@@ -73,28 +77,28 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }
 
   function gainXP(amount: number, attribute?: string) {
-  const bonus = classBonus(playerClass, attribute);
-  const finalXP = Math.round(amount * bonus);
+    const bonus = classBonus(playerClass, attribute);
+    const finalXP = Math.round(amount * bonus);
 
-  setXP(prevXP => {
-    let newXP = prevXP + finalXP;
+    setXP(prevXP => {
+      let newXP = prevXP + finalXP;
 
-    setLevel(prevLevel => {
-      let newLevel = prevLevel;
+      setLevel(prevLevel => {
+        let newLevel = prevLevel;
 
-      while (newXP >= xpToNext(newLevel)) {
-        newXP -= xpToNext(newLevel);
-        newLevel++;
-      }
+        while (newXP >= xpToNext(newLevel)) {
+          newXP -= xpToNext(newLevel);
+          newLevel++;
+        }
 
-      return newLevel;
+        return newLevel;
+      });
+
+      return newXP;
     });
 
-    return newXP;
-  });
-
-  setStreak(prev => prev + 1);
-}
+    setStreak(prev => prev + 1);
+  }
 
   function loseXP(amount: number) {
     setXP(prev => Math.max(prev - amount, 0));
