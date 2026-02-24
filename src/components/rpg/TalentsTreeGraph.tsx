@@ -10,6 +10,8 @@ const CURVE_FACTOR = 0.4;
 
 export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayerRealtime();
+
+  
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
 

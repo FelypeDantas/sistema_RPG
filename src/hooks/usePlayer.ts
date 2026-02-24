@@ -96,8 +96,8 @@ export function usePlayerRealtime(userId?: string) {
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const nextLevelXP = useCallback(
-    () => Math.floor(100 + xp * 0.9),
-    [xp]
+    (lvl: number) => Math.floor(100 * Math.pow(1.15, lvl - 1)),
+    []
   );
 
   /* ==============================
