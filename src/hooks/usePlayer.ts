@@ -29,6 +29,12 @@ export interface Trait {
   description: string;
 }
 
+export type PlayerClass =
+  | "warrior"
+  | "scholar"
+  | "strategist"
+  | "merchant";
+
 export type TalentId = "focus" | "physical_mastery";
 
 interface TalentEffect {
@@ -46,6 +52,7 @@ export function usePlayerRealtime(userId?: string) {
   const [xp, setXP] = useState(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [avatarName, setAvatarNameState] = useState<string | null>(null);
+  const [playerClass, setPlayerClass] = useState<PlayerClass>("warrior");
 
   const [attributes, setAttributes] = useState({
     Físico: 10,
@@ -143,6 +150,10 @@ export function usePlayerRealtime(userId?: string) {
           : DEFAULT_TALENTS
       );
 
+      setPlayerClass(
+        data.playerClass ?? "warrior"
+      );
+
       setTraits(
         Array.isArray(data.traits) ? data.traits : []
       );
@@ -165,6 +176,7 @@ export function usePlayerRealtime(userId?: string) {
       avatarName,
       attributes,
       segments,
+      playerClass,
       talents: talents.map(t => ({
         id: t.id,
         unlocked: t.unlocked,
@@ -316,5 +328,6 @@ export function usePlayerRealtime(userId?: string) {
     gainSegmentXP,
     undoLast,
     setAvatarName,
+    playerClass
   };
 }
