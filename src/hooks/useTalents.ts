@@ -280,6 +280,8 @@ export function useTalents(level: number) {
     return Object.values(talentsMap || {});
   }, [talentsMap]);
 
+  const unlocked = useMemo(() => talentList.filter(t => !t.locked), [talentList]);
+
   /* ================= POINTS ================= */
 
   const points = useMemo(() => {
@@ -396,6 +398,7 @@ export function useTalents(level: number) {
         ? persisted.collapsed
         : {},
     toggleCollapse,
-    trainTalent
+    trainTalent,
+    unlocked: unlocked,
   };
 }

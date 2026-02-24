@@ -12,7 +12,7 @@ export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayerRealtime();
 
   
-  const { unlocked, unlockTalent, canUnlock } =
+  const { unlocked, unlockTalent, points } =
     useTalents(level, playerClass);
 
   /* ===============================
@@ -176,7 +176,7 @@ export default function TalentsTreeGraph() {
       {/* NODES */}
       {validTalents.map(t => {
         const isUnlocked = unlockedSet.has(t.id);
-        const available = canUnlock(t);
+        const available = points(t);
         const clickable = available && !isUnlocked;
 
         const ringColor = isUnlocked
