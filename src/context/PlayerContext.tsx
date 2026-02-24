@@ -7,6 +7,8 @@ interface PlayerContextType {
   level: number;
   streak: number;
   playerClass: PlayerClass;
+  xpToNextLevel: number;
+  levelProgress: number;
   chooseClass: (c: PlayerClass) => void;
   gainXP: (amount: number, attribute?: string) => void;
   loseXP: (amount: number) => void;
@@ -26,17 +28,6 @@ function xpToNext(level: number) {
   return Math.round(100 * Math.pow(level, 1.4));
 }
 
-function classBonus(playerClass: PlayerClass, attribute?: string) {
-  if (!playerClass || !attribute) return 1;
-
-  if (playerClass === "Guerreiro" && attribute === "Físico") return 1.2;
-  if (playerClass === "Mago" && attribute === "Mente") return 1.2;
-  if (playerClass === "Mercador" && attribute === "Finanças") return 1.2;
-  if (playerClass === "Diplomata" && attribute === "Social") return 1.2;
-
-  return 1;
-}
-
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [xp, setXP] = useState(() => Number(localStorage.getItem(XP_KEY)) || 0);
   const [level, setLevel] = useState(() => Number(localStorage.getItem(LEVEL_KEY)) || 1);
@@ -44,6 +35,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [playerClass, setPlayerClass] = useState<PlayerClass>(
     () => (localStorage.getItem(CLASS_KEY) as PlayerClass) || null
   );
+
+  const xpToNextLevel = xpToNext(level);
+  const levelProgress = Math.min((xp / xpToNextLevel) * 100, 100);
 
   useEffect(() => {
     localStorage.setItem(XP_KEY, String(xp));
@@ -92,13 +86,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         gainXP,
         loseXP,
         resetStreak,
+        xpToNextLevel,
+        levelProgress,
       }}
     >
       {children}
     </PlayerContext.Provider>
   );
-}
-
-export function usePlayer() {
-  return useContext(PlayerContext);
 }
