@@ -6,20 +6,33 @@ import { useMemo } from "react";
 
 const WIDTH = 900;
 const HEIGHT = 650;
+const CURVE_FACTOR = 0.4;
 
 export default function TalentsTreeGraph() {
   const { level, playerClass } = usePlayerRealtime();
   const { unlocked, unlockTalent, canUnlock } =
     useTalents(level, playerClass);
 
+  /* ===============================
+     🧠 DERIVED STRUCTURES
+  =============================== */
+
+  const unlockedSet = useMemo(
+    () => new Set(unlocked),
+    [unlocked]
+  );
+
   const validTalents = useMemo(() => {
     return TALENT_GRAPH.filter(
-      t => t?.id && t?.position?.x != null && t?.position?.y != null
+      t =>
+        t?.id &&
+        t?.position?.x != null &&
+        t?.position?.y != null
     );
   }, []);
 
   const talentMap = useMemo(() => {
-    const map = new Map();
+    const map = new Map<string, typeof validTalents[number]>();
     for (const t of validTalents) {
       map.set(t.id, t);
     }
@@ -38,30 +51,34 @@ export default function TalentsTreeGraph() {
       if (!t.requires) continue;
 
       for (const req of t.requires) {
-        const from = talentMap.get(req);
-        if (!from?.position) continue;
+        const fromTalent = talentMap.get(req);
+        if (!fromTalent?.position) continue;
 
         result.push({
           key: `${req}-${t.id}`,
-          from: from.position,
+          from: fromTalent.position,
           to: t.position,
           active:
-            unlocked.includes(req) &&
-            unlocked.includes(t.id)
+            unlockedSet.has(req) &&
+            unlockedSet.has(t.id),
         });
       }
     }
 
     return result;
-  }, [validTalents, talentMap, unlocked]);
+  }, [validTalents, talentMap, unlockedSet]);
 
-  const getCurve = (
+  /* ===============================
+     🎨 CURVE BUILDER
+  =============================== */
+
+  const buildCurve = (
     x1: number,
     y1: number,
     x2: number,
     y2: number
   ) => {
-    const dx = (x2 - x1) * 0.4;
+    const dx = (x2 - x1) * CURVE_FACTOR;
 
     return `
       M ${x1} ${y1}
@@ -71,13 +88,19 @@ export default function TalentsTreeGraph() {
     `;
   };
 
+  /* ===============================
+     🎬 RENDER
+  =============================== */
+
   return (
     <svg
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="w-full h-[650px] rounded-2xl bg-gradient-to-br from-[#0f0f1a] via-[#111827] to-[#0c0c16] shadow-2xl"
+      className="w-full h-[650px] rounded-2xl 
+                 bg-gradient-to-br from-[#0f0f1a] 
+                 via-[#111827] to-[#0c0c16] 
+                 shadow-2xl"
     >
       <defs>
-        {/* Glow */}
         <filter id="glow">
           <feGaussianBlur stdDeviation="5" result="blur" />
           <feMerge>
@@ -86,14 +109,12 @@ export default function TalentsTreeGraph() {
           </feMerge>
         </filter>
 
-        {/* Edge Gradient */}
         <linearGradient id="activeEdge">
           <stop offset="0%" stopColor="#22c55e" />
           <stop offset="50%" stopColor="#06b6d4" />
           <stop offset="100%" stopColor="#a855f7" />
         </linearGradient>
 
-        {/* Node Gradient */}
         <radialGradient id="nodeActive">
           <stop offset="0%" stopColor="#4ade80" />
           <stop offset="100%" stopColor="#166534" />
@@ -114,14 +135,19 @@ export default function TalentsTreeGraph() {
         </pattern>
       </defs>
 
-      {/* GRID BACKGROUND */}
-      <rect width="100%" height="100%" fill="url(#grid)" opacity="0.3" />
+      {/* GRID */}
+      <rect
+        width="100%"
+        height="100%"
+        fill="url(#grid)"
+        opacity="0.3"
+      />
 
       {/* EDGES */}
       {edges.map(edge => (
         <motion.path
           key={edge.key}
-          d={getCurve(
+          d={buildCurve(
             edge.from.x,
             edge.from.y,
             edge.to.x,
@@ -147,23 +173,38 @@ export default function TalentsTreeGraph() {
 
       {/* NODES */}
       {validTalents.map(t => {
-        const isUnlocked = unlocked.includes(t.id);
+        const isUnlocked = unlockedSet.has(t.id);
         const available = canUnlock(t);
         const clickable = available && !isUnlocked;
+
+        const ringColor = isUnlocked
+          ? "#22c55e"
+          : available
+          ? "#a855f7"
+          : "#333";
+
+        const coreFill = isUnlocked
+          ? "url(#nodeActive)"
+          : available
+          ? "#9333ea"
+          : "#1f2937";
 
         return (
           <motion.g
             key={t.id}
             whileHover={
-              clickable
-                ? { scale: 1.15 }
-                : {}
+              clickable ? { scale: 1.15 } : {}
             }
-            transition={{ type: "spring", stiffness: 200 }}
+            transition={{
+              type: "spring",
+              stiffness: 200,
+            }}
             onClick={() =>
               clickable && unlockTalent(t.id)
             }
-            className={clickable ? "cursor-pointer" : ""}
+            className={
+              clickable ? "cursor-pointer" : ""
+            }
           >
             {/* Outer Ring */}
             <circle
@@ -171,13 +212,7 @@ export default function TalentsTreeGraph() {
               cy={t.position.y}
               r="30"
               fill="transparent"
-              stroke={
-                isUnlocked
-                  ? "#22c55e"
-                  : available
-                  ? "#a855f7"
-                  : "#333"
-              }
+              stroke={ringColor}
               strokeWidth="2"
               opacity="0.4"
             />
@@ -187,13 +222,7 @@ export default function TalentsTreeGraph() {
               cx={t.position.x}
               cy={t.position.y}
               r="20"
-              fill={
-                isUnlocked
-                  ? "url(#nodeActive)"
-                  : available
-                  ? "#9333ea"
-                  : "#1f2937"
-              }
+              fill={coreFill}
               style={
                 isUnlocked
                   ? { filter: "url(#glow)" }
