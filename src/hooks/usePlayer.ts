@@ -265,6 +265,15 @@ export function usePlayerRealtime(userId?: string) {
   }, []);
 
   /* ==============================
+     TRAITS
+  ============================== */
+
+  const hasTrait = useCallback(
+    (traitId: TraitId) => traits.some(t => t.id === traitId),
+    [traits]
+  );
+
+  /* ==============================
      RETURN
   ============================== */
 
@@ -282,6 +291,7 @@ export function usePlayerRealtime(userId?: string) {
     gainXP,
     gainSegmentXP,
     undoLast,
+    hasTrait,
     setAvatarName,
   };
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, ReactNode } from "react";
+import { useState, useMemo, useEffect, ReactNode, useCallback } from "react";
 import { Shield, Swords, Trophy, Dumbbell, Brain, Users, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -157,7 +157,7 @@ const RPGDashboardContent = (): ReactNode => {
     };
   }, [showConfirm]);
 
-  const safeNextLevelXP = Math.max(player.nextLevelXP ?? 1, 1);
+  const safeNextLevelXP = Math.max(player.xpToNextLevel ?? 1, 1);
 
   const xpProgress = Math.min(
     100,
@@ -181,7 +181,7 @@ const RPGDashboardContent = (): ReactNode => {
                   title: playerClass.title,
                   level: player.level,
                   currentXP: player.xp,
-                  nextLevelXP: player.nextLevelXP,
+                  nextLevelXP: player.xpToNextLevel,
                   totalXP,
                   rank: playerClass.rank,
                   avatar: playerClass.avatar
