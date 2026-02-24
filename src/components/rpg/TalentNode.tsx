@@ -1,4 +1,4 @@
-import { Lock, ChevronDown, Sparkles, Zap } from "lucide-react";
+import { Lock, ChevronDown, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 
@@ -17,11 +17,16 @@ interface TalentNodeProps {
   rarity?: "common" | "rare" | "epic" | "legendary";
 }
 
+type NodeState = "locked" | "active" | "complete";
+
+const clamp = (value: number, min = 0, max = 100) =>
+  Math.min(Math.max(value, min), max);
+
 export default function TalentNode({
   title,
   description,
   position,
-  progress = 0,
+  progress,
   locked = false,
   hasChildren = false,
   collapsed = false,
@@ -29,44 +34,47 @@ export default function TalentNode({
   onUnlock,
   onTrain,
   points = 0,
-  rarity = "common"
+  rarity = "common",
 }: TalentNodeProps) {
-
   const [isTraining, setIsTraining] = useState(false);
   const [justUnlocked, setJustUnlocked] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const safeProgress = useMemo(() => {
-    return Math.min(Math.max(progress, 0), 100);
-  }, [progress]);
+  /* ===============================
+     🧠 DERIVED STATE
+  =============================== */
 
-  const state = useMemo(() => {
+  const safeProgress = useMemo(() => clamp(progress), [progress]);
+
+  const state: NodeState = useMemo(() => {
     if (locked) return "locked";
     if (safeProgress >= 100) return "complete";
     return "active";
   }, [locked, safeProgress]);
 
-  /* ===================================
-     🎨 RARITY VISUAL SYSTEM
-  =================================== */
-  const rarityVisual = useMemo(() => {
-    switch (rarity) {
-      case "rare":
-        return "border-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.35)]";
-      case "epic":
-        return "border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.45)]";
-      case "legendary":
-        return "border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.6)]";
-      default:
-        return "border-purple-500";
-    }
+  const canUnlock = locked && points > 0;
+  const canTrain = !locked && safeProgress < 100;
+
+  /* ===============================
+     🎨 RARITY VISUAL
+  =============================== */
+
+  const rarityStyle = useMemo(() => {
+    const styles = {
+      common: "border-purple-500",
+      rare: "border-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.35)]",
+      epic: "border-purple-500 shadow-[0_0_30px_rgba(168,85,247,0.45)]",
+      legendary:
+        "border-yellow-400 shadow-[0_0_40px_rgba(250,204,21,0.6)]",
+    };
+    return styles[rarity];
   }, [rarity]);
 
   const cardStyle = useMemo(() => {
     if (state === "locked") {
-      return points > 0
+      return canUnlock
         ? "opacity-80 border-gray-600 hover:border-purple-500 cursor-pointer"
         : "opacity-40 border-gray-700 cursor-not-allowed";
     }
@@ -75,39 +83,38 @@ export default function TalentNode({
       return "border-neon-green shadow-[0_0_35px_rgba(34,197,94,0.5)]";
     }
 
-    return `${rarityVisual} hover:shadow-[0_0_35px_rgba(34,211,238,0.35)]`;
-  }, [state, rarityVisual, points]);
+    return `${rarityStyle} hover:shadow-[0_0_35px_rgba(34,211,238,0.35)]`;
+  }, [state, canUnlock, rarityStyle]);
 
-  /* ===================================
-     🔓 UNLOCK EFFECT
-  =================================== */
+  /* ===============================
+     🔓 UNLOCK
+  =============================== */
+
   const handleUnlock = useCallback(() => {
-    if (!locked || points <= 0) return;
+    if (!canUnlock) return;
 
     onUnlock?.();
     setJustUnlocked(true);
 
-    setTimeout(() => {
-      setJustUnlocked(false);
-    }, 700);
-  }, [locked, points, onUnlock]);
+    setTimeout(() => setJustUnlocked(false), 700);
+  }, [canUnlock, onUnlock]);
 
-  /* ===================================
-     ⚡ TRAIN EFFECT
-  =================================== */
+  /* ===============================
+     ⚡ TRAIN
+  =============================== */
+
   const startTraining = useCallback(() => {
-    if (locked || safeProgress >= 100) return;
+    if (!canTrain) return;
 
     setIsTraining(true);
 
     intervalRef.current = setInterval(() => {
       onTrain?.();
     }, 160);
-  }, [locked, safeProgress, onTrain]);
+  }, [canTrain, onTrain]);
 
   const stopTraining = useCallback(() => {
     setIsTraining(false);
-
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -120,9 +127,9 @@ export default function TalentNode({
     };
   }, []);
 
-  /* ===================================
+  /* ===============================
      🎬 RENDER
-  =================================== */
+  =============================== */
 
   return (
     <motion.div
@@ -134,7 +141,7 @@ export default function TalentNode({
       style={{
         left: position.x,
         top: position.y,
-        transform: "translate(-50%, -50%)"
+        transform: "translate(-50%, -50%)",
       }}
     >
       <div
@@ -144,26 +151,23 @@ export default function TalentNode({
         onMouseLeave={stopTraining}
         onMouseEnter={() => setHovered(true)}
         onMouseLeaveCapture={() => setHovered(false)}
-        className={`
-          w-56 rounded-2xl border p-4 text-center relative overflow-hidden
-          bg-cyber-card backdrop-blur-md transition-all duration-300
-          ${cardStyle}
-        `}
+        className={`w-56 rounded-2xl border p-4 text-center relative overflow-hidden
+                    bg-cyber-card backdrop-blur-md transition-all duration-300
+                    ${cardStyle}`}
       >
-        {/* 🌟 UNLOCK FLASH */}
+        {/* ✨ Unlock Flash */}
         <AnimatePresence>
           {justUnlocked && (
             <motion.div
               initial={{ opacity: 0.8, scale: 0.4 }}
               animate={{ opacity: 0, scale: 2 }}
-              exit={{ opacity: 0 }}
               transition={{ duration: 0.7 }}
               className="absolute inset-0 bg-neon-cyan/30 rounded-2xl pointer-events-none"
             />
           )}
         </AnimatePresence>
 
-        {/* ⚡ TRAINING PULSE */}
+        {/* ⚡ Training Pulse */}
         {isTraining && (
           <motion.div
             className="absolute inset-0 bg-neon-cyan/10 pointer-events-none"
@@ -172,18 +176,7 @@ export default function TalentNode({
           />
         )}
 
-        {/* 🌌 BACKGROUND AURA */}
-        {!locked && (
-          <motion.div
-            className="absolute inset-0 pointer-events-none"
-            animate={{ opacity: 0.08 + safeProgress / 150 }}
-            style={{
-              background:
-                "radial-gradient(circle at center, rgba(34,211,238,0.4), transparent 70%)"
-            }}
-          />
-        )}
-
+        {/* 🔒 / ✨ State Icon */}
         {state === "locked" && (
           <Lock className="mx-auto mb-2 text-gray-400" size={18} />
         )}
@@ -197,7 +190,11 @@ export default function TalentNode({
           </motion.div>
         )}
 
-        <h3 className={`font-semibold text-sm ${state === "locked" ? "text-gray-400" : "text-white"}`}>
+        <h3
+          className={`font-semibold text-sm ${
+            state === "locked" ? "text-gray-400" : "text-white"
+          }`}
+        >
           {title}
         </h3>
 
@@ -205,7 +202,7 @@ export default function TalentNode({
           Treinado {safeProgress}%
         </div>
 
-        {/* PROGRESS BAR */}
+        {/* Progress Bar */}
         <div className="mt-2 h-2 w-full bg-gray-700/60 rounded overflow-hidden">
           <motion.div
             animate={{ width: `${safeProgress}%` }}
@@ -233,7 +230,7 @@ export default function TalentNode({
           </button>
         )}
 
-        {/* TOOLTIP PREMIUM */}
+        {/* Tooltip */}
         <AnimatePresence>
           {description && hovered && (
             <motion.div
@@ -254,7 +251,6 @@ export default function TalentNode({
             </motion.div>
           )}
         </AnimatePresence>
-
       </div>
     </motion.div>
   );
