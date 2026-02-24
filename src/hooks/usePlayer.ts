@@ -1,21 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { db } from "@/services/firebase";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
-const DEFAULT_TALENTS: Talent[] = [
-  {
-    id: "focus",
-    unlocked: true,
-    effect: { segmentBonus: { foco: 1.2 } },
-  },
-  {
-    id: "physical_mastery",
-    unlocked: false,
-    effect: {
-      segmentBonus: { forca: 1.15, resistencia: 1.1 },
-    },
-  },
-];
+/* ==============================
+   TYPES
+============================== */
+
+export type PlayerClass =
+  | "warrior"
+  | "scholar"
+  | "strategist"
+  | "merchant";
 
 export type TraitId =
   | "disciplinado"
@@ -29,12 +24,6 @@ export interface Trait {
   description: string;
 }
 
-export type PlayerClass =
-  | "warrior"
-  | "scholar"
-  | "strategist"
-  | "merchant";
-
 export type TalentId = "focus" | "physical_mastery";
 
 interface TalentEffect {
@@ -47,152 +36,134 @@ export interface Talent {
   effect?: TalentEffect;
 }
 
+/* ==============================
+   CONSTANTS
+============================== */
+
+const DEFAULT_ATTRIBUTES = {
+  Físico: 10,
+  Mente: 10,
+  Social: 10,
+  Finanças: 10,
+};
+
+const DEFAULT_SEGMENTS: Record<string, number> = {
+  forca: 10,
+  foco: 20,
+};
+
+const DEFAULT_TALENTS: Talent[] = [
+  {
+    id: "focus",
+    unlocked: true,
+    effect: { segmentBonus: { foco: 1.2 } },
+  },
+  {
+    id: "physical_mastery",
+    unlocked: false,
+    effect: { segmentBonus: { forca: 1.15 } },
+  },
+];
+
+/* ==============================
+   HOOK
+============================== */
+
 export function usePlayerRealtime(userId?: string) {
   const [level, setLevel] = useState(1);
   const [xp, setXP] = useState(0);
+  const [avatarName, setAvatarName] = useState<string | null>(null);
+  const [playerClass, setPlayerClass] =
+    useState<PlayerClass>("warrior");
+  const [attributes, setAttributes] =
+    useState(DEFAULT_ATTRIBUTES);
+  const [segments, setSegments] =
+    useState(DEFAULT_SEGMENTS);
+  const [talents, setTalents] =
+    useState<Talent[]>(DEFAULT_TALENTS);
+  const [traits, setTraits] = useState<Trait[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [avatarName, setAvatarNameState] = useState<string | null>(null);
-  const [playerClass, setPlayerClass] = useState<PlayerClass>("warrior");
-
-  const [attributes, setAttributes] = useState({
-    Físico: 10,
-    Mente: 10,
-    Social: 10,
-    Finanças: 10,
-  });
-
-  const [segments, setSegments] = useState<Record<string, number>>({
-    forca: 10,
-    foco: 20,
-  });
-
-  const [talents, setTalents] = useState<Talent[]>([
-    {
-      id: "focus",
-      unlocked: true,
-      effect: { segmentBonus: { foco: 1.2 } },
-    },
-    {
-      id: "physical_mastery",
-      unlocked: false,
-      effect: {
-        segmentBonus: { forca: 1.15, resistencia: 1.1 },
-      },
-    },
-  ]);
-
-  const [traits, setTraits] = useState<Trait[]>([
-    {
-      id: "disciplinado",
-      name: "Disciplinado",
-      description: "Ganha mais XP ao manter streaks",
-    },
-  ]);
 
   const undoStack = useRef<
-    Array<{ xp: number; attributes: typeof attributes }>
+    Array<{ xp: number; level: number; attributes: typeof attributes }>
   >([]);
 
-  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* ==============================
+     XP FORMULA
+  ============================== */
 
   const nextLevelXP = useCallback(
-    (lvl: number) => Math.floor(100 * Math.pow(1.15, lvl - 1)),
+    (lvl: number) =>
+      Math.floor(100 * Math.pow(1.15, lvl - 1)),
     []
   );
 
+  const xpToNextLevel = useMemo(
+    () => nextLevelXP(level),
+    [level, nextLevelXP]
+  );
+
+  const levelProgress = useMemo(
+    () => Math.min(100, (xp / xpToNextLevel) * 100),
+    [xp, xpToNextLevel]
+  );
+
   /* ==============================
-     FIRESTORE REALTIME SYNC
+     REALTIME SYNC
   ============================== */
+
   useEffect(() => {
     if (!userId) return;
 
     const docRef = doc(db, "users", userId);
 
-    const unsubscribe = onSnapshot(docRef, snapshot => {
-      const data = snapshot.data()?.player;
+    const unsub = onSnapshot(docRef, snap => {
+      const data = snap.data()?.player;
       if (!data) {
         setIsLoaded(true);
         return;
       }
 
-      setLevel(
-        typeof data.level === "number" ? data.level : 1
-      );
-
-      setXP(typeof data.xp === "number" ? data.xp : 0);
-
-      setAvatarNameState(
-        typeof data.avatarName === "string"
-          ? data.avatarName
-          : null
-      );
-
-      setAttributes(
-        typeof data.attributes === "object"
-          ? data.attributes
-          : {
-            Físico: 10,
-            Mente: 10,
-            Social: 10,
-            Finanças: 10,
-          }
-      );
-
-      setSegments(
-        typeof data.segments === "object"
-          ? data.segments
-          : { forca: 10, foco: 20 }
-      );
-
-      setTalents(
-        Array.isArray(data.talents) && data.talents.length > 0
-          ? data.talents
-          : DEFAULT_TALENTS
-      );
-
-      setPlayerClass(
-        data.playerClass ?? "warrior"
-      );
-
-      setTraits(
-        Array.isArray(data.traits) ? data.traits : []
-      );
-
+      setLevel(data.level ?? 1);
+      setXP(data.xp ?? 0);
+      setAvatarName(data.avatarName ?? null);
+      setAttributes(data.attributes ?? DEFAULT_ATTRIBUTES);
+      setSegments(data.segments ?? DEFAULT_SEGMENTS);
+      setTalents(data.talents ?? DEFAULT_TALENTS);
+      setPlayerClass(data.playerClass ?? "warrior");
+      setTraits(data.traits ?? []);
       setIsLoaded(true);
     });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, [userId]);
 
   /* ==============================
-     SAVE FUNCTION (DEBOUNCED)
+     SAVE (DEBOUNCED)
   ============================== */
-  const savePlayer = useCallback(() => {
-    if (!userId || typeof userId !== "string") return;
 
-    const data = {
-      level,
-      xp,
-      avatarName,
-      attributes,
-      segments,
-      playerClass,
-      talents: talents.map(t => ({
-        id: t.id,
-        unlocked: t.unlocked,
-        effect: t.effect ? { ...t.effect } : undefined,
-      })),
-      traits: traits.map(t => ({
-        id: t.id,
-        name: t.name,
-        description: t.description,
-      })),
-    };
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  const savePlayer = useCallback(() => {
+    if (!userId) return;
 
     const docRef = doc(db, "users", userId);
 
-    setDoc(docRef, { player: data }, { merge: true }).catch(
-      console.error
+    setDoc(
+      docRef,
+      {
+        player: {
+          level,
+          xp,
+          avatarName,
+          attributes,
+          segments,
+          talents,
+          traits,
+          playerClass,
+        },
+      },
+      { merge: true }
     );
   }, [
     level,
@@ -202,11 +173,12 @@ export function usePlayerRealtime(userId?: string) {
     segments,
     talents,
     traits,
+    playerClass,
     userId,
   ]);
 
   useEffect(() => {
-    if (!isLoaded) return; // 🚫 NÃO salva antes de carregar
+    if (!isLoaded) return;
 
     if (saveTimeout.current)
       clearTimeout(saveTimeout.current);
@@ -220,60 +192,43 @@ export function usePlayerRealtime(userId?: string) {
     segments,
     talents,
     traits,
+    playerClass,
     savePlayer,
-    isLoaded
+    isLoaded,
   ]);
 
   /* ==============================
-     HELPERS
+     GAME LOGIC
   ============================== */
 
-  const hasTrait = useCallback(
-    (id: TraitId) => traits.some(t => t.id === id),
-    [traits]
-  );
-
-  const hasTalent = useCallback(
-    (id: TalentId) =>
-      talents.some(t => t.id === id && t.unlocked),
-    [talents]
-  );
-
   const gainXP = useCallback(
-  (amount: number, attribute?: keyof typeof attributes) => {
-    undoStack.current.push({
-      xp,
-      attributes: { ...attributes },
-    });
+    (amount: number, attribute?: keyof typeof attributes) => {
+      undoStack.current.push({
+        xp,
+        level,
+        attributes: { ...attributes },
+      });
 
-    setXP(prevXP => {
-      let totalXP = prevXP + amount;
+      let totalXP = xp + amount;
       let newLevel = level;
 
-      let xpRequired = nextLevelXP(newLevel);
-
-      while (totalXP >= xpRequired) {
-        totalXP -= xpRequired;
-        newLevel += 1;
-        xpRequired = nextLevelXP(newLevel);
+      while (totalXP >= nextLevelXP(newLevel)) {
+        totalXP -= nextLevelXP(newLevel);
+        newLevel++;
       }
 
-      if (newLevel !== level) {
-        setLevel(newLevel);
+      setLevel(newLevel);
+      setXP(totalXP);
+
+      if (attribute) {
+        setAttributes(prev => ({
+          ...prev,
+          [attribute]: prev[attribute] + 1,
+        }));
       }
-
-      return totalXP;
-    });
-
-    if (attribute) {
-      setAttributes(prev => ({
-        ...prev,
-        [attribute]: prev[attribute] + 1,
-      }));
-    }
-  },
-  [level, xp, attributes]
-);
+    },
+    [xp, level, attributes, nextLevelXP]
+  );
 
   const gainSegmentXP = useCallback(
     (segmentId: string, baseAmount: number) => {
@@ -305,32 +260,28 @@ export function usePlayerRealtime(userId?: string) {
     if (!last) return;
 
     setXP(last.xp);
+    setLevel(last.level);
     setAttributes(last.attributes);
   }, []);
 
-  const setAvatarName = useCallback(
-    (name: string) => {
-      if (!name.trim()) return;
-      setAvatarNameState(name.trim());
-    },
-    []
-  );
+  /* ==============================
+     RETURN
+  ============================== */
 
   return {
     level,
     xp,
-    nextLevelXP: nextLevelXP(),
+    xpToNextLevel,
+    levelProgress,
     avatarName,
     attributes,
     segments,
     talents,
     traits,
-    hasTrait,
-    hasTalent,
+    playerClass,
     gainXP,
     gainSegmentXP,
     undoLast,
     setAvatarName,
-    playerClass
   };
 }
