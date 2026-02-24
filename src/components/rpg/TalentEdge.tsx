@@ -15,26 +15,28 @@ interface TalentEdgeProps {
   curvature?: number;
 }
 
+const DEFAULT_WIDTH = 192;
+const DEFAULT_HEIGHT = 96;
+
 export default function TalentEdge({
   from,
   to,
   active = true,
-  curvature = 0.4
+  curvature = 0.4,
 }: TalentEdgeProps) {
-
   if (!from || !to) return null;
 
-  const fromWidth = from.width ?? 192;
-  const fromHeight = from.height ?? 96;
-  const toWidth = to.width ?? 192;
-  const toHeight = to.height ?? 96;
-
-  const x1 = from.x + fromWidth / 2;
-  const y1 = from.y + fromHeight / 2;
-  const x2 = to.x + toWidth / 2;
-  const y2 = to.y + toHeight / 2;
-
   const pathD = useMemo(() => {
+    const fromWidth = from.width ?? DEFAULT_WIDTH;
+    const fromHeight = from.height ?? DEFAULT_HEIGHT;
+    const toWidth = to.width ?? DEFAULT_WIDTH;
+    const toHeight = to.height ?? DEFAULT_HEIGHT;
+
+    const x1 = from.x + fromWidth / 2;
+    const y1 = from.y + fromHeight / 2;
+    const x2 = to.x + toWidth / 2;
+    const y2 = to.y + toHeight / 2;
+
     const dx = x2 - x1;
     const offsetX = dx * curvature;
 
@@ -45,13 +47,20 @@ export default function TalentEdge({
     const c2y = y2;
 
     return `M ${x1} ${y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${x2} ${y2}`;
-  }, [x1, y1, x2, y2, curvature]);
+  }, [from, to, curvature]);
+
+  /* ===============================
+     🎨 CONFIG DERIVADA
+  =============================== */
+
+  const mainStroke = active ? "url(#edgeGradient)" : "#555";
+  const mainWidth = active ? 3.5 : 2;
+  const mainOpacity = active ? 0.95 : 0.35;
+  const dashPattern = active ? "0" : "6 8";
 
   return (
     <>
-      {/* ===============================
-         🌫️ GLOW BASE (blur forte)
-      =============================== */}
+      {/* 🌫️ GLOW BASE */}
       {active && (
         <motion.path
           d={pathD}
@@ -59,37 +68,28 @@ export default function TalentEdge({
           strokeWidth={8}
           strokeLinecap="round"
           fill="transparent"
-          style={{
-            filter: "blur(6px)",
-            opacity: 0.4
-          }}
+          style={{ filter: "blur(6px)" }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.5 }}
           transition={{ duration: 0.6 }}
         />
       )}
 
-      {/* ===============================
-         🎨 MAIN LINE
-      =============================== */}
+      {/* 🎨 MAIN LINE */}
       <motion.path
         d={pathD}
-        stroke={active ? "url(#edgeGradient)" : "#555"}
-        strokeWidth={active ? 3.5 : 2}
-        strokeDasharray={active ? "0" : "6 8"}
+        stroke={mainStroke}
+        strokeWidth={mainWidth}
+        strokeDasharray={dashPattern}
         strokeLinecap="round"
         fill="transparent"
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        style={{
-          opacity: active ? 0.95 : 0.35
-        }}
+        style={{ opacity: mainOpacity }}
       />
 
-      {/* ===============================
-         ⚡ ENERGY FLOW
-      =============================== */}
+      {/* ⚡ ENERGY FLOW */}
       {active && (
         <motion.path
           d={pathD}
@@ -102,17 +102,13 @@ export default function TalentEdge({
           transition={{
             repeat: Infinity,
             duration: 2.5,
-            ease: "linear"
+            ease: "linear",
           }}
-          style={{
-            opacity: 0.45
-          }}
+          style={{ opacity: 0.45 }}
         />
       )}
 
-      {/* ===============================
-         ✨ ENERGY PULSE
-      =============================== */}
+      {/* ✨ ENERGY PULSE */}
       {active && (
         <motion.path
           d={pathD}
@@ -124,11 +120,9 @@ export default function TalentEdge({
           transition={{
             repeat: Infinity,
             duration: 3,
-            ease: "easeInOut"
+            ease: "easeInOut",
           }}
-          style={{
-            filter: "blur(3px)"
-          }}
+          style={{ filter: "blur(3px)" }}
         />
       )}
     </>
