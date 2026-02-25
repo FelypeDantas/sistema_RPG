@@ -38,10 +38,6 @@ const clampXP = (value: number) => {
   return Math.max(1, Math.min(500, Math.floor(value)));
 };
 
-const { user } = useAuthWithPlayer();
-const {attributes} = usePlayerRealtime(user?.uid);
-const { generate } = useSmartMissionGenerator(attributes);
-
 const getDifficulty = (xp: number): DifficultyType => {
   if (xp >= 200) return "epic";
   if (xp >= 100) return "hard";
@@ -65,6 +61,9 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
   const [xp, setXP] = useState<number>(40);
   const [attribute, setAttribute] =
     useState<AttributeType>("Mente");
+  const { user } = useAuthWithPlayer();
+  const { attributes } = usePlayerRealtime(user?.uid);
+  const { generate } = useSmartMissionGenerator(attributes);
 
   const isValid = title.trim().length >= 3;
 
