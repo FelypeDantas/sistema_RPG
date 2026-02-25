@@ -184,9 +184,10 @@ const RPGDashboardContent = (): ReactNode => {
                   nextLevelXP: player.xpToNextLevel,
                   totalXP,
                   rank: playerClass.rank,
-                  avatar: playerClass.avatar
+                  avatar: playerClass.avatar,
                 }}
                 xpProgress={xpProgress}
+                onOpenProfile={() => setIsProfileOpen(true)}
               />
             </div>
 
@@ -196,10 +197,10 @@ const RPGDashboardContent = (): ReactNode => {
                 Atributos
               </h3>
 
-              <AttributeBar attribute={{ name: "Físico", value: player.attributes.Físico, icon: Dumbbell, color: "from-neon-red to-neon-orange" }} />
-              <AttributeBar attribute={{ name: "Mente", value: player.attributes.Mente, icon: Brain, color: "from-neon-blue to-neon-cyan" }} />
-              <AttributeBar attribute={{ name: "Social", value: player.attributes.Social, icon: Users, color: "from-neon-purple to-neon-pink" }} />
-              <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan" }} />
+              <AttributeBar attribute={{ name: "Físico", value: player.attributes.Físico, icon: Dumbbell, color: "from-neon-red to-neon-orange", bgColor: "bg-red-500/30", description: "Atributo físico do personagem" }} />
+              <AttributeBar attribute={{ name: "Mente", value: player.attributes.Mente, icon: Brain, color: "from-neon-blue to-neon-cyan", bgColor: "bg-blue-500/30", description: "Atributo mental do personagem" }} />
+              <AttributeBar attribute={{ name: "Social", value: player.attributes.Social, icon: Users, color: "from-neon-purple to-neon-pink", bgColor: "bg-purple-500/30", description: "Atributo social do personagem" }} />
+              <AttributeBar attribute={{ name: "Finanças", value: player.attributes.Finanças, icon: Wallet, color: "from-neon-green to-neon-cyan", bgColor: "bg-green-500/30", description: "Atributo financeiro do personagem" }} />
             </div>
 
             <TalentTree
