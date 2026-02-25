@@ -110,8 +110,9 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         description: description.trim(),
         xp: finalXP,
         attribute,
-        difficulty: finalDifficulty, // 🔥 agora é persistido
+        difficulty: finalDifficulty,
         done: false,
+        completed: false,
         createdAt: Date.now()
       });
 
