@@ -148,12 +148,11 @@ export default function TalentNode({
         onClick={handleUnlock}
         onMouseDown={startTraining}
         onMouseUp={stopTraining}
-        onMouseLeave={stopTraining}
+        onMouseLeave={(e) => {
+          stopTraining();
+          setHovered(false);
+        }}
         onMouseEnter={() => setHovered(true)}
-        onMouseLeaveCapture={() => setHovered(false)}
-        className={`w-56 rounded-2xl border p-4 text-center relative overflow-hidden
-                    bg-cyber-card backdrop-blur-md transition-all duration-300
-                    ${cardStyle}`}
       >
         {/* ✨ Unlock Flash */}
         <AnimatePresence>
@@ -191,9 +190,8 @@ export default function TalentNode({
         )}
 
         <h3
-          className={`font-semibold text-sm ${
-            state === "locked" ? "text-gray-400" : "text-white"
-          }`}
+          className={`font-semibold text-sm ${state === "locked" ? "text-gray-400" : "text-white"
+            }`}
         >
           {title}
         </h3>
@@ -207,11 +205,10 @@ export default function TalentNode({
           <motion.div
             animate={{ width: `${safeProgress}%` }}
             transition={{ duration: 0.3 }}
-            className={`h-full rounded ${
-              state === "complete"
+            className={`h-full rounded ${state === "complete"
                 ? "bg-neon-green"
                 : "bg-gradient-to-r from-purple-500 via-blue-400 to-neon-cyan"
-            }`}
+              }`}
           />
         </div>
 
@@ -221,9 +218,8 @@ export default function TalentNode({
             className="mt-3 text-xs text-purple-400 flex items-center justify-center gap-1 hover:text-neon-cyan transition"
           >
             <ChevronDown
-              className={`transition-transform duration-300 ${
-                collapsed ? "-rotate-90" : "rotate-0"
-              }`}
+              className={`transition-transform duration-300 ${collapsed ? "-rotate-90" : "rotate-0"
+                }`}
               size={14}
             />
             Sub-habilidades
