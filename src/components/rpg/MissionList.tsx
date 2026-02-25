@@ -49,7 +49,7 @@ export function MissionList() {
   const handleComplete = useCallback(
     (success: boolean) => {
       if (!selectedMission) return;
-      completeMission(selectedMission, success);
+      completeMission(selectedMission.id, success);
       closeModal();
     },
     [selectedMission, completeMission, closeModal]
