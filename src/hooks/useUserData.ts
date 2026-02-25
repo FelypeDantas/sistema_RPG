@@ -52,10 +52,20 @@ export function useUserData() {
      💾 SALVAR DADOS
   ============================= */
   const saveData = useCallback(
-    async (newData: Partial<typeof data>) => {
+    async (
+      updater:
+        | Partial<typeof data>
+        | ((prev: typeof data) => Partial<typeof data>)
+    ) => {
       if (!user) return;
 
-      const mergedData = { ...data, ...newData }; // merge localmente
+      const newPartial =
+        typeof updater === "function"
+          ? updater(data)
+          : updater;
+
+      const mergedData = { ...data, ...newPartial };
+
       setData(mergedData);
 
       try {
@@ -68,7 +78,6 @@ export function useUserData() {
     },
     [user, data]
   );
-
   /* =============================
      📦 API DO HOOK
   ============================= */
