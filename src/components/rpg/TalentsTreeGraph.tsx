@@ -9,20 +9,20 @@ const HEIGHT = 650;
 const CURVE_FACTOR = 0.4;
 
 export default function TalentsTreeGraph() {
-  const { level, playerClass } = usePlayerRealtime();
+  const { level } = usePlayerRealtime();
 
   
   const { unlocked, unlockTalent, points } =
-    useTalents(level, playerClass);
+    useTalents(level);
 
   /* ===============================
      🧠 DERIVED STRUCTURES
   =============================== */
 
   const unlockedSet = useMemo(
-    () => new Set(unlocked),
-    [unlocked]
-  );
+  () => new Set(unlocked.map(t => t.id)),
+  [unlocked]
+);
 
   const validTalents = useMemo(() => {
     return TALENT_GRAPH.filter(
@@ -176,7 +176,7 @@ export default function TalentsTreeGraph() {
       {/* NODES */}
       {validTalents.map(t => {
         const isUnlocked = unlockedSet.has(t.id);
-        const available = points(t);
+        const available = !isUnlocked && points >= t.cost;
         const clickable = available && !isUnlocked;
 
         const ringColor = isUnlocked
