@@ -69,6 +69,7 @@ export const useSmartMissionGenerator = (
             description: `Missão gerada para fortalecer ${lowestAttr}.`,
             xp,
             attribute: lowestAttr,
+            completed: false,
             difficulty:
                 xp >= 200
                     ? "epic"
