@@ -80,6 +80,36 @@
   gap: 1rem;
 }
 
+.mission-controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.xp-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff8c00, #ffd700);
+  transition: width 0.4s ease;
+}
+
+.epic-animate {
+  animation: pulseEpic 2s infinite;
+}
+
+@keyframes pulseEpic {
+  0% { box-shadow: 0 0 10px rgba(180, 0, 255, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(180, 0, 255, 0.7); }
+  100% { box-shadow: 0 0 10px rgba(180, 0, 255, 0.4); }
+}
+
 .mission-card {
   background: #141414;
   border: 1px solid rgba(255, 255, 255, 0.08);
