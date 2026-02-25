@@ -2,6 +2,25 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Mission, useMissions } from "../../hooks/useMissions";
 import "./MissionModal.css";
 
+const difficultyMap = {
+  easy: {
+    label: "Fácil",
+    className: "badge-easy",
+  },
+  medium: {
+    label: "Médio",
+    className: "badge-medium",
+  },
+  hard: {
+    label: "Difícil",
+    className: "badge-hard",
+  },
+  epic: {
+    label: "Épico",
+    className: "badge-epic",
+  },
+};
+
 export function MissionList() {
   const { missions, completeMission } = useMissions();
 
@@ -10,9 +29,7 @@ export function MissionList() {
 
   const showConfirm = selectedMission !== null;
 
-  // ----------------------------
-  // Modal Controls
-  // ----------------------------
+  /* ---------------- Modal Controls ---------------- */
 
   const openModal = useCallback((mission: Mission) => {
     setSelectedMission(mission);
@@ -25,16 +42,13 @@ export function MissionList() {
   const handleComplete = useCallback(
     (success: boolean) => {
       if (!selectedMission) return;
-
       completeMission(selectedMission, success);
       closeModal();
     },
     [selectedMission, completeMission, closeModal]
   );
 
-  // ----------------------------
-  // ESC Key Listener
-  // ----------------------------
+  /* ---------------- ESC Listener ---------------- */
 
   useEffect(() => {
     if (!showConfirm) return;
@@ -47,9 +61,7 @@ export function MissionList() {
     return () => window.removeEventListener("keydown", handleEsc);
   }, [showConfirm, closeModal]);
 
-  // ----------------------------
-  // Prevent Background Scroll
-  // ----------------------------
+  /* ---------------- Scroll Lock ---------------- */
 
   useEffect(() => {
     if (!showConfirm) return;
@@ -62,24 +74,46 @@ export function MissionList() {
     };
   }, [showConfirm]);
 
-  // ----------------------------
-  // Render
-  // ----------------------------
+  /* ---------------- Render ---------------- */
 
   return (
     <>
-      <ul>
-        {missions.map((mission) => (
-          <li key={mission.id}>
-            <h3>{mission.title}</h3>
-            <p>{mission.description}</p>
-            <p>XP: {mission.xp}</p>
+      <ul className="mission-list">
+        {missions.map((mission) => {
+          const difficulty = difficultyMap[mission.difficulty];
 
-            <button onClick={() => openModal(mission)}>
-              Finalizar missão
-            </button>
-          </li>
-        ))}
+          return (
+            <li
+              key={mission.id}
+              className={`mission-card ${
+                mission.difficulty === "epic" ? "epic-glow" : ""
+              }`}
+            >
+              <div className="mission-header">
+                <h3>{mission.title}</h3>
+
+                <span className={`difficulty-badge ${difficulty.className}`}>
+                  {difficulty.label}
+                </span>
+              </div>
+
+              <p className="mission-description">
+                {mission.description}
+              </p>
+
+              <div className="mission-footer">
+                <span className="xp">XP: {mission.xp}</span>
+
+                <button
+                  className="complete-btn"
+                  onClick={() => openModal(mission)}
+                >
+                  Finalizar missão
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       {showConfirm && selectedMission && (
@@ -90,10 +124,7 @@ export function MissionList() {
           aria-labelledby="modal-title"
           onClick={closeModal}
         >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2 id="modal-title">Concluir Missão</h2>
 
             <p>
