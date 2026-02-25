@@ -83,6 +83,7 @@ export function usePlayerRealtime(userId?: string) {
     useState<Talent[]>(DEFAULT_TALENTS);
   const [traits, setTraits] = useState<Trait[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [prestige, setPrestige] = useState(0);
 
   const undoStack = useRef<
     Array<{ xp: number; level: number; attributes: typeof attributes }>
@@ -132,6 +133,7 @@ export function usePlayerRealtime(userId?: string) {
       setTalents(data.talents ?? DEFAULT_TALENTS);
       setPlayerClass(data.playerClass ?? "warrior");
       setTraits(data.traits ?? []);
+      setPrestige(data.prestige ?? 0);
       setIsLoaded(true);
     });
 
@@ -161,6 +163,7 @@ export function usePlayerRealtime(userId?: string) {
           talents,
           traits,
           playerClass,
+          prestige,
         },
       },
       { merge: true }
@@ -288,6 +291,7 @@ export function usePlayerRealtime(userId?: string) {
     talents,
     traits,
     playerClass,
+    prestige,
     gainXP,
     gainSegmentXP,
     undoLast,

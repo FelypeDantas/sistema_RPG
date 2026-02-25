@@ -19,13 +19,12 @@ export const PlayerStatusCard = () => {
     const playerClass = calculatePlayerClass(attributes);
 
     return {
-      prestigeMultiplier,
       rank,
       playerClass,
     };
   }, [level, attributes, prestige]);
 
-  const { prestigeMultiplier, rank, playerClass } = derivedData;
+  const { rank, playerClass } = derivedData;
 
   return (
     <div className="bg-cyber-card p-6 rounded-xl border border-white/5 space-y-4 relative overflow-hidden">
