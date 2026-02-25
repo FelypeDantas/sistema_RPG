@@ -39,10 +39,7 @@ const clampXP = (value: number) => {
 };
 
 const { user } = useAuthWithPlayer();
-const {
-  attributes,
-  playerClass
-} = usePlayerRealtime(user?.uid);
+const {attributes} = usePlayerRealtime(user?.uid);
 const { generate } = useSmartMissionGenerator(attributes);
 
 const getDifficulty = (xp: number): DifficultyType => {
