@@ -14,7 +14,6 @@ export const PlayerStatusCard = () => {
   } = usePlayerRealtime();
 
   const derivedData = useMemo(() => {
-    const prestigeMultiplier = 1 + prestige * 0.05;
     const rank = getGlobalRank(level);
     const playerClass = calculatePlayerClass(attributes);
 
