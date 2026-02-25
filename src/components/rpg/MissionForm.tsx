@@ -1,5 +1,8 @@
 import { useState, useCallback, FormEvent, useMemo } from "react";
 import { Mission } from "@/hooks/useMissions";
+import { usePlayerRealtime } from "@/hooks/usePlayer";
+import { useSmartMissionGenerator } from "@/hooks/useSmartMissionGenerator";
+import { useAuthWithPlayer } from "@/hooks/useAuth";
 import clsx from "clsx";
 
 type AttributeType = "Mente" | "Físico" | "Social" | "Finanças";
@@ -34,6 +37,13 @@ const clampXP = (value: number) => {
   if (isNaN(value)) return 1;
   return Math.max(1, Math.min(500, Math.floor(value)));
 };
+
+const { user } = useAuthWithPlayer();
+const {
+  attributes,
+  playerClass
+} = usePlayerRealtime(user?.uid);
+const { generate } = useSmartMissionGenerator(attributes);
 
 const getDifficulty = (xp: number): DifficultyType => {
   if (xp >= 200) return "epic";
@@ -195,6 +205,14 @@ export const MissionForm = ({ onAdd }: MissionFormProps) => {
         )}
       >
         Criar Missão (+{xp} XP)
+      </button>
+
+      <button
+        type="button"
+        onClick={() => onAdd(generate())}
+        className="w-full py-2 rounded bg-cyan-500/20 hover:bg-cyan-500/40 transition"
+      >
+        🎯 Gerar Missão Inteligente
       </button>
     </form>
   );

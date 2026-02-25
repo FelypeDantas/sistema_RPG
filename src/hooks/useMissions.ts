@@ -5,6 +5,12 @@ import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 export type MissionAttribute = "Mente" | "Físico" | "Social" | "Finanças";
 
+export type DifficultyType = 
+  | "easy"
+  | "medium"
+  | "hard"
+  | "epic";
+
 export interface Mission {
   id: string;
   title: string;
@@ -15,6 +21,8 @@ export interface Mission {
   done?: boolean;
   segment?: string;
   segmentXP?: number;
+  difficulty: DifficultyType;
+  createdAt: number;
 }
 
 export interface MissionHistory extends Omit<Mission, "completed"> {
