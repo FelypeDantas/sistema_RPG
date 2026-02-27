@@ -13,71 +13,101 @@ interface Attribute {
 
 interface AttributeBarProps {
   attribute: Attribute;
-  highestValue?: number; // 🔥 valor do atributo dominante
+  highestValue?: number;
+  maxDisplay?: number; // padrão 100
+  maxRankValue?: number; // teto de rank (ex: 150)
 }
 
 type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "SS";
 
+/* ===============================
+   Rank System Escalável
+================================= */
+
+const RANK_THRESHOLDS: { rank: Rank; min: number }[] = [
+  { rank: "SS", min: 140 },
+  { rank: "S", min: 120 },
+  { rank: "A", min: 100 },
+  { rank: "B", min: 75 },
+  { rank: "C", min: 50 },
+  { rank: "D", min: 25 },
+  { rank: "E", min: 0 }
+];
+
 const getRank = (value: number): Rank => {
-  if (value >= 140) return "SS";
-  if (value >= 120) return "S";
-  if (value >= 100) return "A";
-  if (value >= 75) return "B";
-  if (value >= 50) return "C";
-  if (value >= 25) return "D";
-  return "E";
+  return (
+    RANK_THRESHOLDS.find(r => value >= r.min)?.rank ?? "E"
+  );
 };
 
+const RANK_STYLES: Record<Rank, string> = {
+  SS: "bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/40",
+  S: "bg-orange-500 text-white",
+  A: "bg-green-500 text-white",
+  B: "bg-blue-500 text-white",
+  C: "bg-purple-500 text-white",
+  D: "bg-gray-500 text-white",
+  E: "bg-gray-700 text-gray-300"
+};
+
+/* ===============================
+   Component
+================================= */
+
 export const AttributeBar = memo(
-  ({ attribute, highestValue }: AttributeBarProps) => {
+  ({
+    attribute,
+    highestValue,
+    maxDisplay = 100,
+    maxRankValue = 150
+  }: AttributeBarProps) => {
     const Icon = attribute.icon;
 
     const attributeId = useMemo(
-      () => `attribute-${attribute.name.replace(/\s+/g, "-").toLowerCase()}`,
+      () =>
+        `attribute-${attribute.name
+          .replace(/\s+/g, "-")
+          .toLowerCase()}`,
       [attribute.name]
     );
 
     const rawValue = attribute.value;
-    const cappedValue = Math.min(Math.max(rawValue, 0), 100);
-    const overflowValue = rawValue > 100 ? rawValue - 100 : 0;
+
+    const cappedValue = Math.min(
+      Math.max(rawValue, 0),
+      maxDisplay
+    );
+
+    const overflowValue =
+      rawValue > maxDisplay ? rawValue - maxDisplay : 0;
+
+    const overflowPercent =
+      (overflowValue / (maxRankValue - maxDisplay)) * 100;
 
     const rank = getRank(rawValue);
 
     const isDominant =
-      highestValue !== undefined && rawValue === highestValue;
+      highestValue !== undefined &&
+      rawValue === highestValue;
 
     const [animatedValue, setAnimatedValue] = useState(0);
 
+    /* 🔥 animação suave quando valor muda */
     useEffect(() => {
-      const frame = requestAnimationFrame(() => {
+      setAnimatedValue(0);
+      const timeout = setTimeout(() => {
         setAnimatedValue(cappedValue);
-      });
-      return () => cancelAnimationFrame(frame);
+      }, 100);
+
+      return () => clearTimeout(timeout);
     }, [cappedValue]);
-
-    const barClasses = clsx(
-      "absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out",
-      "bg-gradient-to-r",
-      attribute.color,
-      isDominant && "ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(255,215,0,0.6)]"
-    );
-
-    const rankColor = clsx(
-      "px-2 py-0.5 rounded text-xs font-bold",
-      rank === "SS" && "bg-red-600 text-white animate-pulse",
-      rank === "S" && "bg-orange-500 text-white",
-      rank === "A" && "bg-green-500 text-white",
-      rank === "B" && "bg-blue-500 text-white",
-      rank === "C" && "bg-purple-500 text-white",
-      rank === "D" && "bg-gray-500 text-white",
-      rank === "E" && "bg-gray-700 text-gray-300"
-    );
 
     return (
       <div
         className={clsx(
           "group transition-all duration-300 p-3 rounded-xl",
-          isDominant && "bg-yellow-400/5 border border-yellow-400/30"
+          isDominant &&
+            "bg-yellow-400/5 border border-yellow-400/30"
         )}
       >
         {/* Header */}
@@ -101,7 +131,7 @@ export const AttributeBar = memo(
                 {attribute.name}
               </span>
 
-              <span className="text-gray-500 text-xs ml-2 hidden group-hover:inline">
+              <span className="text-gray-500 text-xs ml-2 hidden group-hover:inline transition-opacity">
                 {attribute.description}
               </span>
             </div>
@@ -112,8 +142,14 @@ export const AttributeBar = memo(
               {rawValue}%
             </span>
 
-            {/* 🌟 Rank Badge */}
-            <span className={rankColor}>{rank}</span>
+            <span
+              className={clsx(
+                "px-2 py-0.5 rounded text-xs font-bold",
+                RANK_STYLES[rank]
+              )}
+            >
+              {rank}
+            </span>
           </div>
         </div>
 
@@ -124,27 +160,38 @@ export const AttributeBar = memo(
           aria-labelledby={attributeId}
           aria-valuenow={rawValue}
           aria-valuemin={0}
-          aria-valuemax={150}
+          aria-valuemax={maxRankValue}
         >
           <div
-            className={barClasses}
+            className={clsx(
+              "absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out",
+              "bg-gradient-to-r",
+              attribute.color,
+              isDominant &&
+                "ring-2 ring-yellow-400 shadow-[0_0_15px_rgba(255,215,0,0.6)]"
+            )}
             style={{ width: `${animatedValue}%` }}
           />
 
-          {/* shimmer */}
+          {/* Shimmer */}
           <div
             className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
             style={{ width: `${animatedValue}%` }}
           />
         </div>
 
-        {/* 🏆 Overflow power acima de 100 */}
+        {/* 🔥 OVERDRIVE SYSTEM */}
         {overflowValue > 0 && (
           <div className="mt-2 relative">
             <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-pulse"
-                style={{ width: `${Math.min(overflowValue, 50) * 2}%` }}
+                className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-pulse transition-all duration-500"
+                style={{
+                  width: `${Math.min(
+                    overflowPercent,
+                    100
+                  )}%`
+                }}
               />
             </div>
 
