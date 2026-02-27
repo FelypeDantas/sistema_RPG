@@ -1,93 +1,87 @@
-// pages/HallOfGlory.tsx
 import { motion } from "framer-motion";
-import { Crown, Sparkles } from "lucide-react";
+import { Trophy, Sparkles } from "lucide-react";
 import { useProgression } from "@/providers/ProgressionProvider";
+import { getRarityClasses } from "@/utils/achievementHelpers";
+import type { AchievementRarity } from "@/hooks/useAchievements";
 
 type Achievement = {
   id: string;
-  name: string;
+  title: string;
   description: string;
   unlocked: boolean;
-  rarity?: "common" | "rare" | "epic" | "legendary";
+  rarity: AchievementRarity;
 };
 
 type HallOfGloryProps = {
   achievements?: Achievement[];
 };
 
-const rarityStyles = {
-  common: "border-yellow-400/20 bg-yellow-400/5",
-  rare: "border-blue-400/40 bg-blue-400/10",
-  epic: "border-purple-500/40 bg-purple-500/10",
-  legendary: "border-amber-400/70 bg-amber-400/15 shadow-amber-400/40",
-};
-
 export function HallOfGlory({ achievements }: HallOfGloryProps) {
   const { level, xp } = useProgression();
 
-  const unlocked = achievements?.filter(a => a.unlocked) || [];
+  const unlocked = achievements?.filter(a => a.unlocked) ?? [];
+
+<span className={`font-bold text-sm ${getRarityClasses(achievements?.[0]?.rarity)}`}></span>
 
   return (
-    <div className="relative p-12 min-h-screen overflow-hidden">
+    <div className="min-h-screen bg-cyber-dark p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
 
-      {/* Background Aura */}
-      <div className="absolute inset-0 bg-gradient-radial from-yellow-500/10 via-transparent to-transparent pointer-events-none" />
+        {/* HEADER estilo igual dashboard */}
+        <div className="bg-cyber-card p-6 rounded-xl border border-zinc-800">
+          <div className="flex items-center gap-3 mb-3">
+            <Trophy className="w-6 h-6 text-neon-orange" />
+            <h1 className="text-2xl font-bold text-white">
+              Hall da Glória
+            </h1>
+          </div>
 
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-12 text-center"
-      >
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <Crown className="text-amber-400 w-8 h-8" />
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-500 bg-clip-text text-transparent">
-            Hall da Glória
-          </h1>
+          <div className="text-sm text-zinc-400">
+            Nível {level} • {xp.toLocaleString()} XP acumulado
+          </div>
         </div>
 
-        <div className="text-gray-400 text-lg">
-          Nível {level} • {xp.toLocaleString()} XP acumulado
-        </div>
-      </motion.div>
+        {/* GRID */}
+        {unlocked.length === 0 ? (
+          <div className="bg-cyber-card p-8 rounded-xl border border-zinc-800 text-center text-zinc-500">
+            Nenhuma conquista desbloqueada ainda.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {unlocked.map((a) => (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+                className="bg-cyber-card p-5 rounded-xl border border-zinc-800 hover:border-zinc-600 transition-all duration-300"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className={`font-bold text-sm ${getRarityClasses(a.rarity)}`}>
+                    🏆 {a.title}
+                  </span>
 
-      {/* Achievements Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-        {unlocked.map(a => {
-          const rarity = a.rarity || "common";
+                  <span className="text-xs px-2 py-1 rounded-full bg-zinc-800 text-zinc-400">
+                    {a.rarity}
+                  </span>
+                </div>
 
-          return (
-            <motion.div
-              key={a.id}
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className={`relative p-6 rounded-2xl border backdrop-blur-md transition-all duration-300 ${rarityStyles[rarity]}`}
-            >
-              {rarity === "legendary" && (
-                <Sparkles className="absolute top-3 right-3 text-amber-300 w-5 h-5 animate-pulse" />
-              )}
+                <p className="text-xs text-zinc-400">
+                  {a.description}
+                </p>
 
-              <div className="text-xl font-bold text-white mb-2">
-                {a.name}
-              </div>
-
-              <div className="text-sm text-gray-400">
-                {a.description}
-              </div>
-
-              <div className="mt-4 text-xs uppercase tracking-wider text-gray-500">
-                {rarity}
-              </div>
-            </motion.div>
-          );
-        })}
+                {a.rarity === "Lendária" && (
+                  <div className="mt-3 flex items-center gap-2 text-neon-orange text-xs">
+                    <Sparkles className="w-4 h-4" />
+                    Conquista Lendária
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
-
-      {unlocked.length === 0 && (
-        <div className="text-center text-gray-500 mt-16">
-          Nenhuma conquista desbloqueada ainda.
-        </div>
-      )}
     </div>
   );
 }
