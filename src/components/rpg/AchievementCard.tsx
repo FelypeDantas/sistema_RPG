@@ -59,117 +59,135 @@ const rarityLabel: Record<Rarity, string> = {
   legendary: "Legendary"
 };
 
-export const AchievementCard = memo(
-  ({ achievement }: AchievementCardProps) => {
-    const style = rarityStyles[achievement.rarity] ?? rarityStyles.common;
+function calculateProgress(progress: number, max: number) {
+  if (!max) return 0;
+  return Math.min((progress / max) * 100, 100);
+}
 
-    const hasProgress =
-      achievement.progress !== undefined &&
-      achievement.maxProgress !== undefined &&
-      achievement.maxProgress > 0;
+function AchievementCardComponent({ achievement }: AchievementCardProps) {
+  const {
+    id,
+    name,
+    description,
+    icon,
+    unlocked,
+    rarity,
+    progress = 0,
+    maxProgress = 0
+  } = achievement;
 
-    const progress = useMemo(() => {
-      if (!hasProgress) return 0;
-      return Math.min(
-        (achievement.progress! / achievement.maxProgress!) * 100,
-        100
-      );
-    }, [achievement.progress, achievement.maxProgress, hasProgress]);
+  const style = rarityStyles[rarity] ?? rarityStyles.common;
 
-    // 🔥 animação suave de progresso
-    const [animatedProgress, setAnimatedProgress] = useState(0);
+  const hasProgress = maxProgress > 0;
+  const progressPercent = calculateProgress(progress, maxProgress);
+  const almostUnlocked =
+    hasProgress && progressPercent >= 80 && !unlocked;
 
-    useEffect(() => {
-      if (hasProgress) {
-        requestAnimationFrame(() => {
-          setAnimatedProgress(progress);
-        });
-      }
-    }, [progress, hasProgress]);
+  const [animatedProgress, setAnimatedProgress] = useState(0);
 
-    const containerClasses = `
-      relative p-4 rounded-xl border transition-all duration-300
+  useEffect(() => {
+    if (!hasProgress) return;
+    setAnimatedProgress(progressPercent);
+  }, [progressPercent, hasProgress]);
+
+  const dynamicGlow = useMemo(() => {
+    if (!unlocked || !hasProgress) return style.glow;
+    const intensity = Math.max(10, progressPercent / 4);
+    return `shadow-[0_0_${intensity}px_rgba(255,255,255,0.15)]`;
+  }, [unlocked, hasProgress, progressPercent, style.glow]);
+
+  const containerClasses = useMemo(() => {
+    return `
+      relative group p-4 rounded-xl border transition-all duration-300
       hover:-translate-y-1 hover:scale-[1.02]
-      ${
-        achievement.unlocked
-          ? `${style.border} ${style.bg} ${style.glow}`
-          : "border-white/5 bg-cyber-darker opacity-70"
-      }
+      ${unlocked
+        ? `${style.border} ${style.bg} ${dynamicGlow} ring-1 ring-white/10`
+        : "border-white/5 bg-cyber-darker opacity-70"}
+      ${almostUnlocked ? "animate-pulse border-yellow-400/40" : ""}
     `;
+  }, [unlocked, style, dynamicGlow, almostUnlocked]);
 
-    const iconClasses = `
-      relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl
-      transition-all duration-300
-      ${achievement.unlocked ? style.bg : "bg-gray-800"}
-    `;
+  const iconClasses = `
+    relative w-12 h-12 rounded-xl flex items-center justify-center text-2xl
+    transition-all duration-300
+    ${unlocked ? style.bg : "bg-gray-800"}
+  `;
 
-    const badgeClasses = `
-      text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider
-      ${
-        achievement.unlocked
-          ? `${style.text} ${style.bg}`
-          : "text-gray-500 bg-gray-800"
-      }
-    `;
+  const badgeClasses = `
+    text-xs px-2 py-0.5 rounded uppercase font-bold tracking-wider
+    ${unlocked ? `${style.text} ${style.bg}` : "text-gray-500 bg-gray-800"}
+  `;
 
-    const progressBarColor = achievement.unlocked
-      ? style.progressBg
-      : "bg-gray-600";
+  const progressBarColor = unlocked ? style.progressBg : "bg-gray-600";
 
-    return (
-      <div className={containerClasses}>
-        <div className="flex items-center gap-3">
-          {/* Icon */}
-          <div className={iconClasses}>
-            {achievement.unlocked ? (
-              achievement.icon
-            ) : (
-              <>
-                <span className="opacity-30">{achievement.icon}</span>
-                <Lock className="absolute w-4 h-4 text-gray-500" />
-              </>
-            )}
+  return (
+    <div className={containerClasses}>
+      <div className="flex items-center gap-3">
+        {/* Icon */}
+        <div className={iconClasses}>
+          {unlocked ? (
+            icon
+          ) : (
+            <>
+              <span className="opacity-30">{icon}</span>
+              <Lock className="absolute w-4 h-4 text-gray-500" />
+            </>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4
+              className={`font-semibold truncate ${
+                unlocked ? "text-white" : "text-gray-500"
+              }`}
+            >
+              {name}
+            </h4>
+
+            <span className={badgeClasses}>
+              {rarityLabel[rarity]}
+            </span>
           </div>
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h4
-                className={`font-semibold truncate ${
-                  achievement.unlocked ? "text-white" : "text-gray-500"
-                }`}
-              >
-                {achievement.name}
-              </h4>
+          <p className="text-gray-500 text-sm line-clamp-2 group-hover:line-clamp-none transition-all duration-300">
+            {description}
+          </p>
 
-              <span className={badgeClasses}>
-                {rarityLabel[achievement.rarity]}
+          {hasProgress && (
+            <div className="mt-2">
+              <div className="h-1.5 bg-cyber-dark rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ease-out ${progressBarColor}`}
+                  style={{ width: `${animatedProgress}%` }}
+                />
+              </div>
+
+              <span className="text-gray-500 text-xs mt-1 block">
+                {progress.toLocaleString()} /{" "}
+                {maxProgress.toLocaleString()}
               </span>
             </div>
-
-            <p className="text-gray-500 text-sm truncate">
-              {achievement.description}
-            </p>
-
-            {/* Progress bar agora sempre aparece se existir */}
-            {hasProgress && (
-              <div className="mt-2">
-                <div className="h-1.5 bg-cyber-dark rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ease-out ${progressBarColor}`}
-                    style={{ width: `${animatedProgress}%` }}
-                  />
-                </div>
-
-                <span className="text-gray-500 text-xs mt-1 block">
-                  {achievement.progress!.toLocaleString()} /{" "}
-                  {achievement.maxProgress!.toLocaleString()}
-                </span>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+export const AchievementCard = memo(
+  AchievementCardComponent,
+  (prev, next) => {
+    const a = prev.achievement;
+    const b = next.achievement;
+
+    return (
+      a.id === b.id &&
+      a.unlocked === b.unlocked &&
+      a.progress === b.progress &&
+      a.maxProgress === b.maxProgress &&
+      a.rarity === b.rarity
     );
   }
 );
