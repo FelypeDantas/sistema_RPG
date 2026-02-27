@@ -1,5 +1,17 @@
-import { LucideIcon, Crown, Flame, Sparkles } from "lucide-react";
-import { memo, useEffect, useMemo, useState } from "react";
+import {
+  LucideIcon,
+  Crown,
+  Flame,
+  Sparkles,
+  Infinity
+} from "lucide-react";
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
 import clsx from "clsx";
 
 interface Attribute {
@@ -9,9 +21,10 @@ interface Attribute {
   color: string;
   bgColor: string;
   description: string;
+  prestigeLevel?: number;
 }
 
-interface AttributeBarProps {
+interface Props {
   attribute: Attribute;
   highestValue?: number;
   maxDisplay?: number;
@@ -20,9 +33,9 @@ interface AttributeBarProps {
 
 type Rank = "E" | "D" | "C" | "B" | "A" | "S" | "SS";
 
-/* ================================
-   RANK SYSTEM
-================================ */
+/* =========================
+   Rank System
+========================= */
 
 const RANKS: { rank: Rank; min: number }[] = [
   { rank: "SS", min: 140 },
@@ -37,26 +50,9 @@ const RANKS: { rank: Rank; min: number }[] = [
 const getRank = (value: number): Rank =>
   RANKS.find(r => value >= r.min)?.rank ?? "E";
 
-const RANK_STYLES: Record<Rank, string> = {
-  SS: "bg-red-600 text-white shadow-lg shadow-red-500/50 animate-pulse",
-  S: "bg-orange-500 text-white",
-  A: "bg-green-500 text-white",
-  B: "bg-blue-500 text-white",
-  C: "bg-purple-500 text-white",
-  D: "bg-gray-500 text-white",
-  E: "bg-gray-700 text-gray-300"
-};
-
-const RankIcon = ({ rank }: { rank: Rank }) => {
-  if (rank === "SS") return <Sparkles className="w-3 h-3 mr-1" />;
-  if (rank === "S") return <Flame className="w-3 h-3 mr-1" />;
-  if (rank === "A") return <Crown className="w-3 h-3 mr-1" />;
-  return null;
-};
-
-/* ================================
-   COMPONENT
-================================ */
+/* =========================
+   Component
+========================= */
 
 export const AttributeBar = memo(
   ({
@@ -64,152 +60,195 @@ export const AttributeBar = memo(
     highestValue,
     maxDisplay = 100,
     maxRankValue = 150
-  }: AttributeBarProps) => {
+  }: Props) => {
     const Icon = attribute.icon;
+    const prestige = attribute.prestigeLevel ?? 0;
 
     const attributeId = useMemo(
       () =>
-        `attribute-${attribute.name.replace(/\s+/g, "-").toLowerCase()}`,
+        `attribute-${attribute.name
+          .replace(/\s+/g, "-")
+          .toLowerCase()}`,
       [attribute.name]
     );
 
     const rawValue = attribute.value;
+    const prevValue = useRef(rawValue);
 
-    const cappedValue = Math.min(Math.max(rawValue, 0), maxDisplay);
-    const overflowValue = rawValue > maxDisplay ? rawValue - maxDisplay : 0;
+    const capped = Math.min(rawValue, maxDisplay);
+    const overflow =
+      rawValue > maxDisplay ? rawValue - maxDisplay : 0;
 
     const overflowPercent =
-      (overflowValue / (maxRankValue - maxDisplay)) * 100;
+      (overflow / (maxRankValue - maxDisplay)) * 100;
 
     const rank = getRank(rawValue);
 
     const isDominant =
-      highestValue !== undefined && rawValue === highestValue;
+      highestValue !== undefined &&
+      rawValue === highestValue;
 
-    const [animatedValue, setAnimatedValue] = useState(0);
-    const [overdriveFlash, setOverdriveFlash] = useState(false);
+    const [animated, setAnimated] = useState(0);
+    const [glitch, setGlitch] = useState(false);
+
+    /* =========================
+       Física elástica
+    ========================= */
 
     useEffect(() => {
-      setAnimatedValue(0);
-      const t = setTimeout(() => {
-        setAnimatedValue(cappedValue);
-      }, 100);
+      let frame: number;
+      let velocity = 0;
+      let current = animated;
 
-      if (overflowValue > 0) {
-        setOverdriveFlash(true);
-        setTimeout(() => setOverdriveFlash(false), 600);
+      const stiffness = 0.15;
+      const damping = 0.8;
+
+      const animate = () => {
+        const force = (capped - current) * stiffness;
+        velocity = velocity * damping + force;
+        current += velocity;
+
+        if (Math.abs(velocity) > 0.1) {
+          setAnimated(current);
+          frame = requestAnimationFrame(animate);
+        } else {
+          setAnimated(capped);
+        }
+      };
+
+      frame = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(frame);
+    }, [capped]);
+
+    /* =========================
+       Glitch se cair
+    ========================= */
+
+    useEffect(() => {
+      if (rawValue < prevValue.current) {
+        setGlitch(true);
+        setTimeout(() => setGlitch(false), 500);
       }
+      prevValue.current = rawValue;
+    }, [rawValue]);
 
-      return () => clearTimeout(t);
-    }, [cappedValue, overflowValue]);
+    /* =========================
+       Canvas Particles SS
+    ========================= */
+
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+      if (rank !== "SS") return;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const particles = Array.from({ length: 25 }).map(() => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 1.5,
+        vy: (Math.random() - 0.5) * 1.5,
+        size: Math.random() * 2 + 1
+      }));
+
+      let frame: number;
+
+      const render = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        frame = requestAnimationFrame(render);
+      };
+
+      render();
+      return () => cancelAnimationFrame(frame);
+    }, [rank]);
 
     return (
       <div
         className={clsx(
-          "relative group transition-all duration-300 p-3 rounded-xl overflow-hidden",
+          "relative p-3 rounded-xl overflow-hidden transition-all duration-300",
           isDominant &&
-            "bg-yellow-400/5 border border-yellow-400/40 shadow-[0_0_25px_rgba(255,215,0,0.25)]"
+            "border border-yellow-400/40 shadow-[0_0_25px_rgba(255,215,0,0.25)]",
+          glitch && "animate-pulse"
         )}
       >
-        {/* Aura dominante */}
-        {isDominant && (
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-yellow-400/10 via-transparent to-yellow-400/10 animate-pulse" />
+        {/* Prestige Mutation */}
+        {prestige >= 3 && (
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 via-indigo-500/10 to-purple-500/10 animate-pulse pointer-events-none" />
+        )}
+
+        {/* SS Particles */}
+        {rank === "SS" && (
+          <canvas
+            ref={canvasRef}
+            width={400}
+            height={80}
+            className="absolute inset-0 pointer-events-none opacity-40"
+          />
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-2 relative z-10">
+        <div className="flex justify-between items-center mb-2 relative z-10">
           <div className="flex items-center gap-2">
-            <div
-              className={clsx(
-                "p-1.5 rounded-lg transition-all duration-300",
-                attribute.bgColor,
-                isDominant && "scale-110"
-              )}
-            >
+            <div className={clsx("p-1.5 rounded-lg", attribute.bgColor)}>
               <Icon className="w-4 h-4 text-white" />
             </div>
 
-            <div>
-              <span
-                id={attributeId}
-                className="text-white font-medium text-sm"
-              >
-                {attribute.name}
-              </span>
-
-              <span className="text-gray-500 text-xs ml-2 hidden group-hover:inline">
-                {attribute.description}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-white font-bold font-mono text-lg">
-              {rawValue}%
+            <span id={attributeId} className="text-white text-sm">
+              {attribute.name}
             </span>
 
-            <span
-              className={clsx(
-                "flex items-center px-2 py-0.5 rounded text-xs font-bold",
-                RANK_STYLES[rank]
-              )}
-            >
-              <RankIcon rank={rank} />
-              {rank}
-            </span>
+            {prestige > 0 && (
+              <span className="text-xs text-indigo-400 flex items-center">
+                <Infinity className="w-3 h-3 mr-1" />
+                {prestige}
+              </span>
+            )}
           </div>
+
+          <span className="text-white font-mono font-bold">
+            {rawValue}%
+          </span>
         </div>
 
         {/* Barra */}
-        <div
-          className="relative h-2.5 bg-cyber-darker rounded-full overflow-hidden border border-white/5"
-          role="progressbar"
-          aria-labelledby={attributeId}
-          aria-valuenow={rawValue}
-          aria-valuemin={0}
-          aria-valuemax={maxRankValue}
-        >
+        <div className="relative h-3 bg-cyber-darker rounded-full overflow-visible">
           <div
             className={clsx(
-              "absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out",
+              "absolute inset-y-0 left-0 rounded-full",
               "bg-gradient-to-r",
-              attribute.color,
-              overdriveFlash && "animate-pulse"
+              attribute.color
             )}
-            style={{ width: `${animatedValue}%` }}
+            style={{ width: `${animated}%` }}
           />
 
-          {/* Shimmer */}
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-20 animate-shimmer pointer-events-none"
-            style={{ width: `${animatedValue}%` }}
-          />
+          {overflow > 0 && (
+            <div
+              className="absolute top-0 h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-r-full animate-pulse"
+              style={{
+                left: "100%",
+                width: `${Math.min(overflowPercent, 100)}%`
+              }}
+            />
+          )}
         </div>
-
-        {/* OVERDRIVE */}
-        {overflowValue > 0 && (
-          <div className="mt-2 relative">
-            <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 animate-pulse transition-all duration-500"
-                style={{ width: `${Math.min(overflowPercent, 100)}%` }}
-              />
-            </div>
-
-            <span className="text-xs text-yellow-400 font-semibold mt-1 block">
-              🔥 Overdrive +{overflowValue}%
-            </span>
-          </div>
-        )}
-
-        {/* Partículas SS */}
-        {rank === "SS" && (
-          <div className="absolute inset-0 pointer-events-none animate-pulse opacity-40">
-            <div className="absolute top-2 right-4 w-1 h-1 bg-white rounded-full" />
-            <div className="absolute bottom-3 left-6 w-1 h-1 bg-white rounded-full" />
-            <div className="absolute top-4 left-10 w-1 h-1 bg-white rounded-full" />
-          </div>
-        )}
       </div>
     );
   }
