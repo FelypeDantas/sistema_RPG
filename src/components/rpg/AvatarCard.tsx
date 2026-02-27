@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronUp, Star, Zap, Crown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import clsx from "clsx";
@@ -16,62 +16,85 @@ interface PlayerData {
 
 interface AvatarCardProps {
   player: PlayerData;
+  xpProgress: number;
   onOpenProfile: () => void;
 }
 
 const safeNumber = (value?: number) =>
   typeof value === "number" && !isNaN(value) ? value : 0;
 
-const clamp = (value: number, min = 0, max = 100) =>
-  Math.min(Math.max(value, min), max);
+const clampPercentage = (value: number) =>
+  Math.min(Math.max(value, 0), 100);
 
 const formatNumber = (value: number) =>
   value.toLocaleString("pt-BR");
 
-const getRankColor = (rank: string) => {
-  const normalized = rank.toUpperCase();
-
-  if (normalized === "SS") return "text-red-400";
-  if (normalized === "S") return "text-orange-400";
-  if (normalized === "A") return "text-green-400";
-  if (normalized === "B") return "text-blue-400";
-  return "text-gray-400";
-};
-
 export const AvatarCard = memo(
-  ({ player, onOpenProfile }: AvatarCardProps) => {
+  ({ player, xpProgress, onOpenProfile }: AvatarCardProps) => {
     const currentXP = safeNumber(player.currentXP);
     const nextLevelXP = safeNumber(player.nextLevelXP);
     const totalXP = safeNumber(player.totalXP);
 
-    const xpProgress = useMemo(() => {
-      if (nextLevelXP <= 0) return 0;
-      return clamp((currentXP / nextLevelXP) * 100);
-    }, [currentXP, nextLevelXP]);
+    const safeProgress = clampPercentage(xpProgress);
+    const isLevelUpReady = safeProgress >= 100;
 
-    const isLevelUpReady = xpProgress >= 100;
+    // ✨ Animação real da barra
+    const [animatedXP, setAnimatedXP] = useState(0);
 
-    const rankColor = useMemo(
-      () => getRankColor(player.rank),
-      [player.rank]
+    useEffect(() => {
+      const frame = requestAnimationFrame(() => {
+        setAnimatedXP(safeProgress);
+      });
+      return () => cancelAnimationFrame(frame);
+    }, [safeProgress]);
+
+    // 🌟 Rank visual dinâmico
+    const rankStyles = useMemo(() => {
+      if (player.rank.includes("SS"))
+        return "text-red-400";
+      if (player.rank.includes("S"))
+        return "text-orange-400";
+      if (player.rank.includes("A"))
+        return "text-green-400";
+      if (player.rank.includes("B"))
+        return "text-blue-400";
+      return "text-gray-400";
+    }, [player.rank]);
+
+    const containerClasses = useMemo(
+      () =>
+        clsx(
+          "bg-cyber-card border border-white/10 rounded-xl p-5",
+          "relative overflow-hidden cursor-pointer",
+          "hover:scale-[1.01] active:scale-[0.99]",
+          "focus:outline-none focus:ring-2 focus:ring-neon-cyan/40",
+          "transition-transform duration-200",
+          isLevelUpReady &&
+            "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.4)]"
+        ),
+      [isLevelUpReady]
     );
 
-    const containerClasses = clsx(
-      "bg-cyber-card border border-white/10 rounded-xl p-5",
-      "relative overflow-hidden transition-all duration-200",
-      "hover:scale-[1.01] active:scale-[0.99]",
-      "focus:outline-none focus:ring-2 focus:ring-neon-cyan/40",
-      isLevelUpReady &&
-        "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(255,215,0,0.4)]"
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpenProfile();
+        }
+      },
+      [onOpenProfile]
     );
 
     return (
-      <button
+      <div
         onClick={onOpenProfile}
+        onKeyDown={handleKeyDown}
         className={containerClasses}
+        role="button"
+        tabIndex={0}
         aria-label={`Abrir perfil de ${player.name}`}
       >
-        {/* Glow Background */}
+        {/* Glow de fundo */}
         <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/5 to-neon-purple/5 pointer-events-none" />
 
         {/* Header */}
@@ -85,13 +108,13 @@ export const AvatarCard = memo(
             {player.avatar}
           </div>
 
-          <div className="flex-1 min-w-0 text-left">
+          <div className="flex-1 min-w-0">
             <h2 className="text-xl font-bold text-white flex items-center gap-2 truncate">
               {player.name}
               <Star className="w-4 h-4 text-neon-yellow flex-shrink-0" />
-              {player.rank === "SS" || player.rank === "S" ? (
+              {player.rank.includes("S") && (
                 <Crown className="w-4 h-4 text-yellow-400" />
-              ) : null}
+              )}
             </h2>
 
             <p className="text-sm text-gray-400 truncate">
@@ -115,7 +138,7 @@ export const AvatarCard = memo(
               <span
                 className={clsx(
                   "text-xs truncate font-medium",
-                  rankColor
+                  rankStyles
                 )}
               >
                 {player.rank}
@@ -138,12 +161,13 @@ export const AvatarCard = memo(
             </span>
           </div>
 
+          {/* Barra customizada com animação */}
           <div className="relative">
             <Progress
-              value={xpProgress}
+              value={animatedXP}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={xpProgress}
+              aria-valuenow={animatedXP}
             />
 
             {isLevelUpReady && (
@@ -157,7 +181,7 @@ export const AvatarCard = memo(
             </div>
           )}
         </div>
-      </button>
+      </div>
     );
   }
 );
