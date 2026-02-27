@@ -3,8 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { memo, ReactNode, useEffect } from "react";
 import { useAchievementEffects } from "@/hooks/useAchievementEffects";
 import { useAchievementToast } from "@/providers/AchievementToastProvider";
+import { useProgression } from "@/providers/ProgressionProvider";
+import { processAchievementUnlock } from "@/utils/processAchievementUnlock";
 
 type Rarity = "common" | "rare" | "epic" | "legendary";
+const { addXP } = useProgression();
 
 interface Achievement {
   id: string;
@@ -34,6 +37,17 @@ function AchievementCardComponent({ achievement }: { achievement: Achievement })
       });
     }
   }, [effectTrigger]);
+
+  useEffect(() => {
+  if (effectTrigger) {
+    processAchievementUnlock({
+      achievement,
+      addXP,
+      unlockTrait: (id) => console.log("Trait unlocked:", id),
+      unlockAchievement: (id) => console.log("Achievement unlocked:", id)
+    });
+  }
+}, [effectTrigger]);
 
   return (
     <motion.div

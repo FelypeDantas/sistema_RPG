@@ -5,7 +5,8 @@ import {
   LayoutDashboard,
   BookOpen,
   X,
-  Calendar
+  Calendar,
+  Crown
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -61,6 +62,13 @@ const MENU_ITEMS: MenuItem[] = [
     label: "Acompanhamento Diário",
     icon: Calendar,
     path: "/daily-tracker",
+    color: "text-neon-yellow",
+    hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
+  },
+  {
+    label: "Hall da Glória",
+    icon: Crown,
+    path: "/hall-of-glory",
     color: "text-neon-yellow",
     hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10"
   }

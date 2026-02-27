@@ -13,6 +13,7 @@ import AttributesPage from "@/pages/AttributesPage";
 import { PlayerProvider } from "@/context/PlayerContext";
 import { AuthPage } from "./pages/AuthPage";
 import DailyTrackerPage from "./pages/DailyTrackerPage";
+import { HallOfGlory } from "./pages/HallOfGlory";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/talents" element={<TalentsTree />} />
             <Route path="/attributes" element={<AttributesPage />} />
             <Route path="/daily-tracker" element={<DailyTrackerPage />} />
+            <Route path="/hall-of-glory" element={<HallOfGlory />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

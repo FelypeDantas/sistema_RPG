@@ -6,7 +6,8 @@ import {
   LayoutDashboard,
   BookOpen,
   Coins,
-  Calendar
+  Calendar,
+  Crown
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef } from "react";
@@ -71,6 +72,13 @@ const NAV_ITEMS: NavItem[] = [
     label: "Acompanhamento Diário",
     icon: Calendar,
     path: "/daily-tracker",
+    hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
+    color: "text-neon-yellow"
+  },
+  {
+    label: "Hall da Glória",
+    icon: Crown,
+    path: "/hall-of-glory",
     hover: "hover:border-neon-yellow/50 hover:bg-neon-yellow/10",
     color: "text-neon-yellow"
   }

@@ -1,5 +1,20 @@
 // hooks/useAchievementEffects.ts
-import { useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import type { Rarity } from "@/types/achievement";
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: ReactNode;
+  unlocked: boolean;
+  rarity: Rarity;
+  progress?: number;
+  maxProgress?: number;
+
+  grantsTraitId?: string;
+  unlocksAchievementIds?: string[];
+}
 
 export function useAchievementEffects(unlocked: boolean, soundUrl?: string) {
   const previousUnlocked = useRef(unlocked);
