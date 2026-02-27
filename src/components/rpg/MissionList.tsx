@@ -4,7 +4,10 @@ import "./MissionModal.css";
 
 type Difficulty = "all" | "easy" | "medium" | "hard" | "epic";
 
-const difficultyMap = {
+const difficultyMap: Record<
+  Exclude<Difficulty, "all">,
+  { label: string; className: string }
+> = {
   easy: { label: "Fácil", className: "badge-easy" },
   medium: { label: "Médio", className: "badge-medium" },
   hard: { label: "Difícil", className: "badge-hard" },
@@ -20,23 +23,17 @@ export function MissionList() {
 
   const successButtonRef = useRef<HTMLButtonElement | null>(null);
 
-  const showConfirm = selectedMission !== null;
+  const showConfirm = Boolean(selectedMission);
 
   /* ---------------- FILTER + SORT ---------------- */
 
   const processedMissions = useMemo(() => {
-    let filtered = missions;
-
-    if (filter !== "all") {
-      filtered = missions.filter((m) => m.difficulty === filter);
-    }
-
-    return [...filtered].sort((a, b) =>
-      sortDesc ? b.xp - a.xp : a.xp - b.xp
-    );
+    return missions
+      .filter((m) => (filter === "all" ? true : m.difficulty === filter))
+      .sort((a, b) => (sortDesc ? b.xp - a.xp : a.xp - b.xp));
   }, [missions, filter, sortDesc]);
 
-  /* ---------------- MODAL ---------------- */
+  /* ---------------- MODAL ACTIONS ---------------- */
 
   const openModal = useCallback((mission: Mission) => {
     setSelectedMission(mission);
@@ -49,13 +46,14 @@ export function MissionList() {
   const handleComplete = useCallback(
     (success: boolean) => {
       if (!selectedMission) return;
+
       completeMission(selectedMission.id, success);
       closeModal();
     },
     [selectedMission, completeMission, closeModal]
   );
 
-  /* ---------------- ESC ---------------- */
+  /* ---------------- ESC + SCROLL LOCK ---------------- */
 
   useEffect(() => {
     if (!showConfirm) return;
@@ -65,25 +63,19 @@ export function MissionList() {
     };
 
     window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [showConfirm, closeModal]);
-
-  useEffect(() => {
-    if (!showConfirm) return;
-
     document.body.style.overflow = "hidden";
     successButtonRef.current?.focus();
 
     return () => {
+      window.removeEventListener("keydown", handleEsc);
       document.body.style.overflow = "auto";
     };
-  }, [showConfirm]);
+  }, [showConfirm, closeModal]);
 
   /* ---------------- RENDER ---------------- */
 
   return (
     <>
-      {/* CONTROLS */}
       <div className="mission-controls">
         <select
           value={filter}
@@ -101,33 +93,29 @@ export function MissionList() {
         </button>
       </div>
 
-      {/* LISTA */}
       <ul className="mission-list">
         {processedMissions.map((mission) => {
           const difficulty = difficultyMap[mission.difficulty];
-
-          const progress = Math.min((mission.xp / 100) * 100, 100);
+          const progress = Math.min(mission.xp, 100);
 
           return (
             <li
               key={mission.id}
               className={`mission-card ${
-                mission.difficulty === "epic" ? "epic-glow epic-animate" : ""
+                mission.difficulty === "epic"
+                  ? "epic-glow epic-animate"
+                  : ""
               }`}
             >
               <div className="mission-header">
                 <h3>{mission.title}</h3>
-
                 <span className={`difficulty-badge ${difficulty.className}`}>
                   {difficulty.label}
                 </span>
               </div>
 
-              <p className="mission-description">
-                {mission.description}
-              </p>
+              <p className="mission-description">{mission.description}</p>
 
-              {/* PROGRESS BAR */}
               <div className="xp-bar">
                 <div
                   className="xp-fill"
@@ -150,7 +138,6 @@ export function MissionList() {
         })}
       </ul>
 
-      {/* MODAL */}
       {showConfirm && selectedMission && (
         <div
           className="modal-overlay"
@@ -159,12 +146,14 @@ export function MissionList() {
           aria-labelledby="modal-title"
           onClick={closeModal}
         >
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 id="modal-title">Concluir Missão</h2>
 
             <p>
-              Deseja concluir
-              <strong> "{selectedMission.title}"</strong>?
+              Deseja concluir <strong>"{selectedMission.title}"</strong>?
             </p>
 
             <div className="actions">
